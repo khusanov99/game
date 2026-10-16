@@ -45,9 +45,9 @@ button {
   font: inherit;
 }
 .app {
-  width: min(1100px, calc(100% - 32px));
+  width: min(1600px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 26px 0 35px;
+  padding: 20px 0 30px;
 }
 .topbar {
   display: flex;
@@ -198,13 +198,15 @@ h1 span {
 }
 .canvas-wrap {
   position: relative;
+  width: 100%;
+  height: clamp(350px, 55vh, 650px);
+  overflow: hidden;
   background: #080b1d;
 }
 canvas {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 900/350;
+  height: 100%;
   touch-action: none;
   cursor: pointer;
 }
@@ -431,6 +433,113 @@ kbd {
     opacity: 0.35;
   }
 }
+
+/* Large screens */
+@media (min-width: 1200px) {
+  .app {
+    width: calc(100% - 48px);
+    max-width: 1800px;
+  }
+
+  .hero {
+    margin-bottom: 30px;
+  }
+
+  .hud {
+    padding: 20px;
+  }
+
+  .stat {
+    padding: 14px 18px;
+  }
+
+  .game-footer {
+    padding: 16px 20px;
+  }
+}
+
+/* Mobile screens */
+@media (max-width: 600px) {
+  .app {
+    width: calc(100% - 12px);
+    padding: 10px 0 20px;
+  }
+
+  .topbar {
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .live-pill {
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+
+  h1 {
+    font-size: clamp(25px, 7vw, 36px);
+    letter-spacing: -1px;
+  }
+
+  .canvas-wrap {
+    height: clamp(260px, 48svh, 430px);
+  }
+
+  .game-footer {
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .controls-hint {
+    justify-content: center;
+    font-size: 9px;
+  }
+
+  .btns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .mini-btn {
+    min-height: 42px;
+  }
+
+  .duck-btn {
+    display: block;
+  }
+}
+
+/* Short landscape phone screens */
+@media (max-width: 900px) and (orientation: landscape) {
+  .app {
+    width: calc(100% - 16px);
+    padding: 8px 0;
+  }
+
+  .hero,
+  .feature-grid,
+  .bottom-note {
+    display: none;
+  }
+
+  .topbar {
+    margin-bottom: 8px;
+  }
+
+  .canvas-wrap {
+    height: 55svh;
+    min-height: 200px;
+  }
+
+  .hud {
+    padding: 6px;
+  }
+
+  .game-footer {
+    padding: 6px;
+  }
+}
+
 @media (max-width: 600px) {
   .app {
     width: calc(100% - 20px);

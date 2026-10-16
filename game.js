@@ -2,13 +2,26 @@
 const $ = (id) => document.getElementById(id);
 const canvas = $("game"),
   ctx = canvas.getContext("2d");
-const W = 900,
-  H = 350,
-  groundY = 292;
-const DPR = Math.min(window.devicePixelRatio || 1, 2);
-canvas.width = W * DPR;
-canvas.height = H * DPR;
-ctx.scale(DPR, DPR);
+
+const W = 900;
+const H = 350;
+const groundY = 292;
+
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  canvas.width = Math.round(rect.width * DPR);
+  canvas.height = Math.round(rect.height * DPR);
+
+  ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
 
 const store = {
   get(k, d) {
@@ -997,3 +1010,22 @@ $("muteButton").textContent = muted ? "🔇 OVOZ" : "🔊 OVOZ";
 resetGame();
 showReady();
 requestAnimationFrame(loop);
+
+async function enterFullscreen() {
+  const target = document.querySelector(".game-shell");
+
+  try {
+    if (!document.fullscreenElement) {
+      await target.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  } catch (error) {
+    console.warn("Fullscreen mavjud emas:", error);
+  }
+}
+
+document.addEventListener("fullscreenchange", () => {
+  resizeCanvas();
+});
+$("fullscreenButton").addEventListener("click", enterFullscreen);
