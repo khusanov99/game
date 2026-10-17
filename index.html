@@ -7,6 +7,8 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="theme-color" content="#070816" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>ZUMARY yugurish — Kelajak o'yini 2040</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
@@ -26,7 +28,7 @@
           </div>
         </div>
         <div class="live-pill">
-          <span class="live-dot"></span>ZUMARY SISTEMA ONLINE
+          <span class="live-dot"></span>SISTEMA ONLINE
         </div>
       </header>
 
@@ -39,7 +41,7 @@
         </p>
       </section>
 
-      <section class="game-shell">
+      <section class="game-shell" id="shell">
         <div class="game-inner">
           <div class="hud">
             <div class="stat">
@@ -47,7 +49,7 @@
               <div class="stat-value" id="score">000000</div>
             </div>
             <div class="stat">
-              <div class="stat-label">ENG YAXSHI NATIJA</div>
+              <div class="stat-label">REKORD</div>
               <div class="stat-value" id="best">000000</div>
             </div>
             <div class="stat">
@@ -55,26 +57,38 @@
               <div class="stat-value" id="speed">1.0x</div>
             </div>
             <div class="stat">
-              <div class="stat-label">ENERGIYA TANGALARI</div>
+              <div class="stat-label">TANGA</div>
               <div class="stat-value" id="coins">0</div>
             </div>
           </div>
 
-          <div class="canvas-wrap">
-            <canvas id="game" aria-label="ZUMARY yugurish o'yini"></canvas>
-            <div class="game-overlay" id="overlay">
-              <div class="overlay-card">
-                <div class="overlay-icon" id="oIcon">✦</div>
-                <h2 id="oTitle"></h2>
-                <p id="oText"></p>
-                <div class="seg" id="diff">
-                  <button data-d="easy">OSON</button
-                  ><button data-d="normal">O'RTACHA</button
-                  ><button data-d="hard">QIYIN</button>
+          <div class="stage">
+            <div class="canvas-wrap" id="wrap">
+              <canvas id="game" aria-label="ZUMARY yugurish o'yini"></canvas>
+              <div class="game-overlay" id="overlay">
+                <div class="overlay-card">
+                  <div class="overlay-icon" id="oIcon">✦</div>
+                  <h2 id="oTitle"></h2>
+                  <p id="oText"></p>
+                  <div class="seg" id="diff">
+                    <button data-d="easy">OSON</button
+                    ><button data-d="normal">O'RTACHA</button
+                    ><button data-d="hard">QIYIN</button>
+                  </div>
+                  <div id="skinBox"></div>
+                  <div id="topBox"></div>
+                  <button class="primary-btn" id="startButton"></button>
                 </div>
-                <div id="topBox"></div>
-                <button class="primary-btn" id="startButton"></button>
               </div>
+            </div>
+
+            <div class="pad">
+              <button class="pad-btn" id="padDuck" type="button">
+                <b>⬇</b><span>ENGASH</span>
+              </button>
+              <button class="pad-btn pad-jump" id="padJump" type="button">
+                <b>⬆</b><span>SAKRASH</span>
+              </button>
             </div>
           </div>
 
@@ -86,12 +100,17 @@
               ><span>OVOZ</span>
             </div>
             <div class="btns">
-              <button class="mini-btn duck-btn" id="duckBtn">⬇ ENGASH</button>
-              <button class="mini-btn" id="pauseButton">❚❚ PAUZA</button>
-              <button class="mini-btn" id="muteButton">🔊 OVOZ</button>
-              <button class="mini-btn" id="restartButton">↻ QAYTA</button>
-              <button class="mini-btn" id="fullscreenButton">
-                ⛶ FULLSCREEN
+              <button class="mini-btn" id="pauseButton" type="button">
+                ❚❚<span class="lbl"> PAUZA</span>
+              </button>
+              <button class="mini-btn" id="muteButton" type="button">
+                🔊<span class="lbl"> OVOZ</span>
+              </button>
+              <button class="mini-btn" id="restartButton" type="button">
+                ↻<span class="lbl"> QAYTA</span>
+              </button>
+              <button class="mini-btn" id="fullscreenButton" type="button">
+                ⛶<span class="lbl"> KATTA EKRAN</span>
               </button>
             </div>
           </div>
@@ -112,10 +131,10 @@
         <article class="feature">
           <div class="feature-icon">◈</div>
           <div>
-            <h3>Quvvat kuchlari</h3>
+            <h3>Quvvat kuchlari va kostyumlar</h3>
             <p>
-              Qalqon, sekinlashuv, ×2 ball va magnit. Tangalar yig'ib kombo
-              hosil qil.
+              Qalqon, sekinlashuv, ×2 ball, magnit. Tangalar bilan yangi
+              kostyumlar och.
             </p>
           </div>
         </article>
@@ -124,8 +143,8 @@
           <div>
             <h3>Zonalar va reyting</h3>
             <p>
-              Har 500 ballda yangi zona. 3 qiyinlik darajasi va eng yaxshi 5
-              natija brauzerda saqlanadi.
+              Har 500 ballda yangi zona. 3 qiyinlik darajasi, eng yaxshi 5
+              natija saqlanadi.
             </p>
           </div>
         </article>
@@ -134,7 +153,6 @@
         ZUMARY RUN © 2040 · KEYINGI AVLOD UCHUN
       </footer>
     </main>
-
     <script src="./game.js"></script>
   </body>
 </html>
