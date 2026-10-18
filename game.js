@@ -168,6 +168,7 @@ const POWER = {
   slow: { icon: "⏳", color: "#a78bfa", dur: 5000 },
   x2: { icon: "×2", color: "#ffd84f", dur: 8000 },
   magnet: { icon: "🧲", color: "#ff4fd8", dur: 8000 },
+  fuel: { icon: "⛽", color: "#ffb36b", dur: 0 },
 };
 const SKINS = [
   { id: "default", n: "ZUMARY", a: null, b: null, cost: 0 },
@@ -260,6 +261,44 @@ let sel = store.get("zr_sel", 0);
 if (mode !== "campaign" && mode !== "endless") mode = "campaign";
 if (!(sel >= 0 && sel < LEVELS.length && sel <= prog.unlocked - 1)) sel = 0;
 
+let up = store.get("zr_up", { jet: 0, fuel: 0, mag: 0, sh: 0, life: 0 });
+const SHOP = [
+  {
+    k: "jet",
+    n: "JETPACK",
+    d: "Havoda yana bos va USHLAB TUR — uchasan!",
+    max: 1,
+    cost: [120],
+  },
+  {
+    k: "fuel",
+    n: "YOQILG'I",
+    d: "+0.8 s parvoz vaqti",
+    max: 3,
+    cost: [100, 200, 350],
+  },
+  {
+    k: "mag",
+    n: "MAGNIT+",
+    d: "Magnit +3 s uzoqroq ishlaydi",
+    max: 2,
+    cost: [90, 180],
+  },
+  {
+    k: "sh",
+    n: "BOSHLANG'ICH QALQON",
+    d: "Har yugurish qalqon bilan boshlanadi",
+    max: 1,
+    cost: [150],
+  },
+  {
+    k: "life",
+    n: "QO'SHIMCHA ♥",
+    d: "Kampaniyada +1 hayot",
+    max: 1,
+    cost: [300],
+  },
+];
 let diff = store.get("zr_diff", "normal");
 if (!DIFF[diff]) diff = "normal";
 let bests = store.get("zr_bests", {});
@@ -302,8 +341,9 @@ const sfx = {
   jump: () => beep(380, 0.12, "square", 0.035, 280),
   jump2: () => beep(520, 0.12, "square", 0.035, 360),
   coin: () => {
-    beep(880, 0.07, "triangle", 0.05);
-    setTimeout(() => beep(1320, 0.09, "triangle", 0.05), 55);
+    const k = 1 + Math.min(combo, 20) * 0.025;
+    beep(880 * k, 0.07, "triangle", 0.05);
+    setTimeout(() => beep(1320 * k, 0.09, "triangle", 0.05), 55);
   },
   power: () => {
     beep(500, 0.1, "sine", 0.06, 500);
@@ -331,6 +371,18 @@ let lvl = null,
   shotTimer = 1500,
   darkKey = "",
   darkG = null;
+let maxLives = 1,
+  fuel = 0,
+  flying = false,
+  jumpHeld = false,
+  sq = 0,
+  zoom = 1,
+  freeze = 0,
+  hbT = 0,
+  lastPhase = 0,
+  shopOpen = false;
+let shoutO = { text: "", t: 0, max: 1, c: "#fff" },
+  flash = { c: "#fff", a: 0 };
 let fx, obstacles, items, particles, pops, stars, layers;
 let obstacleTimer,
   nextObstacle,
@@ -407,6 +459,76 @@ function buildWorld() {
       true,
     ),
   ];
+}
+
+/* ============ EMOTION: shout, combo, music ============ */
+const LOSE = [
+  "Hech qisi yo'q — yana bir bor!",
+  "Deyarli bo'ldi! Yana urinib ko'r.",
+  "Chempionlar ham yiqiladi, lekin turadi.",
+  "Keyingisida albatta o'tasan!",
+];
+const WIN = [
+  "Zo'r o'ynading!",
+  "Sen haqiqiy yuguruvchisan!",
+  "Bunday tezlikni kam odam ushlaydi!",
+  "Ajoyib! Davom et!",
+];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const fuelMax = () => 2200 + 800 * up.fuel;
+function shout(text, c = "#ffd84f", ms = 1200) {
+  shoutO = { text, c, t: ms, max: ms };
+}
+const COMBO_CALLS = {
+  5: ["ZO'R!", "#53f7ff"],
+  10: ["AJOYIB!", "#ffd84f"],
+  20: ["USTOZ!", "#ff4fd8"],
+  35: ["AFSONA!", "#50ffb0"],
+  50: ["ILOHIY!", "#ff8a5c"],
+};
+function addCombo() {
+  combo++;
+  const c = COMBO_CALLS[combo];
+  if (c) {
+    shout(c[0], c[1], 1100);
+    flash = { c: c[1], a: 0.16 };
+    zoom = 1.04;
+    vib(20);
+    [660, 880, 1100].forEach((f, i) =>
+      setTimeout(() => beep(f, 0.1, "triangle", 0.05), i * 70),
+    );
+    burst(player.x + 17, player.y, c[1], 22);
+  }
+}
+let musicOn = false,
+  musicStep = 0;
+const noteHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+function musicTick() {
+  if (!musicOn || muted || state !== "play") {
+    musicOn = false;
+    return;
+  }
+  const roots = lvl ? [48, 50, 45, 43, 41] : [48, 50, 45, 43];
+  const root = roots[lvl ? sel : Math.floor(score / 500) % 4];
+  const st = musicStep++ % 16,
+    pent = [0, 3, 5, 7, 10];
+  if (st % 4 === 0)
+    beep(noteHz(root - 12 + [0, 0, 5, 3][st >> 2]), 0.18, "triangle", 0.05);
+  if (st % 2 === 0 || Math.random() < 0.35)
+    beep(
+      noteHz(root + 12 + pent[(st * 3 + (st >> 3)) % 5]),
+      0.08,
+      "square",
+      0.012,
+    );
+  const bpm = 105 + Math.min(55, speed * 6) + (lvl && lvl.boss ? 15 : 0);
+  setTimeout(musicTick, 60000 / bpm / 4);
+}
+function startMusic() {
+  if (musicOn || muted) return;
+  musicOn = true;
+  musicStep = 0;
+  musicTick();
 }
 
 /* ============ HELPERS ============ */
@@ -523,24 +645,29 @@ function spawnObstacle() {
         ),
       );
 }
-function spawnShot() {
-  const high = Math.random() < 0.5,
-    y = high ? groundY - 50 : groundY - 26;
-  obstacles.push({
-    t: "shot",
-    x: W - 150,
-    y,
-    w: 30,
-    h: 16,
-    passed: false,
-    c: "#ff3b5c",
-    sp: 1.45,
-  });
-  burst(W - 150, y + 8, "#ffb36b", 6);
+function spawnShot(both) {
+  const high = Math.random() < 0.5;
+  const mk = (h, dx) =>
+    obstacles.push({
+      t: "shot",
+      x: W - 150 + dx,
+      y: h ? groundY - 50 : groundY - 26,
+      w: 30,
+      h: 16,
+      passed: false,
+      c: "#ff3b5c",
+      sp: 1.45,
+    });
+  mk(high, 0);
+  if (both) mk(!high, 120);
+  burst(W - 150, groundY - 38, "#ffb36b", 6);
   beep(220, 0.08, "sawtooth", 0.03, -60);
 }
 function spawnPower() {
-  const k = ["shield", "slow", "x2", "magnet"][Math.floor(Math.random() * 4)];
+  const list = up.jet
+    ? ["shield", "slow", "x2", "magnet", "fuel", "fuel"]
+    : ["shield", "slow", "x2", "magnet"];
+  const k = list[Math.floor(Math.random() * list.length)];
   items.push({ k, x: W + 30, y: groundY - rnd(55, 110), r: 15 });
 }
 
@@ -558,6 +685,7 @@ function jump() {
     first ? "#53f7ff" : "#ff4fd8",
     first ? 8 : 6,
   );
+  sq = -0.3;
   first ? sfx.jump() : sfx.jump2();
 }
 function releaseJump() {
@@ -602,6 +730,9 @@ function hurt(o) {
     } else o.x = -999;
     sfx.hit();
     pop(p.x, p.y - 10, "QALQON SINDI", "#53f7ff");
+    freeze = 140;
+    flash = { c: "#53f7ff", a: 0.3 };
+    zoom = 1.05;
     return false;
   }
   hits++;
@@ -618,6 +749,10 @@ function hurt(o) {
     } else o.x = -999;
     sfx.hit();
     pop(p.x, p.y - 12, "♥ " + lives, "#ff6b8a");
+    freeze = 110;
+    flash = { c: "#ff3b5c", a: 0.45 };
+    zoom = 1.06;
+    shout("AU!", "#ff6b8a", 700);
     return false;
   }
   endGame();
@@ -632,6 +767,14 @@ function updateGame(delta) {
   fx.x2 = Math.max(0, fx.x2 - delta);
   fx.magnet = Math.max(0, fx.magnet - delta);
   invul = Math.max(0, invul - delta);
+  if (lvl && maxLives > 1 && lives === 1) {
+    hbT -= delta;
+    if (hbT <= 0) {
+      hbT = 900;
+      beep(70, 0.12, "sine", 0.08);
+      vib(10);
+    }
+  }
   banner.t = Math.max(0, banner.t - delta);
 
   const cfg = lvl || DIFF[diff];
@@ -662,15 +805,39 @@ function updateGame(delta) {
   const p = player;
   p.h = p.grounded && duck() ? 24 : 44;
   if (p.grounded) p.y = groundY - p.h;
-  p.vy += p.g * (duck() && !p.grounded ? 2.2 : 1) * f;
+  flying = !!up.jet && fuel > 0 && jumpHeld && !p.grounded && p.jumps <= 0;
+  if (flying) {
+    fuel = Math.max(0, fuel - delta);
+    p.vy += ((duck() ? 4.5 : -3.8) - p.vy) * 0.18 * f;
+    if (frame % 2 < f && particles.length < Q.maxP + 40)
+      particles.push({
+        x: p.x + 8 + rnd(0, 18),
+        y: p.y + p.h,
+        vx: rnd(-0.6, 0.6),
+        vy: rnd(1.5, 3),
+        s: rnd(3, 6),
+        life: 0.8,
+        color: Math.random() < 0.5 ? "#ffb36b" : "#ff4fd8",
+      });
+  } else p.vy += p.g * (duck() && !p.grounded ? 2.2 : 1) * f;
   p.y += p.vy * f;
+  if (p.y < 12) {
+    p.y = 12;
+    if (p.vy < 0) p.vy = 0;
+  }
   if (p.y + p.h >= groundY) {
-    if (!p.grounded && p.vy > 3) burst(p.x + p.w / 2, groundY, "#a78bfa", 5);
+    if (!p.grounded && p.vy > 3) {
+      burst(p.x + p.w / 2, groundY, "#a78bfa", 5);
+      sq = Math.min(0.45, p.vy / 30);
+    }
     p.y = groundY - p.h;
     p.vy = 0;
     p.grounded = true;
     p.jumps = 2;
   } else p.grounded = false;
+  if (p.grounded && fuel < fuelMax())
+    fuel = Math.min(fuelMax(), fuel + delta * 1.4);
+  sq *= Math.pow(0.82, f);
 
   if (frame % 2 < f) p.trail.push({ x: p.x, y: p.y, h: p.h });
   if (p.trail.length > 6) p.trail.shift();
@@ -693,9 +860,22 @@ function updateGame(delta) {
     nextItem = rnd(9000, 14000);
   }
   if (lvl && lvl.boss && spawning) {
-    shotTimer -= delta;
+    const hp = 1 - Math.min(1, dist / lvl.len),
+      ph = hp < 0.34 ? 2 : hp < 0.67 ? 1 : 0;
+    if (ph !== lastPhase) {
+      lastPhase = ph;
+      shout(
+        ph === 2 ? "ZUMARY-X G'AZABDA!" : "BOSS KUCHAYDI!",
+        "#ff6b8a",
+        1600,
+      );
+      flash = { c: "#ff3b5c", a: 0.25 };
+      zoom = 1.05;
+      shake = 8;
+    }
+    shotTimer -= delta * (1 + ph * 0.3);
     if (shotTimer <= 0) {
-      spawnShot();
+      spawnShot(ph === 2 && Math.random() < 0.4);
       shotTimer = rnd(1100, 1700) * Math.max(0.7, 5.5 / speed);
     }
   }
@@ -710,14 +890,24 @@ function updateGame(delta) {
       if (o.t === "pit") {
         if (p.grounded && pcx > o.x + 6 && pcx < o.x + o.w - 6 && hurt(o))
           return;
-      } else if (hit(box, o, 3) && hurt(o)) return;
+      } else if (hit(box, o, 3)) {
+        if (hurt(o)) return;
+      } else if (
+        hit({ x: box.x - 7, y: box.y - 7, w: box.w + 14, h: box.h + 14 }, o, 0)
+      )
+        o.near = true;
     }
     if (!o.passed && o.x + o.w < p.x) {
       o.passed = true;
-      combo++;
+      addCombo();
       const g = 10 * mult();
       score += g;
       pop(p.x + 20, p.y - 14, "+" + g, "#c7edff");
+      if (o.near && o.t !== "pit") {
+        score += 20;
+        pop(p.x + 44, p.y - 36, "YAQIN! +20", "#ffd84f");
+        beep(1000, 0.07, "triangle", 0.04);
+      }
     }
   }
   obstacles = obstacles.filter((o) => o.x + o.w > -10);
@@ -740,7 +930,7 @@ function updateGame(delta) {
       it.got = true;
       if (it.k === "coin") {
         coins++;
-        combo++;
+        addCombo();
         const g = 25 * mult();
         score += g;
         pop(it.x, it.y, "+" + g, "#ffd84f");
@@ -748,7 +938,9 @@ function updateGame(delta) {
         sfx.coin();
       } else {
         if (it.k === "shield") shield = true;
-        else fx[it.k] = POWER[it.k].dur;
+        else if (it.k === "fuel") fuel = fuelMax();
+        else
+          fx[it.k] = POWER[it.k].dur + (it.k === "magnet" ? 3000 * up.mag : 0);
         burst(it.x, it.y, POWER[it.k].color, 18);
         sfx.power();
         pop(
@@ -759,6 +951,7 @@ function updateGame(delta) {
             slow: "SEKIN!",
             x2: "×2 BALL!",
             magnet: "MAGNIT!",
+            fuel: "YOQILG'I!",
           }[it.k],
           POWER[it.k].color,
         );
@@ -790,6 +983,10 @@ function updateParticles(delta) {
   }
   if (pops.length) pops = pops.filter((q) => q.life > 0);
   shake = Math.max(0, shake - 0.5 * f);
+  flash.a = Math.max(0, flash.a - 0.03 * f);
+  zoom = 1 + (zoom - 1) * Math.pow(0.9, f);
+  shoutO.t = Math.max(0, shoutO.t - delta);
+  if (state !== "play") sq *= Math.pow(0.82, f);
 }
 
 const hudEl = {
@@ -837,6 +1034,21 @@ function drawBackground() {
   }
   ctx.globalAlpha = 1;
 
+  if (speed >= 8 && Q.level < 2 && state === "play") {
+    ctx.strokeStyle = "#fff";
+    ctx.globalAlpha = 0.1;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const n = Math.min(10, Math.floor((speed - 7) * 3));
+    for (let i = 0; i < n; i++) {
+      const x = W - ((frame * speed * 2.5 + i * 137) % (W + 140)),
+        y = 14 + ((i * 53.7) % (groundY - 40));
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 30 + speed * 4, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   const mr = Math.max(1, UI * 0.8);
   ctx.fillStyle = cur.b;
   ctx.globalAlpha = 0.12;
@@ -905,6 +1117,12 @@ function drawPlayer() {
   const p = player,
     small = p.h < 40;
   const [pa, pb] = skinColors();
+  ctx.save();
+  const scx = p.x + p.w / 2,
+    sby = p.y + p.h;
+  ctx.translate(scx, sby);
+  ctx.scale(1 + sq * 0.5, 1 - sq * 0.5);
+  ctx.translate(-scx, -sby);
   ctx.fillStyle = pa;
   for (let i = 0; i < p.trail.length; i++) {
     const pt = p.trail[i];
@@ -943,6 +1161,25 @@ function drawPlayer() {
     ctx.stroke();
     ctx.globalAlpha = 1;
     noGlow();
+  }
+  ctx.restore();
+  drawFuelBar();
+}
+
+function drawFuelBar() {
+  if (!up.jet || state !== "play" || (!flying && fuel >= fuelMax() - 1)) return;
+  const p = player,
+    w = 44,
+    x = p.x + p.w / 2 - w / 2,
+    y = p.y - 14,
+    pr = fuel / fuelMax();
+  ctx.fillStyle = "rgba(10,14,34,.75)";
+  rr(x - 1, y - 1, w + 2, 7, 4);
+  ctx.fill();
+  ctx.fillStyle = pr < 0.25 ? "#ff3b5c" : "#ffb36b";
+  if (pr > 0.02) {
+    rr(x, y, w * pr, 5, 3);
+    ctx.fill();
   }
 }
 
@@ -1152,8 +1389,11 @@ function drawHUD() {
     ctx.textAlign = "left";
     ctx.font = `700 ${Math.round(17 * u)}px Orbitron, sans-serif`;
     ctx.fillStyle = "#ff6b8a";
-    const hl = Math.min(3, lives);
-    ctx.fillText("♥".repeat(hl) + "♡".repeat(3 - hl), m, row);
+    ctx.fillText(
+      "♥".repeat(lives) + "♡".repeat(Math.max(0, maxLives - lives)),
+      m,
+      row,
+    );
     row += 22 * u;
   }
   if (combo >= 2 && state !== "ready") {
@@ -1205,7 +1445,12 @@ function drawHUD() {
     ctx.fillStyle = P.color;
     ctx.font = `700 ${Math.round(13 * u)}px Orbitron, sans-serif`;
     ctx.fillText(P.icon, x + bw / 2, m - 4 * u + bh * 0.42);
-    ctx.fillRect(x + 5 * u, m - 4 * u + bh - 6 * u, (bw - 10 * u) * pct, 3 * u);
+    ctx.fillRect(
+      x + 5 * u,
+      m - 4 * u + bh - 6 * u,
+      (bw - 10 * u) * Math.min(1, pct),
+      3 * u,
+    );
   }
   if (banner.t > 0) {
     ctx.globalAlpha = Math.max(
@@ -1222,11 +1467,28 @@ function drawHUD() {
     noGlow();
     ctx.globalAlpha = 1;
   }
+  if (shoutO.t > 0) {
+    const el = shoutO.max - shoutO.t,
+      k = el < 180 ? 1 + 0.5 * (1 - el / 180) : 1;
+    ctx.globalAlpha = Math.min(1, shoutO.t / 350);
+    ctx.textAlign = "center";
+    ctx.font = `800 ${Math.round(Math.min(30 * u, (W * 0.92) / (shoutO.text.length * 0.78)) * k)}px Orbitron, sans-serif`;
+    ctx.fillStyle = shoutO.c;
+    glow(shoutO.c, 18);
+    ctx.fillText(shoutO.text, W / 2, H * 0.5);
+    noGlow();
+    ctx.globalAlpha = 1;
+  }
 }
 
 function draw() {
   ctx.save();
   if (shake > 0) ctx.translate(rnd(-shake, shake), rnd(-shake, shake));
+  if (zoom > 1.002) {
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-W / 2, -H / 2);
+  }
   drawBackground();
   drawFinish();
   drawBoss();
@@ -1236,6 +1498,19 @@ function draw() {
   drawPlayer();
   drawDark();
   ctx.restore();
+  if (flash.a > 0.01) {
+    ctx.globalAlpha = flash.a;
+    ctx.fillStyle = flash.c;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
+  if (lvl && maxLives > 1 && lives === 1 && state === "play") {
+    ctx.strokeStyle = "#ff3b5c";
+    ctx.globalAlpha = 0.25 + 0.2 * Math.sin(frame * 0.18);
+    ctx.lineWidth = 10 * UI;
+    ctx.strokeRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
   drawHUD();
 }
 
@@ -1276,6 +1551,27 @@ function renderLevels() {
     `</div>`
   );
 }
+function renderShop() {
+  return (
+    `<div class="top-title">DO'KON · ◎ ${wallet}</div><div class="shop">` +
+    SHOP.map((it) => {
+      const lv = up[it.k] || 0,
+        maxed = lv >= it.max,
+        cost = it.cost[lv];
+      return `<div class="shop-row"><div><b>${it.n}${it.max > 1 ? ` ${lv}/${it.max}` : ""}</b><small>${it.d}</small></div><button type="button" data-u="${it.k}" class="${maxed ? "done" : wallet >= cost ? "" : "lock"}">${maxed ? "✓" : "◎" + cost}</button></div>`;
+    }).join("") +
+    `</div>`
+  );
+}
+function showShop() {
+  showOverlay(
+    "🛒",
+    "DO'KON",
+    "Yig'gan tangalaringni foydali kuchlarga almashtir.",
+    "←   ORQAGA",
+    { shop: true },
+  );
+}
 function showOverlay(icon, title, text, btn, o = {}) {
   $("oIcon").textContent = icon;
   $("oTitle").textContent = title;
@@ -1287,6 +1583,9 @@ function showOverlay(icon, title, text, btn, o = {}) {
   $("skinBox").innerHTML = o.skins ? renderSkins() : "";
   $("topBox").innerHTML = o.top && mode === "endless" ? renderTop() : "";
   $("menuButton").style.display = o.menuBtn ? "flex" : "none";
+  $("shopButton").style.display = o.menu ? "flex" : "none";
+  $("shopBox").innerHTML = o.shop ? renderShop() : "";
+  shopOpen = !!o.shop;
   $("overlay").classList.remove("hidden");
   paintDiff();
 }
@@ -1325,8 +1624,18 @@ function resetGame() {
   lvl = mode === "campaign" ? LEVELS[sel] : null;
   dist = 0;
   hits = 0;
-  lives = lvl ? 3 : 1;
+  maxLives = lvl ? 3 + up.life : 1;
+  lives = maxLives;
   shotTimer = 1500;
+  fuel = fuelMax();
+  flying = false;
+  sq = 0;
+  zoom = 1;
+  freeze = 0;
+  flash.a = 0;
+  shoutO.t = 0;
+  lastPhase = 0;
+  hbT = 0;
   score = 0;
   speed = (lvl || DIFF[diff]).base;
   frame = 0;
@@ -1334,7 +1643,7 @@ function resetGame() {
   combo = 0;
   shake = 0;
   invul = 0;
-  shield = false;
+  shield = !!up.sh;
   banner = { text: "", sub: "", t: 0, max: 1 };
   lastZone = 0;
   cur = { ...THEMES[lvl ? lvl.theme : 0] };
@@ -1357,7 +1666,7 @@ function resetGame() {
     jumps: 2,
     trail: [],
   });
-  duckKey = duckPtr = duckBtn = false;
+  duckKey = duckPtr = duckBtn = jumpHeld = false;
   buildWorld();
   updateHUD();
 }
@@ -1377,6 +1686,11 @@ function startGame() {
     };
   $("overlay").classList.add("hidden");
   beep(660, 0.1, "triangle");
+  startMusic();
+  if (up.jet && !store.get("zr_jh", 0)) {
+    store.set("zr_jh", 1);
+    shout("JETPACK: havoda yana bos va USHLAB TUR!", "#ffb36b", 3400);
+  }
 }
 function goMenu() {
   resetGame();
@@ -1385,7 +1699,7 @@ function goMenu() {
 function pauseGame() {
   if (state !== "play") return;
   state = "pause";
-  duckKey = duckPtr = duckBtn = false;
+  duckKey = duckPtr = duckBtn = jumpHeld = false;
   showOverlay(
     "❚❚",
     "PAUZA",
@@ -1400,6 +1714,7 @@ function resumeGame() {
   lastT = 0;
   fpsAcc = 0;
   fpsN = -20;
+  startMusic();
   $("overlay").classList.add("hidden");
 }
 
@@ -1419,7 +1734,7 @@ function endGame() {
   state = "over";
   shake = 12;
   sfx.hit();
-  duckKey = duckPtr = duckBtn = false;
+  duckKey = duckPtr = duckBtn = jumpHeld = false;
   burst(player.x + player.w / 2, player.y + player.h / 2, "#ff4fd8", 35);
   const s = Math.floor(score),
     isBest = saveBest();
@@ -1438,7 +1753,7 @@ function endGame() {
       showOverlay(
         "✕",
         "DARAJA TUGAMADI",
-        `MASOFA: <b>${Math.floor(dist)} / ${lvl.len} m</b> · TANGA: <b>${coins}</b><br>Yana urinib ko'r — sen uddalaysan!`,
+        `MASOFA: <b>${Math.floor(dist)} / ${lvl.len} m</b> · TANGA: <b>${coins}</b> (jami ◎ ${wallet})<br>${pick(LOSE)}`,
         "↻   QAYTA URINISH",
         { menu: true, skins: true },
       );
@@ -1446,7 +1761,7 @@ function endGame() {
       showOverlay(
         isBest ? "★" : "✕",
         isBest ? "YANGI REKORD!" : "YUGURISH TUGADI",
-        `NATIJA: <b>${fmt(score)}</b> · TANGA: <b>${coins}</b><br>REKORD (${DIFF[diff].name}): <b>${fmt(bests[diff] || 0)}</b>`,
+        `NATIJA: <b>${fmt(score)}</b> · TANGA: <b>${coins}</b> (jami ◎ ${wallet})<br>${pick(LOSE)}<br>REKORD (${DIFF[diff].name}): <b>${fmt(bests[diff] || 0)}</b>`,
         "↻   YANA URINISH",
         { menu: true, skins: true, top: true },
       );
@@ -1460,9 +1775,14 @@ function winLevel() {
   state = "won";
   sfx.zone();
   vib(80);
+  flash = { c: "#fff", a: 0.5 };
+  zoom = 1.08;
+  [523, 659, 784, 1047].forEach((f2, i) =>
+    setTimeout(() => beep(f2, 0.18, "triangle", 0.07), i * 130),
+  );
   obstacles = [];
   items = [];
-  duckKey = duckPtr = duckBtn = false;
+  duckKey = duckPtr = duckBtn = jumpHeld = false;
   for (let i = 0; i < 6; i++)
     setTimeout(() => {
       if (state === "won")
@@ -1492,7 +1812,7 @@ function winLevel() {
     showOverlay(
       starText(st),
       last ? "O'YIN YAKUNLANDI!" : "DARAJA TUGADI!",
-      `${L.name}<br>★ tugatish ✓ · ★ ${coins}/${L.coins} tanga ${coins >= L.coins ? "✓" : "✗"} · ★ zarbasiz ${hits === 0 ? "✓" : "✗ (" + hits + ")"}<br>+${st * 10} bonus tanga`,
+      `${L.name}<br>★ tugatish ✓ · ★ ${coins}/${L.coins} tanga ${coins >= L.coins ? "✓" : "✗"} · ★ zarbasiz ${hits === 0 ? "✓" : "✗ (" + hits + ")"}<br>+${st * 10} bonus tanga · jami ◎ ${wallet}<br>${pick(WIN)}`,
       last ? "↻   QAYTA O'YNA" : "▶   KEYINGI DARAJA",
       { menuBtn: true },
     );
@@ -1503,6 +1823,12 @@ function loop(t) {
   const raw = lastT ? t - lastT : 16.67;
   const delta = Math.min(raw, 40);
   lastT = t;
+  if (freeze > 0 && state === "play") {
+    freeze -= delta;
+    draw();
+    requestAnimationFrame(loop);
+    return;
+  }
   if (state === "play") {
     updateGame(delta);
     // auto-lower quality on slow devices
@@ -1534,6 +1860,7 @@ function action() {
 document.addEventListener("keydown", (e) => {
   if (JUMP_KEYS.includes(e.code)) {
     e.preventDefault();
+    jumpHeld = true;
     if (!e.repeat) action();
   } else if (DUCK_KEYS.includes(e.code)) {
     e.preventDefault();
@@ -1547,13 +1874,17 @@ document.addEventListener("keydown", (e) => {
   } else if (e.code === "KeyF") toggleFs();
 });
 document.addEventListener("keyup", (e) => {
-  if (JUMP_KEYS.includes(e.code)) releaseJump();
+  if (JUMP_KEYS.includes(e.code)) {
+    jumpHeld = false;
+    releaseJump();
+  }
   if (DUCK_KEYS.includes(e.code)) duckKey = false;
 });
 
 let py = 0;
 canvas.addEventListener("pointerdown", (e) => {
   py = e.clientY;
+  jumpHeld = true;
   action();
 });
 canvas.addEventListener("pointermove", (e) => {
@@ -1563,6 +1894,7 @@ canvas.addEventListener("pointermove", (e) => {
 ["pointerup", "pointercancel"].forEach((n) =>
   canvas.addEventListener(n, () => {
     duckPtr = false;
+    jumpHeld = false;
     releaseJump();
   }),
 );
@@ -1584,7 +1916,17 @@ function holdButton(el, down, up) {
     el.addEventListener(n, end),
   );
 }
-holdButton($("padJump"), action, releaseJump);
+holdButton(
+  $("padJump"),
+  () => {
+    jumpHeld = true;
+    action();
+  },
+  () => {
+    jumpHeld = false;
+    releaseJump();
+  },
+);
 holdButton(
   $("padDuck"),
   () => {
@@ -1595,9 +1937,11 @@ holdButton(
   },
 );
 
-$("startButton").addEventListener("click", () =>
-  state === "pause" ? resumeGame() : startGame(),
-);
+$("startButton").addEventListener("click", () => {
+  if (shopOpen) goMenu();
+  else if (state === "pause") resumeGame();
+  else startGame();
+});
 $("restartButton").addEventListener("click", () => {
   resetGame();
   startGame();
@@ -1663,6 +2007,30 @@ $("levelBox").addEventListener("click", (e) => {
   goMenu();
 });
 $("menuButton").addEventListener("click", goMenu);
+$("shopButton").addEventListener("click", showShop);
+$("shopBox").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-u]");
+  if (!b) return;
+  const it = SHOP.find((x) => x.k === b.dataset.u),
+    lv = up[it.k] || 0;
+  if (lv >= it.max) return;
+  const cost = it.cost[lv];
+  if (wallet < cost) {
+    b.classList.remove("shake");
+    void b.offsetWidth;
+    b.classList.add("shake");
+    vib(30);
+    beep(160, 0.15, "sawtooth", 0.04);
+    return;
+  }
+  wallet -= cost;
+  up[it.k] = lv + 1;
+  store.set("zr_wallet", wallet);
+  store.set("zr_up", up);
+  sfx.power();
+  vib(25);
+  $("shopBox").innerHTML = renderShop();
+});
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) pauseGame();
@@ -1677,6 +2045,7 @@ document.addEventListener("click", (e) => {
 function toggleMute() {
   muted = !muted;
   store.set("zr_muted", muted);
+  if (!muted && state === "play") startMusic();
   $("muteButton").firstChild.textContent = muted ? "🔇" : "🔊";
 }
 

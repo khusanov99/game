@@ -476,6 +476,62 @@ canvas {
   cursor: pointer;
   touch-action: manipulation;
 }
+.shop {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+.shop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.shop-row b {
+  display: block;
+  font:
+    700 10px Orbitron,
+    sans-serif;
+  color: var(--text);
+}
+.shop-row small {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.shop-row button {
+  flex: none;
+  min-width: 66px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--gold);
+  color: #201800;
+  font:
+    800 11px Orbitron,
+    sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.shop-row button.lock {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+.shop-row button.done {
+  background: #1f6b3f;
+  color: #fff;
+}
+.shop-row .shake {
+  animation: shake 0.35s;
+}
 /* ---- touch pad ---- */
 .pad {
   display: none;
