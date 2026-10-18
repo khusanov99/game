@@ -407,6 +407,75 @@ canvas {
   transform: scale(0.98);
 }
 
+.levels {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.levels button {
+  min-width: 0;
+  padding: 8px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.levels b {
+  font:
+    700 16px Orbitron,
+    sans-serif;
+  color: var(--text);
+}
+.levels span {
+  max-width: 100%;
+  font:
+    600 6px Orbitron,
+    sans-serif;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.levels small {
+  font-size: 9px;
+  color: var(--gold);
+  min-height: 11px;
+}
+.levels .on {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan);
+}
+.levels .lock {
+  opacity: 0.45;
+}
+.levels .shake {
+  animation: shake 0.35s;
+}
+.ghost-btn {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font:
+    600 10px Orbitron,
+    sans-serif;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
 /* ---- touch pad ---- */
 .pad {
   display: none;

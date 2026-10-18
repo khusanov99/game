@@ -176,6 +176,90 @@ const SKINS = [
   { id: "gold", n: "OLTIN", a: "#ffd84f", b: "#ff7a59", cost: 400 },
 ];
 
+THEMES.push(
+  {
+    n: "QORONG'I TUNNEL",
+    top: "#04050e",
+    bot: "#0a0c1c",
+    a: "#8c7bff",
+    b: "#53f7ff",
+  },
+  {
+    n: "ZUMARY-X BOSS",
+    top: "#16040b",
+    bot: "#260a14",
+    a: "#ff3b5c",
+    b: "#ffb36b",
+  },
+);
+const PX_M = 30; // world pixels per metre
+const LEVELS = [
+  {
+    name: "NEON SHAHAR",
+    tag: "Asosiy to'siqlar",
+    len: 600,
+    base: 4.8,
+    max: 8,
+    gap: 1.3,
+    theme: 0,
+    types: ["block"],
+    coins: 25,
+  },
+  {
+    name: "PUSHTI KECHA",
+    tag: "Uchar dronlar va qo'sh to'siqlar",
+    len: 800,
+    base: 5.3,
+    max: 9.5,
+    gap: 1.15,
+    theme: 1,
+    types: ["block", "drone", "double"],
+    coins: 35,
+  },
+  {
+    name: "ZUMRAD ORBITA",
+    tag: "Kam tortishish va chuqurlar",
+    len: 1000,
+    base: 5.6,
+    max: 10.5,
+    gap: 1.1,
+    theme: 2,
+    types: ["block", "drone", "pit"],
+    coins: 45,
+    g: 0.4,
+    jump: [-10.8, -9.5],
+  },
+  {
+    name: "QORONG'I TUNNEL",
+    tag: "Ko'rish cheklangan — oldinga ehtiyot bo'l",
+    len: 1200,
+    base: 6,
+    max: 11.5,
+    gap: 1.05,
+    theme: 4,
+    types: ["block", "drone", "pit", "double"],
+    coins: 50,
+    dark: true,
+  },
+  {
+    name: "ZUMARY-X BOSS",
+    tag: "Yakuniy jang: o'qlardan qoch",
+    len: 1500,
+    base: 6.2,
+    max: 12,
+    gap: 1.7,
+    theme: 5,
+    types: ["block", "pit", "drone"],
+    coins: 60,
+    boss: true,
+  },
+];
+let prog = store.get("zr_prog", { unlocked: 1, stars: {} });
+let mode = store.get("zr_mode", "campaign");
+let sel = store.get("zr_sel", 0);
+if (mode !== "campaign" && mode !== "endless") mode = "campaign";
+if (!(sel >= 0 && sel < LEVELS.length && sel <= prog.unlocked - 1)) sel = 0;
+
 let diff = store.get("zr_diff", "normal");
 if (!DIFF[diff]) diff = "normal";
 let bests = store.get("zr_bests", {});
@@ -240,6 +324,13 @@ const sfx = {
 /* ============ STATE ============ */
 let state = "ready"; // ready | play | pause | over
 let score, speed, frame, coins, combo, shake, invul, shield, banner, lastZone;
+let lvl = null,
+  dist = 0,
+  lives = 1,
+  hits = 0,
+  shotTimer = 1500,
+  darkKey = "",
+  darkG = null;
 let fx, obstacles, items, particles, pops, stars, layers;
 let obstacleTimer,
   nextObstacle,
@@ -358,7 +449,17 @@ const mkCoin = (x, y) => ({ k: "coin", x, y, r: 9 });
 
 function spawnObstacle() {
   const sx = W + 20;
-  if (score > 150 && Math.random() < 0.28) {
+  let t;
+  if (lvl) t = lvl.types[Math.floor(Math.random() * lvl.types.length)];
+  else
+    t =
+      score > 150 && Math.random() < 0.28
+        ? "drone"
+        : score > 400 && Math.random() < 0.22
+          ? "double"
+          : "block";
+
+  if (t === "drone") {
     const y = groundY - 52;
     obstacles.push({
       t: "drone",
@@ -375,12 +476,32 @@ function spawnObstacle() {
         items.push(mkCoin(sx + 8 + i * 26, groundY - 14));
     return;
   }
+  if (t === "pit") {
+    const w = rnd(95, 135);
+    obstacles.push({
+      t: "pit",
+      x: sx,
+      y: groundY,
+      w,
+      h: 60,
+      passed: false,
+      c: "#ff3b5c",
+    });
+    for (let i = 0; i < 5; i++)
+      items.push(
+        mkCoin(
+          sx + w / 2 + (i - 2) * 26,
+          groundY - 50 - Math.sin((i / 4) * Math.PI) * 45,
+        ),
+      );
+    return;
+  }
   const tall = Math.random() > 0.55;
   const h = tall ? rnd(45, 65) : rnd(28, 42),
     w = tall ? rnd(25, 36) : rnd(32, 46);
   const c = Math.random() > 0.5 ? "#ff4fd8" : "#ff7a59";
   obstacles.push({ t: "block", x: sx, y: groundY - h, w, h, passed: false, c });
-  if (score > 400 && Math.random() < 0.22) {
+  if (t === "double") {
     const h2 = rnd(28, 48),
       w2 = rnd(28, 40);
     obstacles.push({
@@ -402,6 +523,22 @@ function spawnObstacle() {
         ),
       );
 }
+function spawnShot() {
+  const high = Math.random() < 0.5,
+    y = high ? groundY - 50 : groundY - 26;
+  obstacles.push({
+    t: "shot",
+    x: W - 150,
+    y,
+    w: 30,
+    h: 16,
+    passed: false,
+    c: "#ff3b5c",
+    sp: 1.45,
+  });
+  burst(W - 150, y + 8, "#ffb36b", 6);
+  beep(220, 0.08, "sawtooth", 0.03, -60);
+}
 function spawnPower() {
   const k = ["shield", "slow", "x2", "magnet"][Math.floor(Math.random() * 4)];
   items.push({ k, x: W + 30, y: groundY - rnd(55, 110), r: 15 });
@@ -411,7 +548,8 @@ function spawnPower() {
 function jump() {
   if (state !== "play" || player.jumps <= 0) return;
   const first = player.jumps === 2;
-  player.vy = first ? -14 : -12;
+  const jp = lvl && lvl.jump ? lvl.jump : [-14, -12];
+  player.vy = first ? jp[0] : jp[1];
   player.jumps--;
   player.grounded = false;
   burst(
@@ -450,6 +588,42 @@ function scrollWorld(d) {
   });
 }
 
+function hurt(o) {
+  const p = player;
+  if (shield) {
+    shield = false;
+    invul = 900;
+    shake = 9;
+    burst(p.x + 17, p.y + 20, "#53f7ff", 24);
+    if (o.t === "pit") {
+      p.vy = -11;
+      p.grounded = false;
+      p.jumps = 1;
+    } else o.x = -999;
+    sfx.hit();
+    pop(p.x, p.y - 10, "QALQON SINDI", "#53f7ff");
+    return false;
+  }
+  hits++;
+  combo = 0;
+  if (lives > 1) {
+    lives--;
+    invul = 1600;
+    shake = 10;
+    burst(p.x + 17, p.y + 22, "#ff4fd8", 18);
+    if (o.t === "pit") {
+      p.vy = -12;
+      p.grounded = false;
+      p.jumps = 1;
+    } else o.x = -999;
+    sfx.hit();
+    pop(p.x, p.y - 12, "♥ " + lives, "#ff6b8a");
+    return false;
+  }
+  endGame();
+  return true;
+}
+
 function updateGame(delta) {
   const f = Math.min(delta / 16.67, 2);
   frame += f;
@@ -460,18 +634,26 @@ function updateGame(delta) {
   invul = Math.max(0, invul - delta);
   banner.t = Math.max(0, banner.t - delta);
 
-  const cfg = DIFF[diff];
+  const cfg = lvl || DIFF[diff];
   score += f * 0.12;
-  speed = Math.min(cfg.base + score / 180, cfg.max);
+  speed = lvl
+    ? lvl.base + (lvl.max - lvl.base) * Math.min(1, dist / lvl.len)
+    : Math.min(cfg.base + score / 180, cfg.max);
   const ev = speed * (fx.slow > 0 ? 0.65 : 1);
 
-  const zone = Math.floor(score / 500) % THEMES.length;
-  if (zone !== lastZone) {
-    lastZone = zone;
-    banner = { text: THEMES[zone].n, t: 2200 };
-    sfx.zone();
+  let T;
+  if (lvl) {
+    dist += (ev * f) / PX_M;
+    T = THEMES[lvl.theme];
+  } else {
+    const zone = Math.floor(score / 500) % 4;
+    if (zone !== lastZone) {
+      lastZone = zone;
+      banner = { text: THEMES[zone].n, sub: "YANGI ZONA", t: 2200, max: 2200 };
+      sfx.zone();
+    }
+    T = THEMES[zone];
   }
-  const T = THEMES[zone];
   if (cur.top !== T.top || cur.a !== T.a || cur.b !== T.b || cur.bot !== T.bot)
     ["top", "bot", "a", "b"].forEach((k) => (cur[k] = mix(cur[k], T[k], 0.04)));
 
@@ -493,8 +675,10 @@ function updateGame(delta) {
   if (frame % 2 < f) p.trail.push({ x: p.x, y: p.y, h: p.h });
   if (p.trail.length > 6) p.trail.shift();
 
+  // stop spawning near the finish line so the last stretch is clear
+  const spawning = lvl ? (lvl.len - dist) * PX_M > W * 0.95 : true;
   obstacleTimer += delta;
-  if (obstacleTimer >= nextObstacle) {
+  if (spawning && obstacleTimer >= nextObstacle) {
     spawnObstacle();
     obstacleTimer = 0;
     nextObstacle = Math.max(
@@ -503,29 +687,30 @@ function updateGame(delta) {
     );
   }
   itemTimer += delta;
-  if (itemTimer >= nextItem) {
+  if (spawning && itemTimer >= nextItem) {
     spawnPower();
     itemTimer = 0;
     nextItem = rnd(9000, 14000);
   }
+  if (lvl && lvl.boss && spawning) {
+    shotTimer -= delta;
+    if (shotTimer <= 0) {
+      spawnShot();
+      shotTimer = rnd(1100, 1700) * Math.max(0.7, 5.5 / speed);
+    }
+  }
 
   const box = { x: p.x + 4, y: p.y + 4, w: p.w - 8, h: p.h - 4 };
+  const pcx = p.x + p.w / 2,
+    pcy = p.y + p.h / 2;
   for (const o of obstacles) {
-    o.x -= ev * f;
+    o.x -= ev * f * (o.sp || 1);
     if (o.t === "drone") o.y = o.by + Math.sin(frame * 0.1) * 4;
-    if (invul <= 0 && hit(box, o, 3)) {
-      if (shield) {
-        shield = false;
-        invul = 900;
-        shake = 9;
-        burst(o.x, o.y, "#53f7ff", 24);
-        o.x = -999;
-        sfx.hit();
-        pop(p.x, p.y - 10, "QALQON SINDI", "#53f7ff");
-      } else {
-        endGame();
-        return;
-      }
+    if (invul <= 0) {
+      if (o.t === "pit") {
+        if (p.grounded && pcx > o.x + 6 && pcx < o.x + o.w - 6 && hurt(o))
+          return;
+      } else if (hit(box, o, 3) && hurt(o)) return;
     }
     if (!o.passed && o.x + o.w < p.x) {
       o.passed = true;
@@ -537,8 +722,6 @@ function updateGame(delta) {
   }
   obstacles = obstacles.filter((o) => o.x + o.w > -10);
 
-  const pcx = p.x + p.w / 2,
-    pcy = p.y + p.h / 2;
   for (const it of items) {
     it.x -= ev * f;
     if (it.k === "coin" && fx.magnet > 0) {
@@ -584,6 +767,10 @@ function updateGame(delta) {
   }
   items = items.filter((i) => !i.got && i.x > -30);
 
+  if (lvl && dist >= lvl.len) {
+    winLevel();
+    return;
+  }
   updateParticles(delta);
   updateHUD();
 }
@@ -624,8 +811,8 @@ function updateHUD() {
     "best",
     fmt(
       Math.max(
-        bests[diff] || 0,
-        state === "play" || state === "over" ? score : 0,
+        bests[bestKey()] || 0,
+        state === "play" || state === "over" || state === "won" ? score : 0,
       ),
     ),
   );
@@ -761,6 +948,18 @@ function drawPlayer() {
 
 function drawObstacles() {
   for (const o of obstacles) {
+    if (o.t === "pit") {
+      ctx.fillStyle = "#03040a";
+      ctx.fillRect(o.x, groundY - 1, o.w, H - groundY + 22);
+      ctx.fillStyle = o.c;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(o.x - 2, groundY - 1, 3, H - groundY + 22);
+      ctx.fillRect(o.x + o.w - 1, groundY - 1, 3, H - groundY + 22);
+      ctx.globalAlpha = 0.25;
+      ctx.fillRect(o.x, groundY + 6, o.w, 2);
+      ctx.globalAlpha = 1;
+      continue;
+    }
     halo(o.x, o.y, o.w, o.h, 5, o.c);
     glow(o.c, 18);
     ctx.fillStyle = grad(
@@ -777,6 +976,12 @@ function drawObstacles() {
     ctx.strokeStyle = "#ffc0f0";
     ctx.lineWidth = 1;
     ctx.stroke();
+    if (o.t === "shot") {
+      ctx.fillStyle = "#ffb36b";
+      ctx.globalAlpha = 0.55;
+      ctx.fillRect(o.x + o.w, o.y + 4, 16 + Math.sin(frame) * 4, 8);
+      ctx.globalAlpha = 1;
+    }
     if (o.t === "drone") {
       ctx.fillStyle = "#fff";
       ctx.fillRect(o.x + 8, o.y + 10, o.w - 16, 5);
@@ -849,15 +1054,139 @@ function drawParticles() {
   }
 }
 
+function drawFinish() {
+  if (!lvl) return;
+  const gx = player.x + (lvl.len - dist) * PX_M;
+  if (gx > W + 80) return;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(gx, groundY - 112, 6, 112);
+  ctx.fillRect(gx + 104, groundY - 112, 6, 112);
+  for (let i = 0; i < 11; i++)
+    for (let j = 0; j < 2; j++) {
+      ctx.fillStyle = (i + j) % 2 ? "#fff" : "#10142c";
+      ctx.fillRect(gx + 6 + i * 9, groundY - 112 + j * 12, 9, 12);
+    }
+  ctx.fillStyle = cur.a;
+  ctx.globalAlpha = 0.25;
+  ctx.fillRect(gx + 6, groundY - 88, 98, 88);
+  ctx.globalAlpha = 1;
+  ctx.font = `700 ${Math.round(12 * UI)}px Orbitron, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("FINISH", gx + 55, groundY - 60);
+}
+
+function drawBoss() {
+  if (!(lvl && lvl.boss) || state === "ready" || state === "won") return;
+  const bw = 120,
+    bh = 86,
+    x = W - 78,
+    y = H * 0.34 + Math.sin(frame * 0.05) * 12;
+  const charging = state === "play" && shotTimer < 350;
+  halo(x - bw / 2, y - bh / 2, bw, bh, 22, "#ff3b5c");
+  glow("#ff3b5c", 26);
+  ctx.fillStyle = grad(
+    x - bw / 2,
+    y - bh / 2,
+    x + bw / 2,
+    y + bh / 2,
+    "#ff3b5c",
+    "#5a0f24",
+  );
+  rr(x - bw / 2, y - bh / 2, bw, bh, 22);
+  ctx.fill();
+  noGlow();
+  ctx.fillStyle = "#12040a";
+  rr(x - bw / 2 + 14, y - 16, bw - 28, 22, 10);
+  ctx.fill();
+  ctx.fillStyle = charging ? "#fff" : "#ffb36b";
+  ctx.beginPath();
+  ctx.arc(x + Math.sin(frame * 0.08) * 22, y - 5, 6, 0, 7);
+  ctx.fill();
+  ctx.fillStyle = "#2a0a14";
+  ctx.fillRect(x - bw / 2 - 16, y + 8, 22, 14);
+  if (charging) {
+    ctx.fillStyle = "#ffb36b";
+    ctx.beginPath();
+    ctx.arc(x - bw / 2 - 16, y + 15, 8 + Math.sin(frame) * 2, 0, 7);
+    ctx.fill();
+  }
+  ctx.strokeStyle = "#ffb36b";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 20, y - bh / 2);
+  ctx.lineTo(x - 28, y - bh / 2 - 14);
+  ctx.moveTo(x + 20, y - bh / 2);
+  ctx.lineTo(x + 28, y - bh / 2 - 14);
+  ctx.stroke();
+}
+
+function drawDark() {
+  if (!(lvl && lvl.dark) || state === "ready") return;
+  const cx = player.x + W * 0.16,
+    cy = groundY - 50,
+    r = W * 0.55;
+  const k = cx + "|" + cy + "|" + r + "|" + Q.flat;
+  if (k !== darkKey) {
+    darkKey = k;
+    if (Q.flat) darkG = "rgba(0,0,0,.5)";
+    else {
+      const g = ctx.createRadialGradient(cx, cy, r * 0.12, cx, cy, r);
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(0.6, "rgba(0,0,0,.6)");
+      g.addColorStop(1, "rgba(0,0,0,.94)");
+      darkG = g;
+    }
+  }
+  ctx.fillStyle = darkG;
+  ctx.fillRect(-20, -20, W + 40, H + 40);
+}
+
 function drawHUD() {
   const u = UI,
     m = 14 * u;
   ctx.textBaseline = "middle";
+  let row = m + 8 * u;
+  if (lvl && state !== "ready") {
+    ctx.textAlign = "left";
+    ctx.font = `700 ${Math.round(17 * u)}px Orbitron, sans-serif`;
+    ctx.fillStyle = "#ff6b8a";
+    const hl = Math.min(3, lives);
+    ctx.fillText("♥".repeat(hl) + "♡".repeat(3 - hl), m, row);
+    row += 22 * u;
+  }
   if (combo >= 2 && state !== "ready") {
     ctx.textAlign = "left";
     ctx.font = `700 ${Math.round(14 * u)}px Orbitron, sans-serif`;
     ctx.fillStyle = mult() > 1 ? "#ffd84f" : "#c7edff";
-    ctx.fillText("KOMBO " + combo + "  ×" + mult(), m, m + 8 * u);
+    ctx.fillText("KOMBO " + combo + "  ×" + mult(), m, row);
+  }
+  // level progress / boss health
+  if (lvl && state !== "ready") {
+    const bw = Math.min(W * 0.34, 300),
+      x0 = (W - bw) / 2,
+      y0 = m,
+      pr = Math.min(1, dist / lvl.len);
+    ctx.fillStyle = "rgba(10,14,34,.7)";
+    rr(x0, y0, bw, 9 * u, 5 * u);
+    ctx.fill();
+    ctx.fillStyle = lvl.boss ? "#ff3b5c" : cur.a;
+    const fw = lvl.boss ? bw * (1 - pr) : bw * pr;
+    if (fw > 2) {
+      rr(x0, y0, fw, 9 * u, 5 * u);
+      ctx.fill();
+    }
+    ctx.textAlign = "center";
+    ctx.font = `600 ${Math.round(10 * u)}px Orbitron, sans-serif`;
+    ctx.fillStyle = "#c7edff";
+    ctx.fillText(
+      lvl.boss
+        ? "ZUMARY-X"
+        : `${Math.min(lvl.len, Math.floor(dist))} / ${lvl.len} m`,
+      W / 2,
+      y0 + 20 * u,
+    );
   }
   let x = W - m;
   ctx.textAlign = "center";
@@ -879,18 +1208,17 @@ function drawHUD() {
     ctx.fillRect(x + 5 * u, m - 4 * u + bh - 6 * u, (bw - 10 * u) * pct, 3 * u);
   }
   if (banner.t > 0) {
-    ctx.globalAlpha = Math.min(
-      1,
-      banner.t / 500,
-      (2200 - banner.t) / 300 + 0.2,
+    ctx.globalAlpha = Math.max(
+      0,
+      Math.min(1, banner.t / 500, (banner.max - banner.t) / 300 + 0.2),
     );
     ctx.fillStyle = cur.a;
     glow(cur.a, 20);
     ctx.textAlign = "center";
     ctx.font = `800 ${Math.round(26 * u)}px Orbitron, sans-serif`;
-    ctx.fillText(banner.text, W / 2, H * 0.2);
+    ctx.fillText(banner.text, W / 2, H * 0.3);
     ctx.font = `500 ${Math.round(11 * u)}px Orbitron, sans-serif`;
-    ctx.fillText("YANGI ZONA", W / 2, H * 0.2 + 28 * u);
+    ctx.fillText(banner.sub || "", W / 2, H * 0.3 + 28 * u);
     noGlow();
     ctx.globalAlpha = 1;
   }
@@ -900,15 +1228,20 @@ function draw() {
   ctx.save();
   if (shake > 0) ctx.translate(rnd(-shake, shake), rnd(-shake, shake));
   drawBackground();
+  drawFinish();
+  drawBoss();
   drawItems();
   drawParticles();
   drawObstacles();
   drawPlayer();
+  drawDark();
   ctx.restore();
   drawHUD();
 }
 
 /* ============ OVERLAY / MENU ============ */
+const starText = (n) => "★".repeat(n) + "☆".repeat(3 - n);
+const bestKey = () => (lvl ? "L" + (sel + 1) : diff);
 function renderTop() {
   if (!board.length)
     return `<div class="top-title">REYTING</div><p>Hali natija yo'q. Birinchi bo'l!</p>`;
@@ -933,46 +1266,78 @@ function renderSkins() {
     `</div>`
   );
 }
-function showOverlay(icon, title, text, btn, opts = {}) {
+function renderLevels() {
+  return (
+    `<div class="top-title">DARAJALAR</div><div class="levels">` +
+    LEVELS.map((L, i) => {
+      const locked = i >= prog.unlocked;
+      return `<button type="button" data-l="${i}" class="${i === sel ? "on" : ""}${locked ? " lock" : ""}"><b>${locked ? "🔒" : i + 1}</b><span>${L.name}</span><small>${locked ? "&nbsp;" : starText(prog.stars[i + 1] || 0)}</small></button>`;
+    }).join("") +
+    `</div>`
+  );
+}
+function showOverlay(icon, title, text, btn, o = {}) {
   $("oIcon").textContent = icon;
   $("oTitle").textContent = title;
   $("oText").innerHTML = text;
   $("startButton").textContent = btn;
-  $("diff").style.display = opts.diff ? "flex" : "none";
-  $("skinBox").innerHTML = opts.skins ? renderSkins() : "";
-  $("topBox").innerHTML = opts.top ? renderTop() : "";
+  $("mode").style.display = o.menu ? "flex" : "none";
+  $("diff").style.display = o.menu && mode === "endless" ? "flex" : "none";
+  $("levelBox").innerHTML = o.menu && mode === "campaign" ? renderLevels() : "";
+  $("skinBox").innerHTML = o.skins ? renderSkins() : "";
+  $("topBox").innerHTML = o.top && mode === "endless" ? renderTop() : "";
+  $("menuButton").style.display = o.menuBtn ? "flex" : "none";
   $("overlay").classList.remove("hidden");
+  paintDiff();
 }
 function paintDiff() {
   document
     .querySelectorAll("#diff button")
     .forEach((b) => b.classList.toggle("on", b.dataset.d === diff));
+  document
+    .querySelectorAll("#mode button")
+    .forEach((b) => b.classList.toggle("on", b.dataset.m === mode));
 }
 function showReady() {
-  showOverlay(
-    "✦",
-    "TAYYORMISAN, YUGURUVCHI?",
-    "Sakra, engash, tanga yig' va quvvat kuchlarini ol.<br>To'siqlardan o't va yangi rekord o'rnat.",
-    "▶   YUGURISHNI BOSHLA!",
-    { diff: true, skins: true, top: true },
-  );
-  paintDiff();
+  if (mode === "campaign") {
+    const L = LEVELS[sel];
+    showOverlay(
+      "✦",
+      `DARAJA ${sel + 1}: ${L.name}`,
+      `${L.tag}.<br>Maqsad: <b>${L.len} m</b> yugur · <b>${L.coins}</b> tanga yig' · 3 ta ♥`,
+      `▶   DARAJA ${sel + 1}NI BOSHLA`,
+      { menu: true, skins: true },
+    );
+  } else {
+    showOverlay(
+      "✦",
+      "TAYYORMISAN, YUGURUVCHI?",
+      "Cheksiz rejim: to'xtamasdan yugur.<br>Har 500 ballda yangi zona boshlanadi.",
+      "▶   YUGURISHNI BOSHLA!",
+      { menu: true, skins: true, top: true },
+    );
+  }
 }
 
 /* ============ FLOW ============ */
 function resetGame() {
   state = "ready";
+  lvl = mode === "campaign" ? LEVELS[sel] : null;
+  dist = 0;
+  hits = 0;
+  lives = lvl ? 3 : 1;
+  shotTimer = 1500;
   score = 0;
-  speed = DIFF[diff].base;
+  speed = (lvl || DIFF[diff]).base;
   frame = 0;
   coins = 0;
   combo = 0;
   shake = 0;
   invul = 0;
   shield = false;
-  banner = { text: "", t: 0 };
+  banner = { text: "", sub: "", t: 0, max: 1 };
   lastZone = 0;
-  cur = { ...THEMES[0] };
+  cur = { ...THEMES[lvl ? lvl.theme : 0] };
   skyKey = "";
   fx = { slow: 0, x2: 0, magnet: 0 };
   obstacles = [];
@@ -987,6 +1352,7 @@ function resetGame() {
     y: groundY - 44,
     h: 44,
     vy: 0,
+    g: lvl && lvl.g ? lvl.g : 0.65,
     grounded: true,
     jumps: 2,
     trail: [],
@@ -997,13 +1363,24 @@ function resetGame() {
 }
 function startGame() {
   if (state === "play") return;
-  if (state === "over" || state === "ready") resetGame();
+  if (state === "over" || state === "ready" || state === "won") resetGame();
   state = "play";
   lastT = 0;
   fpsAcc = 0;
   fpsN = -45;
+  if (lvl)
+    banner = {
+      text: `DARAJA ${sel + 1}`,
+      sub: lvl.name + " · " + lvl.tag,
+      t: 2800,
+      max: 2800,
+    };
   $("overlay").classList.add("hidden");
   beep(660, 0.1, "triangle");
+}
+function goMenu() {
+  resetGame();
+  showReady();
 }
 function pauseGame() {
   if (state !== "play") return;
@@ -1014,6 +1391,7 @@ function pauseGame() {
     "PAUZA",
     "Davom etish uchun tugmani bosing.",
     "▶   DAVOM ETISH",
+    { menuBtn: true },
   );
 }
 function resumeGame() {
@@ -1025,6 +1403,17 @@ function resumeGame() {
   $("overlay").classList.add("hidden");
 }
 
+function saveBest() {
+  const s = Math.floor(score),
+    k = bestKey(),
+    isBest = s > (bests[k] || 0);
+  if (isBest) {
+    bests[k] = s;
+    store.set("zr_bests", bests);
+  }
+  return isBest;
+}
+
 function endGame() {
   if (state === "over") return;
   state = "over";
@@ -1033,12 +1422,8 @@ function endGame() {
   duckKey = duckPtr = duckBtn = false;
   burst(player.x + player.w / 2, player.y + player.h / 2, "#ff4fd8", 35);
   const s = Math.floor(score),
-    isBest = s > (bests[diff] || 0);
-  if (isBest) {
-    bests[diff] = s;
-    store.set("zr_bests", bests);
-  }
-  if (s > 0) {
+    isBest = saveBest();
+  if (!lvl && s > 0) {
     board.push({ s, d: diff });
     board.sort((a, b) => b.s - a.s);
     board = board.slice(0, 5);
@@ -1049,15 +1434,69 @@ function endGame() {
   updateHUD();
   setTimeout(() => {
     if (state !== "over") return;
-    showOverlay(
-      isBest ? "★" : "✕",
-      isBest ? "YANGI REKORD!" : "YUGURISH TUGADI",
-      `NATIJA: <b>${fmt(score)}</b> · TANGA: <b>${coins}</b><br>REKORD (${DIFF[diff].name}): <b>${fmt(bests[diff] || 0)}</b>`,
-      "↻   YANA URINISH",
-      { diff: true, skins: true, top: true },
-    );
-    paintDiff();
+    if (lvl) {
+      showOverlay(
+        "✕",
+        "DARAJA TUGAMADI",
+        `MASOFA: <b>${Math.floor(dist)} / ${lvl.len} m</b> · TANGA: <b>${coins}</b><br>Yana urinib ko'r — sen uddalaysan!`,
+        "↻   QAYTA URINISH",
+        { menu: true, skins: true },
+      );
+    } else {
+      showOverlay(
+        isBest ? "★" : "✕",
+        isBest ? "YANGI REKORD!" : "YUGURISH TUGADI",
+        `NATIJA: <b>${fmt(score)}</b> · TANGA: <b>${coins}</b><br>REKORD (${DIFF[diff].name}): <b>${fmt(bests[diff] || 0)}</b>`,
+        "↻   YANA URINISH",
+        { menu: true, skins: true, top: true },
+      );
+    }
   }, 650);
+}
+
+function winLevel() {
+  const L = lvl,
+    id = sel + 1;
+  state = "won";
+  sfx.zone();
+  vib(80);
+  obstacles = [];
+  items = [];
+  duckKey = duckPtr = duckBtn = false;
+  for (let i = 0; i < 6; i++)
+    setTimeout(() => {
+      if (state === "won")
+        burst(
+          rnd(100, W - 100),
+          rnd(60, groundY - 60),
+          ["#53f7ff", "#ff4fd8", "#ffd84f"][i % 3],
+          30,
+        );
+    }, i * 130);
+  if (L.boss) burst(W - 78, H * 0.34, "#ff3b5c", 60);
+  const st = 1 + (coins >= L.coins ? 1 : 0) + (hits === 0 ? 1 : 0);
+  prog.stars[id] = Math.max(prog.stars[id] || 0, st);
+  if (id < LEVELS.length) prog.unlocked = Math.max(prog.unlocked, id + 1);
+  store.set("zr_prog", prog);
+  saveBest();
+  wallet += coins + st * 10;
+  store.set("zr_wallet", wallet);
+  const last = id >= LEVELS.length;
+  if (!last) {
+    sel = id;
+    store.set("zr_sel", sel);
+  }
+  updateHUD();
+  setTimeout(() => {
+    if (state !== "won") return;
+    showOverlay(
+      starText(st),
+      last ? "O'YIN YAKUNLANDI!" : "DARAJA TUGADI!",
+      `${L.name}<br>★ tugatish ✓ · ★ ${coins}/${L.coins} tanga ${coins >= L.coins ? "✓" : "✗"} · ★ zarbasiz ${hits === 0 ? "✓" : "✗ (" + hits + ")"}<br>+${st * 10} bonus tanga`,
+      last ? "↻   QAYTA O'YNA" : "▶   KEYINGI DARAJA",
+      { menuBtn: true },
+    );
+  }, 900);
 }
 
 function loop(t) {
@@ -1075,9 +1514,9 @@ function loop(t) {
     }
   } else if (state !== "pause") {
     updateParticles(delta);
-    if (state === "ready") {
+    if (state === "ready" || state === "won") {
       frame += delta / 16.67;
-      scrollWorld((1.2 * delta) / 16.67);
+      scrollWorld(((state === "won" ? 3 : 1.2) * delta) / 16.67);
     }
   }
   if (state !== "pause" || !document.hidden) draw();
@@ -1088,7 +1527,7 @@ function loop(t) {
 const JUMP_KEYS = ["Space", "ArrowUp", "KeyW"],
   DUCK_KEYS = ["ArrowDown", "KeyS"];
 function action() {
-  if (state === "ready" || state === "over") startGame();
+  if (state === "ready" || state === "over" || state === "won") startGame();
   else if (state === "pause") resumeGame();
   else jump();
 }
@@ -1200,6 +1639,30 @@ $("skinBox").addEventListener("click", (e) => {
   store.set("zr_skin", skin);
   $("skinBox").innerHTML = renderSkins();
 });
+
+$("mode").addEventListener("click", (e) => {
+  const m = e.target.dataset.m;
+  if (!m || m === mode) return;
+  mode = m;
+  store.set("zr_mode", m);
+  goMenu();
+});
+$("levelBox").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-l]");
+  if (!b) return;
+  const i = +b.dataset.l;
+  if (i >= prog.unlocked) {
+    b.classList.remove("shake");
+    void b.offsetWidth;
+    b.classList.add("shake");
+    vib(30);
+    return;
+  }
+  sel = i;
+  store.set("zr_sel", i);
+  goMenu();
+});
+$("menuButton").addEventListener("click", goMenu);
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) pauseGame();
