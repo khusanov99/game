@@ -532,6 +532,144 @@ canvas {
 .shop-row .shake {
   animation: shake 0.35s;
 }
+.nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.nav button {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.nav span {
+  font:
+    600 7px Orbitron,
+    sans-serif;
+  letter-spacing: 0.5px;
+}
+.nav .on {
+  color: var(--text);
+  border-color: var(--cyan);
+  background: rgba(83, 247, 255, 0.1);
+}
+.xp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font:
+    600 9px Orbitron,
+    sans-serif;
+  color: var(--purple);
+}
+.xp i {
+  flex: 1;
+  height: 8px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.xp b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+}
+.xp em {
+  font-style: normal;
+  color: var(--muted);
+}
+.daily {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.daily button {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--gold);
+  color: #201800;
+  font:
+    800 10px Orbitron,
+    sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+  animation: pulse 1.2s infinite;
+}
+.dim {
+  opacity: 0.6;
+}
+.gift-got {
+  margin: -4px 0 10px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 216, 79, 0.12);
+  color: var(--gold);
+  font:
+    700 12px Orbitron,
+    sans-serif;
+}
+.bar {
+  display: block;
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.bar b {
+  display: block;
+  height: 100%;
+  background: var(--cyan);
+  font: inherit;
+}
+.note {
+  margin: 0 0 12px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.stats div {
+  padding: 8px 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.stats b {
+  display: block;
+  font:
+    700 14px Orbitron,
+    sans-serif;
+  color: var(--cyan);
+}
+.stats small {
+  display: block;
+  margin-top: 3px;
+  font:
+    600 7px Orbitron,
+    sans-serif;
+  color: var(--muted);
+}
 /* ---- touch pad ---- */
 .pad {
   display: none;
@@ -576,6 +714,22 @@ canvas {
     rgba(255, 79, 216, 0.04)
   );
   color: #ff9be9;
+}
+.pad-turbo {
+  flex: 0.7;
+  border-color: rgba(255, 216, 79, 0.35);
+  background: linear-gradient(
+    160deg,
+    rgba(255, 216, 79, 0.1),
+    rgba(255, 216, 79, 0.03)
+  );
+  color: #ffd84f;
+  opacity: 0.55;
+}
+.pad-turbo.ready {
+  opacity: 1;
+  border-color: #ffd84f;
+  animation: glowp 0.8s infinite;
 }
 .pad-btn.on {
   transform: scale(0.96);
@@ -683,6 +837,11 @@ kbd {
     opacity: 0.35;
   }
 }
+@keyframes glowp {
+  50% {
+    box-shadow: 0 0 26px rgba(255, 216, 79, 0.7);
+  }
+}
 @keyframes shake {
   25%,
   75% {
@@ -725,13 +884,17 @@ kbd {
 @media (orientation: portrait) {
   .fs .canvas-wrap {
     flex: none;
-    aspect-ratio: 4/3;
+    aspect-ratio: 4/5;
   }
   .fs .pad {
-    flex: 1;
+    flex: 0 0 auto;
+    padding: 14px;
   }
   .fs .pad-btn {
-    min-height: 0;
+    min-height: 96px;
+  }
+  .fs .game-footer {
+    margin-top: auto;
   }
 }
 
@@ -798,7 +961,7 @@ kbd {
   }
   .canvas-wrap {
     height: auto;
-    aspect-ratio: 16/10;
+    aspect-ratio: 4/3;
   }
   /* menu becomes a full-screen sheet so everything fits */
   .game-overlay {
@@ -944,6 +1107,11 @@ kbd {
   .pad-btn span {
     font-size: 9px;
   }
+  .pad-turbo {
+    margin-left: auto;
+    margin-right: 12px;
+    width: clamp(76px, 12vw, 110px);
+  }
   .fs .pad {
     flex: none;
   }
@@ -954,5 +1122,113 @@ kbd {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- real-city menu: postcards, facts, bottom sheet ---- */
+.levels button {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  min-height: 68px;
+  justify-content: flex-end;
+}
+.levels button b {
+  position: relative;
+  text-shadow: 0 1px 6px #000;
+}
+.levels span,
+.levels small {
+  position: relative;
+  color: #fff;
+  text-shadow: 0 1px 4px #000;
+}
+.fact {
+  display: block;
+  margin-top: 8px;
+  font-style: normal;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #ffd9a0;
+}
+.album {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.card-pc {
+  position: relative;
+  aspect-ratio: 240/130;
+  border-radius: 8px;
+  background: #10142c center/cover;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.card-pc span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 4px 3px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+  font:
+    600 7px Orbitron,
+    sans-serif;
+  color: #fff;
+}
+.card-pc.lock {
+  filter: grayscale(1) brightness(0.35);
+}
+@media (max-width: 760px) {
+  .game-overlay {
+    align-items: flex-end;
+    padding: 0;
+    background: rgba(5, 7, 22, 0.72);
+  }
+  .overlay-card {
+    width: 100%;
+    max-height: 90vh;
+    max-height: 90svh;
+    border-radius: 26px 26px 0 0;
+    border-bottom: 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .overlay-card::before {
+    content: "";
+    display: block;
+    width: 44px;
+    height: 4px;
+    margin: -4px auto 12px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.22);
+  }
+  .levels {
+    gap: 5px;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .game-overlay {
+    align-items: center;
+    padding: 8px;
+  }
+  .overlay-card {
+    border-radius: 18px;
+    width: min(420px, 100%);
+    border-bottom: 1px solid rgba(83, 247, 255, 0.28);
+  }
+  .overlay-card::before {
+    display: none;
+  }
+  .fact {
+    display: none;
+  }
+}
+
+@media (orientation: portrait) {
+  .fs .pad {
+    margin-top: auto;
+    margin-bottom: auto;
   }
 }

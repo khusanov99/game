@@ -70,6 +70,18 @@
                   <div class="overlay-icon" id="oIcon">✦</div>
                   <h2 id="oTitle"></h2>
                   <p id="oText"></p>
+                  <div class="nav" id="nav">
+                    <button data-p="play" type="button">
+                      🏁<span>O'YIN</span></button
+                    ><button data-p="missions" type="button">
+                      📋<span>VAZIFA</span></button
+                    ><button data-p="shop" type="button">
+                      🛒<span>DO'KON</span></button
+                    ><button data-p="medals" type="button">
+                      🏅<span>MEDAL</span>
+                    </button>
+                  </div>
+                  <div id="dailyBox"></div>
                   <div class="seg" id="mode">
                     <button data-m="campaign">KAMPANIYA</button
                     ><button data-m="endless">CHEKSIZ</button>
@@ -87,8 +99,8 @@
                   <button class="ghost-btn" id="menuButton" type="button">
                     ☰ MENYU
                   </button>
-                  <button class="ghost-btn" id="shopButton" type="button">
-                    🛒 DO'KON
+                  <button class="ghost-btn" id="shareButton" type="button">
+                    📤 ULASHISH
                   </button>
                 </div>
               </div>
@@ -97,6 +109,9 @@
             <div class="pad">
               <button class="pad-btn" id="padDuck" type="button">
                 <b>⬇</b><span>ENGASH</span>
+              </button>
+              <button class="pad-btn pad-turbo" id="padTurbo" type="button">
+                <b>⚡</b><span>TURBO</span>
               </button>
               <button class="pad-btn pad-jump" id="padJump" type="button">
                 <b>⬆</b><span>SAKRASH</span>
@@ -108,8 +123,8 @@
             <div class="controls-hint">
               <kbd>SPACE</kbd><kbd>↑</kbd><span>SAKRASH (2x)</span
               ><span>·</span> <kbd>↓</kbd><span>ENGASH</span><span>·</span>
-              <kbd>P</kbd><span>PAUZA</span><span>·</span><kbd>M</kbd
-              ><span>OVOZ</span>
+              <kbd>T</kbd><span>TURBO</span><span>·</span> <kbd>P</kbd
+              ><span>PAUZA</span><span>·</span><kbd>M</kbd><span>OVOZ</span>
             </div>
             <div class="btns">
               <button class="mini-btn" id="pauseButton" type="button">
@@ -165,6 +180,7 @@
         ZUMARY RUN © 2040 · KEYINGI AVLOD UCHUN
       </footer>
     </main>
+    <script src="./art.js"></script>
     <script src="./game.js"></script>
   </body>
 </html>
