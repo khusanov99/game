@@ -1232,3 +1232,65 @@ kbd {
     margin-bottom: auto;
   }
 }
+
+/* ---- language switcher ---- */
+.topright {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.lang {
+  display: flex;
+  gap: 4px;
+}
+.lang button {
+  padding: 7px 10px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font:
+    700 10px Orbitron,
+    "Hiragino Sans",
+    "Noto Sans JP",
+    sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.lang button.on {
+  color: #06121d;
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+.lang-menu {
+  justify-content: center;
+  margin: 0 0 10px;
+}
+@media (max-width: 520px) {
+  .live-pill {
+    display: none;
+  }
+  .lang button {
+    padding: 7px 9px;
+  }
+}
+/* Japanese reads better without wide tracking and with CJK-friendly fonts */
+html[lang="ja"] * {
+  letter-spacing: 0 !important;
+}
+html[lang="ja"] body {
+  font-family:
+    Inter, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+}
+html[lang="ja"] h1 {
+  font-size: clamp(26px, 5.4vw, 50px);
+  line-height: 1.25;
+}
+html[lang="ja"] .nav span,
+html[lang="ja"] .stat-label,
+html[lang="ja"] .levels span,
+html[lang="ja"] .stats small,
+html[lang="ja"] .card-pc span {
+  font-size: 9px;
+}

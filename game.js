@@ -129,13 +129,36 @@ const rnd = (a, b) => Math.random() * (b - a) + a;
 const fmt = (v) => String(Math.floor(v)).padStart(6, "0");
 
 const DIFF = {
-  easy: { name: "OSON", base: 4.6, max: 10, gap: 1.25 },
-  normal: { name: "O'RTACHA", base: 5.3, max: 12, gap: 1 },
-  hard: { name: "QIYIN", base: 6.2, max: 15, gap: 0.82 },
+  easy: {
+    get name() {
+      return t("diffEasy");
+    },
+    base: 4.6,
+    max: 10,
+    gap: 1.25,
+  },
+  normal: {
+    get name() {
+      return t("diffNormal");
+    },
+    base: 5.3,
+    max: 12,
+    gap: 1,
+  },
+  hard: {
+    get name() {
+      return t("diffHard");
+    },
+    base: 6.2,
+    max: 15,
+    gap: 0.82,
+  },
 };
 const THEMES = [
   {
-    n: "TOSHKENT",
+    get n() {
+      return t("city.tash");
+    },
     city: "tash",
     wx: "leaf",
     night: 0,
@@ -146,7 +169,9 @@ const THEMES = [
     body: [0.8, 0.55, 22, "#ffd9a0"],
   },
   {
-    n: "SAMARQAND",
+    get n() {
+      return t("city.sam");
+    },
     city: "sam",
     wx: "spark",
     night: 0,
@@ -157,7 +182,9 @@ const THEMES = [
     body: [0.74, 0.56, 38, "#ffcf6a"],
   },
   {
-    n: "BUXORO",
+    get n() {
+      return t("city.bux");
+    },
     city: "bux",
     wx: "dust",
     night: 0,
@@ -168,7 +195,9 @@ const THEMES = [
     body: [0.78, 0.52, 34, "#ffe29a"],
   },
   {
-    n: "XIVA",
+    get n() {
+      return t("city.khi");
+    },
     city: "khi",
     wx: "dust",
     night: 1,
@@ -179,7 +208,9 @@ const THEMES = [
     body: [0.82, 0.2, 22, "#e6ecff"],
   },
   {
-    n: "XIVA TUNI",
+    get n() {
+      return t("city.khiN");
+    },
     city: "khi",
     wx: "dust",
     night: 1,
@@ -190,7 +221,9 @@ const THEMES = [
     body: [0.84, 0.2, 20, "#a9b4ff"],
   },
   {
-    n: "TOSHKENT TUNI",
+    get n() {
+      return t("city.tashN");
+    },
     city: "tashN",
     wx: "rain",
     night: 1,
@@ -202,26 +235,21 @@ const THEMES = [
   },
 ];
 const FACTS = {
-  tash: [
-    "Toshkent teleminorasi 375 m balandlikda — Markaziy Osiyodagi eng baland inshoot.",
-    "Toshkent metrosi 1977-yilda ochilgan — Markaziy Osiyoda birinchisi.",
-  ],
-  tashN: [
-    "Toshkent teleminorasi 375 m balandlikda — Markaziy Osiyodagi eng baland inshoot.",
-    "Toshkent metrosi 1977-yilda ochilgan — Markaziy Osiyoda birinchisi.",
-  ],
-  sam: [
-    "Registon «qumli joy» degan ma'noni anglatadi.",
-    "Samarqand 2700 yildan ortiq tarixga ega shahar.",
-  ],
-  bux: [
-    "Kalon minorasi 1127-yilda qurilgan, balandligi taxminan 46 m.",
-    "Buxoro tarixiy markazi YUNESKO ro'yxatiga kiritilgan.",
-  ],
-  khi: [
-    "Xiva Ichan-Qal'a 1990-yilda YUNESKO ro'yxatiga kiritilgan.",
-    "Kalta Minor tugallanmagan — rejada ancha baland bo'lishi kerak edi.",
-  ],
+  get tash() {
+    return t("fact.tash");
+  },
+  get tashN() {
+    return t("fact.tash");
+  },
+  get sam() {
+    return t("fact.sam");
+  },
+  get bux() {
+    return t("fact.bux");
+  },
+  get khi() {
+    return t("fact.khi");
+  },
 };
 const POWER = {
   shield: { icon: "🛡", color: "#53f7ff", dur: 0 },
@@ -233,16 +261,44 @@ const POWER = {
 };
 const SKINS = [
   { id: "default", n: "ZUMARY", a: null, b: null, cost: 0 },
-  { id: "rose", n: "ROZA", a: "#ff4fd8", b: "#ff8a5c", cost: 80 },
-  { id: "mint", n: "MINT", a: "#50ffb0", b: "#53f7ff", cost: 200 },
-  { id: "gold", n: "OLTIN", a: "#ffd84f", b: "#ff7a59", cost: 400 },
+  {
+    id: "rose",
+    get n() {
+      return t("skin.rose");
+    },
+    a: "#ff4fd8",
+    b: "#ff8a5c",
+    cost: 80,
+  },
+  {
+    id: "mint",
+    get n() {
+      return t("skin.mint");
+    },
+    a: "#50ffb0",
+    b: "#53f7ff",
+    cost: 200,
+  },
+  {
+    id: "gold",
+    get n() {
+      return t("skin.gold");
+    },
+    a: "#ffd84f",
+    b: "#ff7a59",
+    cost: 400,
+  },
 ];
 
 const PX_M = 30; // world pixels per metre
 const LEVELS = [
   {
-    name: "TOSHKENT",
-    tag: "Asosiy to'siqlar",
+    get name() {
+      return t("city.tash");
+    },
+    get tag() {
+      return t("lvl.1");
+    },
     len: 600,
     base: 4.8,
     max: 8,
@@ -252,8 +308,12 @@ const LEVELS = [
     coins: 25,
   },
   {
-    name: "SAMARQAND",
-    tag: "Uchar dronlar va qo'sh to'siqlar",
+    get name() {
+      return t("city.sam");
+    },
+    get tag() {
+      return t("lvl.2");
+    },
     len: 800,
     base: 5.3,
     max: 9.5,
@@ -263,8 +323,12 @@ const LEVELS = [
     coins: 35,
   },
   {
-    name: "BUXORO",
-    tag: "Kam tortishish va chuqurlar",
+    get name() {
+      return t("city.bux");
+    },
+    get tag() {
+      return t("lvl.3");
+    },
     len: 1000,
     base: 5.6,
     max: 10.5,
@@ -276,8 +340,12 @@ const LEVELS = [
     jump: [-10.8, -9.5],
   },
   {
-    name: "XIVA TUNI",
-    tag: "Ko'rish cheklangan — oldinga ehtiyot bo'l",
+    get name() {
+      return t("city.khiN");
+    },
+    get tag() {
+      return t("lvl.4");
+    },
     len: 1200,
     base: 6,
     max: 11.5,
@@ -288,8 +356,12 @@ const LEVELS = [
     dark: true,
   },
   {
-    name: "TOSHKENT TUNI",
-    tag: "Yakuniy jang: o'qlardan qoch",
+    get name() {
+      return t("city.tashN");
+    },
+    get tag() {
+      return t("lvl.5");
+    },
     len: 1500,
     base: 6.2,
     max: 12,
@@ -310,43 +382,67 @@ let up = store.get("zr_up", { jet: 0, fuel: 0, mag: 0, sh: 0, life: 0 });
 const SHOP = [
   {
     k: "jet",
-    n: "JETPACK",
-    d: "Havoda yana bos va USHLAB TUR — uchasan!",
+    get n() {
+      return t("shop.jet.n");
+    },
+    get d() {
+      return t("shop.jet.d");
+    },
     max: 1,
     cost: [120],
   },
   {
     k: "fuel",
-    n: "YOQILG'I",
-    d: "+0.8 s parvoz vaqti",
+    get n() {
+      return t("shop.fuel.n");
+    },
+    get d() {
+      return t("shop.fuel.d");
+    },
     max: 3,
     cost: [100, 200, 350],
   },
   {
     k: "mag",
-    n: "MAGNIT+",
-    d: "Magnit +3 s uzoqroq ishlaydi",
+    get n() {
+      return t("shop.mag.n");
+    },
+    get d() {
+      return t("shop.mag.d");
+    },
     max: 2,
     cost: [90, 180],
   },
   {
     k: "sh",
-    n: "BOSHLANG'ICH QALQON",
-    d: "Har yugurish qalqon bilan boshlanadi",
+    get n() {
+      return t("shop.sh.n");
+    },
+    get d() {
+      return t("shop.sh.d");
+    },
     max: 1,
     cost: [150],
   },
   {
     k: "life",
-    n: "QO'SHIMCHA ♥",
-    d: "Kampaniyada +1 hayot",
+    get n() {
+      return t("shop.life.n");
+    },
+    get d() {
+      return t("shop.life.d");
+    },
     max: 1,
     cost: [300],
   },
   {
     k: "pet",
-    n: "ROBO-DO'ST",
-    d: "Yoningda uchadi, tangalarni o'zi tortadi",
+    get n() {
+      return t("shop.pet.n");
+    },
+    get d() {
+      return t("shop.pet.d");
+    },
     max: 1,
     cost: [250],
   },
@@ -432,7 +528,9 @@ let maxLives = 1,
   freeze = 0,
   hbT = 0,
   lastPhase = 0,
-  shopOpen = false;
+  shopOpen = false,
+  curPanel = "shop",
+  screenFn = null;
 let prefetched = -1;
 let shoutO = { text: "", t: 0, max: 1, c: "#fff" },
   flash = { c: "#fff", a: 0 };
@@ -513,29 +611,17 @@ function buildWorld() {
 }
 
 /* ============ EMOTION: shout, combo, music ============ */
-const LOSE = [
-  "Hech qisi yo'q — yana bir bor!",
-  "Deyarli bo'ldi! Yana urinib ko'r.",
-  "Chempionlar ham yiqiladi, lekin turadi.",
-  "Keyingisida albatta o'tasan!",
-];
-const WIN = [
-  "Zo'r o'ynading!",
-  "Sen haqiqiy yuguruvchisan!",
-  "Bunday tezlikni kam odam ushlaydi!",
-  "Ajoyib! Davom et!",
-];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const fuelMax = () => 2200 + 800 * up.fuel;
 function shout(text, c = "#ffd84f", ms = 1200) {
   shoutO = { text, c, t: ms, max: ms };
 }
 const COMBO_CALLS = {
-  5: ["ZO'R!", "#53f7ff"],
-  10: ["AJOYIB!", "#ffd84f"],
-  20: ["USTOZ!", "#ff4fd8"],
-  35: ["AFSONA!", "#50ffb0"],
-  50: ["ILOHIY!", "#ff8a5c"],
+  5: ["combo.5", "#53f7ff"],
+  10: ["combo.10", "#ffd84f"],
+  20: ["combo.20", "#ff4fd8"],
+  35: ["combo.35", "#50ffb0"],
+  50: ["combo.50", "#ff8a5c"],
 };
 function addCombo() {
   combo++;
@@ -543,7 +629,7 @@ function addCombo() {
   mMax("combo", combo);
   const c = COMBO_CALLS[combo];
   if (c) {
-    shout(c[0], c[1], 1100);
+    shout(t(c[0]), c[1], 1100);
     flash = { c: c[1], a: 0.16 };
     zoom = 1.04;
     vib(20);
@@ -634,24 +720,13 @@ function updateToast(delta) {
 
 /* ---- daily missions ---- */
 const MPOOL = [
-  { k: "coin", t: (n) => `Bugun ${n} ta tanga yig'`, g: [25, 60], r: 40 },
-  { k: "near", t: (n) => `${n} marta "YAQIN!" bonusini ol`, g: [3, 8], r: 45 },
-  { k: "combo", t: (n) => `${n} kombo qil`, g: [12, 30], r: 50 },
-  {
-    k: "score",
-    t: (n) => `Bir yugurishda ${n} ball to'pla`,
-    g: [400, 1200],
-    r: 55,
-  },
-  { k: "turbo", t: (n) => `Turboni ${n} marta ishlat`, g: [1, 3], r: 50 },
-  {
-    k: "fly",
-    t: (n) => `Jetpack bilan ${n} soniya uch`,
-    g: [5, 12],
-    r: 60,
-    need: "jet",
-  },
-  { k: "win", t: (n) => `${n} ta darajani tugat`, g: [1, 2], r: 80 },
+  { k: "coin", t: (n) => t("m.coin", { n }), g: [25, 60], r: 40 },
+  { k: "near", t: (n) => t("m.near", { n }), g: [3, 8], r: 45 },
+  { k: "combo", t: (n) => t("m.combo", { n }), g: [12, 30], r: 50 },
+  { k: "score", t: (n) => t("m.score", { n }), g: [400, 1200], r: 55 },
+  { k: "turbo", t: (n) => t("m.turbo", { n }), g: [1, 3], r: 50 },
+  { k: "fly", t: (n) => t("m.fly", { n }), g: [5, 12], r: 60, need: "jet" },
+  { k: "win", t: (n) => t("m.win", { n }), g: [1, 2], r: 80 },
 ];
 function genMissions() {
   const pool = MPOOL.filter((m) => !m.need || up[m.need]),
@@ -673,7 +748,7 @@ function checkM(m) {
     m.done = 1;
     wallet += m.r;
     store.set("zr_wallet", wallet);
-    toast(`✓ VAZIFA! +◎${m.r}`);
+    toast(t("mDone", { r: m.r }));
     sfx.zone();
     saveMeta();
   }
@@ -697,78 +772,122 @@ function mMax(k, v) {
 const ACH = [
   {
     id: "a1",
-    n: "BIRINCHI QADAM",
-    d: "Bir yugurishda 100 ball",
+    get n() {
+      return t("ach.a1.n");
+    },
+    get d() {
+      return t("ach.a1.d");
+    },
     ok: () => meta.bestScore >= 100,
     r: 20,
   },
   {
     id: "a2",
-    n: "TEZKOR",
-    d: "Bir yugurishda 1000 ball",
+    get n() {
+      return t("ach.a2.n");
+    },
+    get d() {
+      return t("ach.a2.d");
+    },
     ok: () => meta.bestScore >= 1000,
     r: 60,
   },
   {
     id: "a3",
-    n: "KOMBO USTASI",
-    d: "20 kombo",
+    get n() {
+      return t("ach.a3.n");
+    },
+    get d() {
+      return t("ach.a3.d");
+    },
     ok: () => meta.bestCombo >= 20,
     r: 40,
   },
   {
     id: "a4",
-    n: "AFSONA KOMBO",
-    d: "50 kombo",
+    get n() {
+      return t("ach.a4.n");
+    },
+    get d() {
+      return t("ach.a4.d");
+    },
     ok: () => meta.bestCombo >= 50,
     r: 100,
   },
   {
     id: "a5",
-    n: "TANGA OVCHISI",
-    d: "Jami 500 tanga",
+    get n() {
+      return t("ach.a5.n");
+    },
+    get d() {
+      return t("ach.a5.d");
+    },
     ok: () => meta.coinsTotal >= 500,
     r: 60,
   },
   {
     id: "a6",
-    n: "BOY",
-    d: "Jami 2000 tanga",
+    get n() {
+      return t("ach.a6.n");
+    },
+    get d() {
+      return t("ach.a6.d");
+    },
     ok: () => meta.coinsTotal >= 2000,
     r: 150,
   },
   {
     id: "a7",
-    n: "PARVOZ",
-    d: "Jami 20 soniya uchish",
+    get n() {
+      return t("ach.a7.n");
+    },
+    get d() {
+      return t("ach.a7.d");
+    },
     ok: () => meta.flyMs >= 20000,
     r: 60,
   },
   {
     id: "a8",
-    n: "TOSHKENT FATHI",
-    d: "1-darajani tugat",
+    get n() {
+      return t("ach.a8.n");
+    },
+    get d() {
+      return t("ach.a8.d");
+    },
     ok: () => (prog.stars[1] || 0) > 0,
     r: 40,
   },
   {
     id: "a9",
-    n: "CHEMPION",
-    d: "Toshkent tunidagi bossni yengish",
+    get n() {
+      return t("ach.a9.n");
+    },
+    get d() {
+      return t("ach.a9.d");
+    },
     ok: () => (prog.stars[5] || 0) > 0,
     r: 200,
   },
   {
     id: "a10",
-    n: "SADOQAT",
-    d: "3 kunlik seriya",
+    get n() {
+      return t("ach.a10.n");
+    },
+    get d() {
+      return t("ach.a10.d");
+    },
     ok: () => meta.streak >= 3,
     r: 50,
   },
   {
     id: "a11",
-    n: "TURBO",
-    d: "Turboni 5 marta ishlat",
+    get n() {
+      return t("ach.a11.n");
+    },
+    get d() {
+      return t("ach.a11.d");
+    },
     ok: () => meta.turbos >= 5,
     r: 60,
   },
@@ -791,12 +910,12 @@ function checkAch() {
 
 /* ---- XP + ranks ---- */
 const RANKS = [
-  ["YANGI", 0],
-  ["YUGURUVCHI", 100],
-  ["TEZKOR", 300],
-  ["USTA", 700],
-  ["CHEMPION", 1500],
-  ["AFSONA", 3000],
+  ["rank.0", 0],
+  ["rank.1", 100],
+  ["rank.2", 300],
+  ["rank.3", 700],
+  ["rank.4", 1500],
+  ["rank.5", 3000],
 ];
 const rankOf = (xp) => {
   let i = 0;
@@ -810,23 +929,25 @@ function gainXp(n) {
   meta.xp += Math.max(0, Math.round(n));
   const after = rankOf(meta.xp);
   if (after > before) {
-    toast(`⭐ YANGI UNVON: ${RANKS[after][0]}!`);
-    return `<br>⭐ YANGI UNVON: <b>${RANKS[after][0]}</b>!`;
+    toast(t("rankUpToast", { r: t(RANKS[after][0]) }));
+    return RANKS[after][0];
   }
-  return "";
+  return null;
 }
+const rkText = (rk) =>
+  (rk.rank ? t("rankUpHtml", { r: t(rk.rank) }) : "") +
+  t("xpLine", { n: rk.xp });
 function bookRun(winBonus) {
   meta.runs++;
   meta.dist += Math.floor(lvl ? dist : score / 10);
   meta.coinsTotal += coins;
   meta.bestScore = Math.max(meta.bestScore, Math.floor(score));
   mMax("score", Math.floor(score));
-  const msg = gainXp(score / 10 + coins * 2 + (winBonus || 0));
+  const xp = score / 10 + coins * 2 + (winBonus || 0);
+  const rank = gainXp(xp);
   checkAch();
   saveMeta();
-  return (
-    msg + `<br>+${Math.round(score / 10 + coins * 2 + (winBonus || 0))} XP`
-  );
+  return { rank, xp: Math.round(xp) };
 }
 
 /* ---- daily streak (runs once on load) ---- */
@@ -851,7 +972,7 @@ function turboAdd(n) {
   const was = turbo >= 100;
   turbo = Math.min(100, turbo + n);
   if (!was && turbo >= 100) {
-    toast("⚡ TURBO TAYYOR!  [T]");
+    toast(t("turboReady"));
     beep(1200, 0.1, "triangle", 0.05);
     vib(20);
   }
@@ -1092,36 +1213,36 @@ function renderDaily() {
   const pr = last ? 100 : Math.min(100, ((meta.xp - c0) / (n0 - c0)) * 100);
   const gift = meta.boxDay !== todayStr();
   return (
-    `<div class="xp"><span>${RANKS[ri][0]}</span><i><b style="width:${pr}%"></b></i><em>${meta.xp} XP</em></div>` +
-    `<div class="daily"><span>🔥 ${meta.streak} kunlik seriya</span>${gift ? `<button type="button" id="giftBtn">🎁 SOVG'A OL</button>` : `<span class="dim">🎁 ertaga yana</span>`}</div>`
+    `<div class="xp"><span>${t(RANKS[ri][0])}</span><i><b style="width:${pr}%"></b></i><em>${meta.xp} XP</em></div>` +
+    `<div class="daily"><span>${t("daily.streak", { n: meta.streak })}</span>${gift ? `<button type="button" id="giftBtn">${t("daily.gift")}</button>` : `<span class="dim">${t("daily.tomorrow")}</span>`}</div>`
   );
 }
 function renderMissions() {
   return (
-    `<div class="top-title">BUGUNGI VAZIFALAR</div><div class="shop">` +
+    `<div class="top-title">${t("missions.title")}</div><div class="shop">` +
     meta.missions
       .map((m) => {
         const def = MPOOL.find((x) => x.k === m.k),
           pr = Math.min(m.g, Math.floor(m.p));
-        return `<div class="shop-row"><div><b>${def.t(m.g)}</b><small>${pr} / ${m.g} · mukofot ◎${m.r}</small><i class="bar"><b style="width:${(pr / m.g) * 100}%"></b></i></div><button type="button" class="${m.done ? "done" : "lock"}">${m.done ? "✓" : "◎" + m.r}</button></div>`;
+        return `<div class="shop-row"><div><b>${def.t(m.g)}</b><small>${pr} / ${m.g} · ${t("missions.reward")} ◎${m.r}</small><i class="bar"><b style="width:${(pr / m.g) * 100}%"></b></i></div><button type="button" class="${m.done ? "done" : "lock"}">${m.done ? "✓" : "◎" + m.r}</button></div>`;
       })
       .join("") +
-    `</div><p class="note">Vazifalar har kuni yangilanadi. Mukofot avtomatik qo'shiladi.</p>`
+    `</div><p class="note">${t("missions.note")}</p>`
   );
 }
 function renderMedals() {
   const album =
-    `<div class="top-title">ALBOM — SHAHAR OTKRITKALARI</div><div class="album">` +
+    `<div class="top-title">${t("album.title")}</div><div class="album">` +
     LEVELS.map((L, i) => {
       const got = (prog.stars[i + 1] || 0) > 0,
         th = THUMBS[THEMES[L.theme].city];
       return `<div class="card-pc ${got ? "" : "lock"}" style="${th ? `background-image:url(${th})` : ""}"><span>${got ? L.name : "???"}</span></div>`;
     }).join("") +
     `</div>`;
-  const st = `<div class="stats"><div><b>${meta.runs}</b><small>YUGURISH</small></div><div><b>${meta.dist}</b><small>METR</small></div><div><b>${meta.coinsTotal}</b><small>TANGA</small></div><div><b>${meta.bestCombo}</b><small>KOMBO</small></div></div>`;
+  const st = `<div class="stats"><div><b>${meta.runs}</b><small>${t("stats.runs")}</small></div><div><b>${meta.dist}</b><small>${t("stats.dist")}</small></div><div><b>${meta.coinsTotal}</b><small>${t("stats.coins")}</small></div><div><b>${meta.bestCombo}</b><small>${t("stats.combo")}</small></div></div>`;
   return (
     album +
-    `<div class="top-title">STATISTIKA</div>${st}<div class="top-title">MEDALLAR ${Object.keys(meta.medals).length}/${ACH.length}</div><div class="shop">` +
+    `<div class="top-title">${t("stats.title")}</div>${st}<div class="top-title">${t("medals.title", { a: Object.keys(meta.medals).length, b: ACH.length })}</div><div class="shop">` +
     ACH.map(
       (a) =>
         `<div class="shop-row"><div><b>${meta.medals[a.id] ? "🏅" : "🔒"} ${a.n}</b><small>${a.d} · ◎${a.r}</small></div></div>`,
@@ -1130,20 +1251,14 @@ function renderMedals() {
   );
 }
 function showPanel(name) {
-  const T = {
-    shop: [
-      "🛒",
-      "DO'KON",
-      "Yig'gan tangalaringni foydali kuchlarga almashtir.",
-    ],
-    missions: [
-      "📋",
-      "KUNLIK VAZIFALAR",
-      "Bajar — mukofot avtomatik qo'shiladi.",
-    ],
-    medals: ["🏅", "MEDALLAR VA STATISTIKA", "Maqsadlarga yetish uchun o'yna!"],
-  }[name];
-  showOverlay(T[0], T[1], T[2], "←   ORQAGA", { panel: name });
+  curPanel = name;
+  showOverlay(
+    { shop: "🛒", missions: "📋", medals: "🏅" }[name],
+    t("panel." + name + ".t"),
+    t("panel." + name + ".d"),
+    t("back"),
+    { panel: name },
+  );
 }
 
 /* ============ HELPERS ============ */
@@ -1348,7 +1463,7 @@ function hurt(o) {
       p.jumps = 1;
     } else o.x = -999;
     sfx.hit();
-    pop(p.x, p.y - 10, "QALQON SINDI", "#53f7ff");
+    pop(p.x, p.y - 10, t("pop.shieldBroke"), "#53f7ff");
     freeze = 140;
     flash = { c: "#53f7ff", a: 0.3 };
     zoom = 1.05;
@@ -1371,7 +1486,7 @@ function hurt(o) {
     freeze = 110;
     flash = { c: "#ff3b5c", a: 0.45 };
     zoom = 1.06;
-    shout("AU!", "#ff6b8a", 700);
+    shout(t("hurt"), "#ff6b8a", 700);
     return false;
   }
   endGame();
@@ -1420,12 +1535,7 @@ function updateGame(delta) {
     const zone = Math.floor(score / 500) % 4;
     if (zone !== lastZone) {
       lastZone = zone;
-      banner = {
-        text: THEMES[zone].n,
-        sub: "YANGI SHAHAR",
-        t: 2200,
-        max: 2200,
-      };
+      banner = { text: THEMES[zone].n, sub: t("newCity"), t: 2200, max: 2200 };
       sfx.zone();
     }
     T = THEMES[zone];
@@ -1516,11 +1626,7 @@ function updateGame(delta) {
       ph = hp < 0.34 ? 2 : hp < 0.67 ? 1 : 0;
     if (ph !== lastPhase) {
       lastPhase = ph;
-      shout(
-        ph === 2 ? "ZUMARY-X G'AZABDA!" : "BOSS KUCHAYDI!",
-        "#ff6b8a",
-        1600,
-      );
+      shout(ph === 2 ? t("boss.mad") : t("boss.stronger"), "#ff6b8a", 1600);
       flash = { c: "#ff3b5c", a: 0.25 };
       zoom = 1.05;
       shake = 8;
@@ -1570,7 +1676,7 @@ function updateGame(delta) {
         score += 20;
         turboAdd(10);
         mAdd("near", 1);
-        pop(p.x + 44, p.y - 36, "YAQIN! +20", "#ffd84f");
+        pop(p.x + 44, p.y - 36, t("pop.near"), "#ffd84f");
         beep(1000, 0.07, "triangle", 0.04);
       }
     }
@@ -1619,28 +1725,16 @@ function updateGame(delta) {
         else if (it.k === "plov") {
           if (lvl && lives < maxLives) {
             lives++;
-            shout("PLOV! ♥ +1", "#ffd84f", 1000);
+            shout(t("plov1"), "#ffd84f", 1000);
           } else {
             shield = true;
-            shout("PLOV! QALQON", "#ffd84f", 1000);
+            shout(t("plov2"), "#ffd84f", 1000);
           }
         } else
           fx[it.k] = POWER[it.k].dur + (it.k === "magnet" ? 3000 * up.mag : 0);
         burst(it.x, it.y, POWER[it.k].color, 18);
         sfx.power();
-        pop(
-          it.x,
-          it.y - 12,
-          {
-            shield: "QALQON!",
-            slow: "SEKIN!",
-            x2: "×2 BALL!",
-            magnet: "MAGNIT!",
-            fuel: "YOQILG'I!",
-            plov: "PLOV!",
-          }[it.k],
-          POWER[it.k].color,
-        );
+        pop(it.x, it.y - 12, t("pw." + it.k), POWER[it.k].color);
       }
     }
   }
@@ -1986,7 +2080,8 @@ function drawItems() {
       ctx.stroke();
       noGlow();
       ctx.fillStyle = P.color;
-      ctx.font = "700 14px Orbitron, sans-serif";
+      ctx.font =
+        "700 14px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(P.icon, it.x, it.y + bob + 1);
@@ -2002,7 +2097,7 @@ function drawParticles() {
   }
   ctx.globalAlpha = 1;
   if (pops.length) {
-    ctx.font = `700 ${Math.round(13 * UI)}px Orbitron, sans-serif`;
+    ctx.font = `700 ${Math.round(13 * UI)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const q of pops) {
@@ -2030,11 +2125,11 @@ function drawFinish() {
   ctx.globalAlpha = 0.25;
   ctx.fillRect(gx + 6, groundY - 88, 98, 88);
   ctx.globalAlpha = 1;
-  ctx.font = `700 ${Math.round(12 * UI)}px Orbitron, sans-serif`;
+  ctx.font = `700 ${Math.round(12 * UI)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#fff";
-  ctx.fillText("FINISH", gx + 55, groundY - 60);
+  ctx.fillText(t("hud.finish"), gx + 55, groundY - 60);
 }
 
 function drawBoss() {
@@ -2110,7 +2205,7 @@ function drawHUD() {
   let row = m + 8 * u;
   if (lvl && state !== "ready") {
     ctx.textAlign = "left";
-    ctx.font = `700 ${Math.round(17 * u)}px Orbitron, sans-serif`;
+    ctx.font = `700 ${Math.round(17 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillStyle = "#ff6b8a";
     const hl = Math.min(lives, 6);
     ctx.fillText(
@@ -2122,9 +2217,9 @@ function drawHUD() {
   }
   if (combo >= 2 && state !== "ready") {
     ctx.textAlign = "left";
-    ctx.font = `700 ${Math.round(14 * u)}px Orbitron, sans-serif`;
+    ctx.font = `700 ${Math.round(14 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillStyle = mult() > 1 ? "#ffd84f" : "#c7edff";
-    ctx.fillText("KOMBO " + combo + "  ×" + mult(), m, row);
+    ctx.fillText(t("hud.combo") + " " + combo + "  ×" + mult(), m, row);
   }
   if (state === "play" || state === "pause") {
     const bw = 110 * u,
@@ -2139,9 +2234,13 @@ function drawHUD() {
       ctx.fill();
     }
     ctx.textAlign = "left";
-    ctx.font = `600 ${Math.round(9 * u)}px Orbitron, sans-serif`;
+    ctx.font = `600 ${Math.round(9 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillText(
-      turboT > 0 ? "TURBO!" : turbo >= 100 ? "TURBO TAYYOR [T]" : "⚡ TURBO",
+      turboT > 0
+        ? "TURBO!"
+        : turbo >= 100
+          ? t("hud.turboReady")
+          : t("hud.turbo"),
       m + bw + 6 * u,
       ty,
     );
@@ -2162,7 +2261,7 @@ function drawHUD() {
       ctx.fill();
     }
     ctx.textAlign = "center";
-    ctx.font = `600 ${Math.round(10 * u)}px Orbitron, sans-serif`;
+    ctx.font = `600 ${Math.round(10 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillStyle = "#c7edff";
     ctx.fillText(
       lvl.boss
@@ -2187,7 +2286,7 @@ function drawHUD() {
     rr(x, m - 4 * u, bw, bh, 8 * u);
     ctx.fill();
     ctx.fillStyle = P.color;
-    ctx.font = `700 ${Math.round(13 * u)}px Orbitron, sans-serif`;
+    ctx.font = `700 ${Math.round(13 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillText(P.icon, x + bw / 2, m - 4 * u + bh * 0.42);
     ctx.fillRect(
       x + 5 * u,
@@ -2204,9 +2303,9 @@ function drawHUD() {
     ctx.fillStyle = cur.a;
     glow(cur.a, 20);
     ctx.textAlign = "center";
-    ctx.font = `800 ${Math.round(26 * u)}px Orbitron, sans-serif`;
+    ctx.font = `800 ${Math.round(26 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillText(banner.text, W / 2, H * 0.3);
-    ctx.font = `500 ${Math.round(11 * u)}px Orbitron, sans-serif`;
+    ctx.font = `500 ${Math.round(11 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillText(banner.sub || "", W / 2, H * 0.3 + 28 * u);
     noGlow();
     ctx.globalAlpha = 1;
@@ -2216,7 +2315,7 @@ function drawHUD() {
       k = el < 180 ? 1 + 0.5 * (1 - el / 180) : 1;
     ctx.globalAlpha = Math.min(1, shoutO.t / 350);
     ctx.textAlign = "center";
-    ctx.font = `800 ${Math.round(Math.min(30 * u, (W * 0.92) / (shoutO.text.length * 0.78)) * k)}px Orbitron, sans-serif`;
+    ctx.font = `800 ${Math.round(Math.min(30 * u, (W * 0.92) / (shoutO.text.length * 0.78)) * k)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillStyle = shoutO.c;
     glow(shoutO.c, 18);
     ctx.fillText(shoutO.text, W / 2, H * 0.5);
@@ -2228,7 +2327,7 @@ function drawHUD() {
       0,
       Math.min(1, toastO.t / 300, (toastO.max - toastO.t) / 200 + 0.1),
     );
-    ctx.font = `700 ${Math.round(12 * u)}px Orbitron, sans-serif`;
+    ctx.font = `700 ${Math.round(12 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     const tw = ctx.measureText(toastO.text).width + 26 * u,
       ty = (lvl && state !== "ready" ? 44 : 16) * u;
     ctx.fillStyle = "rgba(10,14,34,.88)";
@@ -2280,9 +2379,9 @@ const starText = (n) => "★".repeat(n) + "☆".repeat(3 - n);
 const bestKey = () => (lvl ? "L" + (sel + 1) : diff);
 function renderTop() {
   if (!board.length)
-    return `<div class="top-title">REYTING</div><p>Hali natija yo'q. Birinchi bo'l!</p>`;
+    return `<div class="top-title">${t("top.head")}</div><p>${t("top.empty")}</p>`;
   return (
-    `<div class="top-title">ENG YAXSHI 5 NATIJA</div><ol class="top">` +
+    `<div class="top-title">${t("top.best5")}</div><ol class="top">` +
     board
       .map(
         (r, i) =>
@@ -2294,7 +2393,7 @@ function renderTop() {
 }
 function renderSkins() {
   return (
-    `<div class="top-title">KOSTYUM · ◎ ${wallet}</div><div class="skins">` +
+    `<div class="top-title">${t("skins.title", { w: wallet })}</div><div class="skins">` +
     SKINS.map((s) => {
       const has = owned.includes(s.id);
       return `<button type="button" data-s="${s.id}" class="${skin === s.id ? "on" : ""}${has ? "" : " lock"}" style="--c:${s.a || "#53f7ff"}"><i></i>${s.n}${has ? "" : `<small>◎${s.cost}</small>`}</button>`;
@@ -2310,7 +2409,7 @@ function buildThumbs() {
 }
 function renderLevels() {
   return (
-    `<div class="top-title">SHAHARLAR</div><div class="levels">` +
+    `<div class="top-title">${t("cities.title")}</div><div class="levels">` +
     LEVELS.map((L, i) => {
       const locked = i >= prog.unlocked,
         th = THUMBS[THEMES[L.theme].city];
@@ -2324,7 +2423,7 @@ function renderLevels() {
 }
 function renderShop() {
   return (
-    `<div class="top-title">DO'KON · ◎ ${wallet}</div><div class="shop">` +
+    `<div class="top-title">${t("shop.title", { w: wallet })}</div><div class="shop">` +
     SHOP.map((it) => {
       const lv = up[it.k] || 0,
         maxed = lv >= it.max,
@@ -2361,7 +2460,7 @@ function showOverlay(icon, title, text, btn, o = {}) {
           ? renderMedals()
           : "";
   $("shareButton").style.display = o.share ? "flex" : "none";
-  $("menuButton").textContent = o.menuLabel || "☰ MENYU";
+  $("menuButton").textContent = o.menuLabel || t("menuBtn");
   shopOpen = !!o.panel;
   $("overlay").classList.remove("hidden");
   paintDiff();
@@ -2375,24 +2474,33 @@ function paintDiff() {
     .forEach((b) => b.classList.toggle("on", b.dataset.m === mode));
 }
 function showReady() {
-  if (mode === "campaign") {
-    const L = LEVELS[sel];
-    showOverlay(
-      "✦",
-      `DARAJA ${sel + 1}: ${L.name}`,
-      `${L.tag}.<br>Maqsad: <b>${L.len} m</b> yugur · <b>${L.coins}</b> tanga yig' · 3 ta ♥<em class="fact">💡 ${pick(FACTS[THEMES[L.theme].city])}</em>`,
-      `▶   DARAJA ${sel + 1}NI BOSHLA`,
-      { menu: true, skins: true },
-    );
-  } else {
-    showOverlay(
-      "✦",
-      "TAYYORMISAN, YUGURUVCHI?",
-      "Cheksiz rejim: to'xtamasdan yugur.<br>Har 500 ballda yangi zona boshlanadi.",
-      "▶   YUGURISHNI BOSHLA!",
-      { menu: true, skins: true, top: true },
-    );
-  }
+  const render = () => {
+    if (mode === "campaign") {
+      const L = LEVELS[sel];
+      showOverlay(
+        "✦",
+        t("ready.title", { n: sel + 1, name: L.name }),
+        t("ready.text", {
+          tag: L.tag,
+          len: L.len,
+          coins: L.coins,
+          fact: pick(FACTS[THEMES[L.theme].city]),
+        }),
+        t("ready.btn", { n: sel + 1 }),
+        { menu: true, skins: true },
+      );
+    } else {
+      showOverlay(
+        "✦",
+        t("endless.title"),
+        t("endless.text"),
+        t("endless.btn"),
+        { menu: true, skins: true, top: true },
+      );
+    }
+  };
+  screenFn = render;
+  render();
 }
 
 /* ============ FLOW ============ */
@@ -2462,7 +2570,7 @@ function startGame() {
   if (COARSE && !fsOn) setFs(true);
   if (lvl)
     banner = {
-      text: `DARAJA ${sel + 1}`,
+      text: t("banner.level", { n: sel + 1 }),
       sub: lvl.name + " · " + lvl.tag,
       t: 2800,
       max: 2800,
@@ -2472,7 +2580,7 @@ function startGame() {
   startMusic();
   if (up.jet && !store.get("zr_jh", 0)) {
     store.set("zr_jh", 1);
-    shout("JETPACK: havoda yana bos va USHLAB TUR!", "#ffb36b", 3400);
+    shout(t("jet.hint"), "#ffb36b", 3400);
   }
 }
 function goMenu() {
@@ -2483,13 +2591,11 @@ function pauseGame() {
   if (state !== "play") return;
   state = "pause";
   duckKey = duckPtr = duckBtn = jumpHeld = false;
-  showOverlay(
-    "❚❚",
-    "PAUZA",
-    "Davom etish uchun tugmani bosing.",
-    "▶   DAVOM ETISH",
-    { menuBtn: true },
-  );
+  screenFn = () =>
+    showOverlay("❚❚", t("pause.title"), t("pause.text"), t("pause.btn"), {
+      menuBtn: true,
+    });
+  screenFn();
 }
 function resumeGame() {
   if (state !== "pause") return;
@@ -2524,13 +2630,15 @@ function endGame() {
     state = "revive";
     setTimeout(() => {
       if (state !== "revive") return;
-      showOverlay(
-        "♥",
-        "TIRILASANMI?",
-        `Bir marta davom et — atigi <b>◎${REVIVE_COST}</b>.<br>Hamyoning: ◎ ${wallet}`,
-        `♥   TIRILISH · ◎${REVIVE_COST}`,
-        { menuBtn: true, menuLabel: "KERAK EMAS" },
-      );
+      screenFn = () =>
+        showOverlay(
+          "♥",
+          t("revive.title"),
+          t("revive.text", { c: REVIVE_COST, w: wallet }),
+          t("revive.btn", { c: REVIVE_COST }),
+          { menuBtn: true, menuLabel: t("revive.no") },
+        );
+      screenFn();
     }, 500);
     return;
   }
@@ -2561,7 +2669,7 @@ function doRevive() {
   $("overlay").classList.add("hidden");
   flash = { c: "#ffffff", a: 0.4 };
   zoom = 1.07;
-  shout("QAYTA OMON!", "#50ffb0", 1200);
+  shout(t("revive.shout"), "#50ffb0", 1200);
   [500, 700, 1000].forEach((f, i) =>
     setTimeout(() => beep(f, 0.12, "triangle", 0.06), i * 90),
   );
@@ -2581,25 +2689,49 @@ function finalizeOver() {
   store.set("zr_wallet", wallet);
   const rk = bookRun(0);
   updateHUD();
+  const L0 = lvl,
+    dist0 = Math.floor(dist),
+    coins0 = coins,
+    w0 = wallet,
+    best0 = bests[diff] || 0,
+    dk = diff,
+    mi = Math.floor(Math.random() * 4);
   setTimeout(() => {
     if (state !== "over") return;
-    if (lvl) {
-      showOverlay(
-        "✕",
-        "DARAJA TUGAMADI",
-        `MASOFA: <b>${Math.floor(dist)} / ${lvl.len} m</b> · TANGA: <b>${coins}</b> (jami ◎ ${wallet})<br>${pick(LOSE)}${rk}`,
-        "↻   QAYTA URINISH",
-        { menu: true, skins: true, share: true },
-      );
-    } else {
-      showOverlay(
-        isBest ? "★" : "✕",
-        isBest ? "YANGI REKORD!" : "YUGURISH TUGADI",
-        `NATIJA: <b>${fmt(score)}</b> · TANGA: <b>${coins}</b> (jami ◎ ${wallet})<br>${pick(LOSE)}<br>REKORD (${DIFF[diff].name}): <b>${fmt(bests[diff] || 0)}</b>${rk}`,
-        "↻   YANA URINISH",
-        { menu: true, skins: true, top: true, share: true },
-      );
-    }
+    screenFn = () => {
+      if (L0)
+        showOverlay(
+          "✕",
+          t("lose.title"),
+          t("lose.text", {
+            d: dist0,
+            len: L0.len,
+            c: coins0,
+            w: w0,
+            msg: t("lose")[mi],
+            rk: rkText(rk),
+          }),
+          t("lose.btn"),
+          { menu: true, skins: true, share: true },
+        );
+      else
+        showOverlay(
+          isBest ? "★" : "✕",
+          t(isBest ? "over.record" : "over.title"),
+          t("over.text", {
+            s: fmt(s),
+            c: coins0,
+            w: w0,
+            msg: t("lose")[mi],
+            d: DIFF[dk].name,
+            b: fmt(best0),
+            rk: rkText(rk),
+          }),
+          t("over.btn"),
+          { menu: true, skins: true, top: true, share: true },
+        );
+    };
+    screenFn();
   }, 650);
 }
 
@@ -2629,7 +2761,7 @@ function winLevel() {
     }, i * 130);
   if (L.boss) burst(W - 78, H * 0.34, "#ff3b5c", 60);
   const st = 1 + (coins >= L.coins ? 1 : 0) + (hits === 0 ? 1 : 0);
-  if (!(prog.stars[id] > 0)) toast("🖼 Yangi otkritka: " + L.name);
+  if (!(prog.stars[id] > 0)) toast(t("postcard", { n: L.name }));
   prog.stars[id] = Math.max(prog.stars[id] || 0, st);
   if (id < LEVELS.length) prog.unlocked = Math.max(prog.unlocked, id + 1);
   store.set("zr_prog", prog);
@@ -2645,15 +2777,32 @@ function winLevel() {
     store.set("zr_sel", sel);
   }
   updateHUD();
+  const c0 = coins,
+    h0 = hits,
+    w0 = wallet,
+    mi = Math.floor(Math.random() * 4);
   setTimeout(() => {
     if (state !== "won") return;
-    showOverlay(
-      starText(st),
-      last ? "O'YIN YAKUNLANDI!" : "DARAJA TUGADI!",
-      `${L.name}<br>★ tugatish ✓ · ★ ${coins}/${L.coins} tanga ${coins >= L.coins ? "✓" : "✗"} · ★ zarbasiz ${hits === 0 ? "✓" : "✗ (" + hits + ")"}<br>+${st * 10} bonus tanga · jami ◎ ${wallet}<br>${pick(WIN)}<em class="fact">💡 ${pick(FACTS[THEMES[L.theme].city])}</em>${rk}`,
-      last ? "↻   QAYTA O'YNA" : "▶   KEYINGI DARAJA",
-      { menuBtn: true, share: true },
-    );
+    screenFn = () =>
+      showOverlay(
+        starText(st),
+        t(last ? "win.final" : "win.title"),
+        t("win.text", {
+          name: L.name,
+          c: c0,
+          g: L.coins,
+          ok: c0 >= L.coins ? "✓" : "✗",
+          nh: h0 === 0 ? "✓" : "✗ (" + h0 + ")",
+          b: st * 10,
+          w: w0,
+          msg: t("win")[mi],
+          fact: pick(FACTS[THEMES[L.theme].city]),
+          rk: rkText(rk),
+        }),
+        t(last ? "win.btnFinal" : "win.btnNext"),
+        { menuBtn: true, share: true },
+      );
+    screenFn();
   }, 900);
 }
 
@@ -2866,12 +3015,12 @@ $("nav").addEventListener("click", (e) => {
 });
 $("dailyBox").addEventListener("click", (e) => {
   if (!e.target.closest("#giftBtn")) return;
-  const t = todayStr();
-  if (meta.boxDay === t) return;
+  const td = todayStr();
+  if (meta.boxDay === td) return;
   const lucky = Math.random() < 0.2 ? 100 : 0,
     amt = 30 + Math.min(meta.streak, 7) * 15 + lucky;
   wallet += amt;
-  meta.boxDay = t;
+  meta.boxDay = td;
   store.set("zr_wallet", wallet);
   checkAch();
   saveMeta();
@@ -2879,13 +3028,17 @@ $("dailyBox").addEventListener("click", (e) => {
   vib(30);
   $("dailyBox").innerHTML =
     renderDaily() +
-    `<div class="gift-got">🎁 +◎${amt}${lucky ? " · OMADLI QUTI! 🍀" : ""}</div>`;
+    `<div class="gift-got">🎁 +◎${amt}${lucky ? t("gift.lucky") : ""}</div>`;
   if ($("skinBox").innerHTML) $("skinBox").innerHTML = renderSkins();
 });
 $("shareButton").addEventListener("click", async () => {
   const b = $("shareButton"),
     old = b.textContent;
-  const txt = `ZUMARY RUN: ${fmt(score)} ball, ${coins} tanga${lvl ? ` · ${lvl.name} ${Math.floor(dist)} m` : ""}! Meni yeta olasanmi? 🏃⚡`;
+  const txt = t("share.text", {
+    s: fmt(score),
+    c: coins,
+    lv: lvl ? t("share.lv", { name: lvl.name, d: Math.floor(dist) }) : "",
+  });
   try {
     if (navigator.share)
       await navigator.share({
@@ -2895,7 +3048,7 @@ $("shareButton").addEventListener("click", async () => {
       });
     else {
       await navigator.clipboard.writeText(txt + " " + location.href);
-      b.textContent = "✓ NUSXALANDI";
+      b.textContent = t("share.copied");
       setTimeout(() => (b.textContent = old), 1500);
     }
   } catch (x) {}
@@ -2976,6 +3129,16 @@ document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement && fsOn) setFs(false);
   resize();
 });
+
+/* ============ LANGUAGE ============ */
+window.onLangChange = () => {
+  hudLast.score = hudLast.best = hudLast.speed = hudLast.coins = undefined;
+  if (!$("overlay").classList.contains("hidden")) {
+    if (shopOpen) showPanel(curPanel);
+    else if (screenFn) screenFn();
+  }
+  updateHUD();
+};
 
 /* ============ INIT ============ */
 if ("ResizeObserver" in window)

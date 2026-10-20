@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#070816" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <title>ZUMARY yugurish — Kelajak o'yini 2040</title>
+    <title>ZUMARY Run</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap"
@@ -23,121 +23,138 @@
         <div class="brand">
           <div class="brand-icon">ϟ</div>
           <div>
-            <div class="brand-name">ZUMARY <span>Yugurish o'yini</span></div>
-            <div class="brand-sub">KELAJAK O'YINI</div>
+            <div class="brand-name" data-i18n-html="brand">
+              ZUMARY <span>Runner</span>
+            </div>
+            <div class="brand-sub" data-i18n="brandSub"></div>
           </div>
         </div>
-        <div class="live-pill">
-          <span class="live-dot"></span>SISTEMA ONLINE
+        <div class="topright">
+          <div class="lang" aria-label="Language">
+            <button type="button" data-lang="uz">UZ</button
+            ><button type="button" data-lang="en">EN</button
+            ><button type="button" data-lang="ja">日本語</button>
+          </div>
+          <div class="live-pill">
+            <span class="live-dot"></span><span data-i18n="online"></span>
+          </div>
         </div>
       </header>
 
       <section class="hero">
-        <div class="eyebrow">✦ KELAJAK HARAKATDA</div>
-        <h1>KELAJAGING UCHUN <span>HARAKATLAN.</span></h1>
-        <p>
-          Sakra. Engash. Tanga yig'. Omon qol. Rekordingni yangila!<br />Qanchalik
-          uzoqqa bora olasan?
-        </p>
+        <div class="eyebrow" data-i18n="eyebrow"></div>
+        <h1 data-i18n-html="h1"></h1>
+        <p data-i18n-html="heroP"></p>
       </section>
 
       <section class="game-shell" id="shell">
         <div class="game-inner">
           <div class="hud">
             <div class="stat">
-              <div class="stat-label">NATIJA</div>
+              <div class="stat-label" data-i18n="lScore"></div>
               <div class="stat-value" id="score">000000</div>
             </div>
             <div class="stat">
-              <div class="stat-label">REKORD</div>
+              <div class="stat-label" data-i18n="lBest"></div>
               <div class="stat-value" id="best">000000</div>
             </div>
             <div class="stat">
-              <div class="stat-label">TEZLIK</div>
+              <div class="stat-label" data-i18n="lSpeed"></div>
               <div class="stat-value" id="speed">1.0x</div>
             </div>
             <div class="stat">
-              <div class="stat-label">TANGA</div>
+              <div class="stat-label" data-i18n="lCoins"></div>
               <div class="stat-value" id="coins">0</div>
             </div>
           </div>
 
           <div class="stage">
             <div class="canvas-wrap" id="wrap">
-              <canvas id="game" aria-label="ZUMARY yugurish o'yini"></canvas>
+              <canvas id="game" aria-label="ZUMARY Run"></canvas>
               <div class="game-overlay" id="overlay">
                 <div class="overlay-card">
+                  <div class="lang lang-menu" aria-label="Language">
+                    <button type="button" data-lang="uz">UZ</button
+                    ><button type="button" data-lang="en">EN</button
+                    ><button type="button" data-lang="ja">日本語</button>
+                  </div>
                   <div class="overlay-icon" id="oIcon">✦</div>
                   <h2 id="oTitle"></h2>
                   <p id="oText"></p>
                   <div class="nav" id="nav">
                     <button data-p="play" type="button">
-                      🏁<span>O'YIN</span></button
+                      🏁<span data-i18n="navPlay"></span></button
                     ><button data-p="missions" type="button">
-                      📋<span>VAZIFA</span></button
+                      📋<span data-i18n="navMissions"></span></button
                     ><button data-p="shop" type="button">
-                      🛒<span>DO'KON</span></button
+                      🛒<span data-i18n="navShop"></span></button
                     ><button data-p="medals" type="button">
-                      🏅<span>MEDAL</span>
+                      🏅<span data-i18n="navMedals"></span>
                     </button>
                   </div>
                   <div id="dailyBox"></div>
                   <div class="seg" id="mode">
-                    <button data-m="campaign">KAMPANIYA</button
-                    ><button data-m="endless">CHEKSIZ</button>
+                    <button data-m="campaign" data-i18n="modeCampaign"></button
+                    ><button data-m="endless" data-i18n="modeEndless"></button>
                   </div>
                   <div class="seg" id="diff">
-                    <button data-d="easy">OSON</button
-                    ><button data-d="normal">O'RTACHA</button
-                    ><button data-d="hard">QIYIN</button>
+                    <button data-d="easy" data-i18n="diffEasy"></button
+                    ><button data-d="normal" data-i18n="diffNormal"></button
+                    ><button data-d="hard" data-i18n="diffHard"></button>
                   </div>
                   <div id="levelBox"></div>
                   <div id="skinBox"></div>
                   <div id="topBox"></div>
                   <div id="shopBox"></div>
                   <button class="primary-btn" id="startButton"></button>
-                  <button class="ghost-btn" id="menuButton" type="button">
-                    ☰ MENYU
-                  </button>
-                  <button class="ghost-btn" id="shareButton" type="button">
-                    📤 ULASHISH
-                  </button>
+                  <button
+                    class="ghost-btn"
+                    id="menuButton"
+                    type="button"
+                  ></button>
+                  <button
+                    class="ghost-btn"
+                    id="shareButton"
+                    type="button"
+                    data-i18n="share"
+                  ></button>
                 </div>
               </div>
             </div>
 
             <div class="pad">
               <button class="pad-btn" id="padDuck" type="button">
-                <b>⬇</b><span>ENGASH</span>
+                <b>⬇</b><span data-i18n="padDuck"></span>
               </button>
               <button class="pad-btn pad-turbo" id="padTurbo" type="button">
-                <b>⚡</b><span>TURBO</span>
+                <b>⚡</b><span data-i18n="padTurbo"></span>
               </button>
               <button class="pad-btn pad-jump" id="padJump" type="button">
-                <b>⬆</b><span>SAKRASH</span>
+                <b>⬆</b><span data-i18n="padJump"></span>
               </button>
             </div>
           </div>
 
           <div class="game-footer">
             <div class="controls-hint">
-              <kbd>SPACE</kbd><kbd>↑</kbd><span>SAKRASH (2x)</span
-              ><span>·</span> <kbd>↓</kbd><span>ENGASH</span><span>·</span>
-              <kbd>T</kbd><span>TURBO</span><span>·</span> <kbd>P</kbd
-              ><span>PAUZA</span><span>·</span><kbd>M</kbd><span>OVOZ</span>
+              <kbd>SPACE</kbd><kbd>↑</kbd><span data-i18n="hintJump"></span
+              ><span>·</span> <kbd>↓</kbd><span data-i18n="hintDuck"></span
+              ><span>·</span> <kbd>T</kbd><span data-i18n="hintTurbo"></span
+              ><span>·</span> <kbd>P</kbd><span data-i18n="hintPause"></span
+              ><span>·</span><kbd>M</kbd><span data-i18n="hintSound"></span>
             </div>
             <div class="btns">
               <button class="mini-btn" id="pauseButton" type="button">
-                ❚❚<span class="lbl"> PAUZA</span>
+                ❚❚<span class="lbl" data-i18n="btnPause"></span>
               </button>
               <button class="mini-btn" id="muteButton" type="button">
-                🔊<span class="lbl"> OVOZ</span>
+                🔊<span class="lbl" data-i18n="btnSound"></span>
               </button>
               <button class="mini-btn" id="restartButton" type="button">
-                ↻<span class="lbl"> QAYTA</span>
+                ↻<span class="lbl" data-i18n="btnRestart"></span>
               </button>
               <button class="mini-btn" id="fullscreenButton" type="button">
-                ⛶<span class="lbl"> KATTA EKRAN</span>
+                ⛶<span class="lbl" data-i18n="btnFull"></span>
               </button>
             </div>
           </div>
@@ -148,38 +165,28 @@
         <article class="feature">
           <div class="feature-icon">⚡</div>
           <div>
-            <h3>Ikki karra sakrash va engashish</h3>
-            <p>
-              Tugmani ushlab baland sakra, havoda yana sakra. Uchar dronlar
-              ostidan engashib o't.
-            </p>
+            <h3 data-i18n="f1h"></h3>
+            <p data-i18n="f1p"></p>
           </div>
         </article>
         <article class="feature">
           <div class="feature-icon">◈</div>
           <div>
-            <h3>Quvvat kuchlari va kostyumlar</h3>
-            <p>
-              Qalqon, sekinlashuv, ×2 ball, magnit. Tangalar bilan yangi
-              kostyumlar och.
-            </p>
+            <h3 data-i18n="f2h"></h3>
+            <p data-i18n="f2p"></p>
           </div>
         </article>
         <article class="feature">
           <div class="feature-icon">◎</div>
           <div>
-            <h3>Zonalar va reyting</h3>
-            <p>
-              Har 500 ballda yangi zona. 3 qiyinlik darajasi, eng yaxshi 5
-              natija saqlanadi.
-            </p>
+            <h3 data-i18n="f3h"></h3>
+            <p data-i18n="f3p"></p>
           </div>
         </article>
       </section>
-      <footer class="bottom-note">
-        ZUMARY RUN © 2040 · KEYINGI AVLOD UCHUN
-      </footer>
+      <footer class="bottom-note" data-i18n="foot"></footer>
     </main>
+    <script src="./i18n.js"></script>
     <script src="./art.js"></script>
     <script src="./game.js"></script>
   </body>
