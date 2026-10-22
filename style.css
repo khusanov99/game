@@ -983,7 +983,7 @@ kbd {
   .btns {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
   .mini-btn {
     min-height: 44px;
@@ -1006,7 +1006,7 @@ kbd {
   }
 }
 .fs .btns {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
 }
 
 /* ---- short landscape phones ---- */
@@ -1293,4 +1293,36 @@ html[lang="ja"] .levels span,
 html[lang="ja"] .stats small,
 html[lang="ja"] .card-pc span {
   font-size: 9px;
+}
+
+/* ---- phones: keep the look, drop what the GPU has to repaint every frame ---- */
+@media (pointer: coarse) {
+  body::before {
+    display: none;
+  }
+  .live-dot,
+  .daily button {
+    animation: none;
+  }
+  .pad-turbo.ready {
+    animation: none;
+    box-shadow: inset 0 0 0 2px #ffd84f;
+  }
+  .game-shell {
+    box-shadow: none;
+  }
+  .game-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+/* while playing full-screen nothing else on the page needs to be composited */
+body.fs-lock::before {
+  display: none;
+}
+body.fs-lock .topbar,
+body.fs-lock .hero,
+body.fs-lock .feature-grid,
+body.fs-lock .bottom-note {
+  display: none;
 }

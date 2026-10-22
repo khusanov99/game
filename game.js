@@ -8,7 +8,7 @@ const $ = (id) => document.getElementById(id);
 const canvas = $("game"),
   wrap = $("wrap"),
   shell = $("shell"),
-  ctx = canvas.getContext("2d", { alpha: false });
+  ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
 
 if (!ctx.roundRect) {
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -32,19 +32,16 @@ let W = 900,
 const COARSE = window.matchMedia("(pointer:coarse)").matches;
 
 /* ============ QUALITY ============ */
-const Q = {
-  level: COARSE ? 1 : 0,
-  shadow: !COARSE,
-  flat: false,
-  dpr: COARSE ? 1.5 : 2,
-  maxP: COARSE ? 70 : 140,
-};
+const Q = { level: 0, shadow: !COARSE, flat: false, dpr: 2, maxP: 140 };
 function setQuality(l) {
   Q.level = l;
-  Q.shadow = l === 0;
+  Q.shadow = l === 0 && !COARSE; // real shadowBlur only on desktop at the top level
   Q.flat = l >= 2;
-  Q.dpr = l >= 2 ? 1 : COARSE ? 1.5 : 2;
-  Q.maxP = [140, 70, 40][Math.min(l, 2)];
+  Q.dpr = [2, 1.5, 1, 0.75][Math.min(l, 3)];
+  Q.maxP = [140, 70, 40, 24][Math.min(l, 3)];
+  skyKey = "";
+  gndKey = "";
+  buildWeather();
   resize();
 }
 const glow = (c, b) => {
@@ -63,16 +60,53 @@ const grad = (x0, y0, x1, y1, c0, c1) => {
   g.addColorStop(1, c1);
   return g;
 };
+const GLOWS = {};
+function glowSprite(c) {
+  // pre-rendered soft glow: one cheap drawImage instead of shadowBlur
+  if (!GLOWS[c]) {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 64;
+    const g = cv.getContext("2d"),
+      gr = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+    gr.addColorStop(0, c + "cc");
+    gr.addColorStop(0.4, c + "55");
+    gr.addColorStop(1, c + "00");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 64, 64);
+    GLOWS[c] = cv;
+  }
+  return GLOWS[c];
+}
 const halo = (x, y, w, h, r, c) => {
-  // cheap glow when real shadows are off
-  if (Q.shadow) return;
-  ctx.globalAlpha = 0.16;
-  ctx.fillStyle = c;
-  ctx.beginPath();
-  ctx.roundRect(x - 4, y - 4, w + 8, h + 8, r + 3);
-  ctx.fill();
+  if (Q.shadow || Q.flat) return;
+  const d = Math.max(w, h) * 2.3,
+    cx = x + w / 2,
+    cy = y + h / 2;
+  ctx.globalAlpha = 0.55;
+  ctx.drawImage(glowSprite(c), cx - d / 2, cy - d / 2, d, d);
   ctx.globalAlpha = 1;
 };
+let hazPat = null;
+function hazardPattern() {
+  if (!hazPat) {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 16;
+    const g = cv.getContext("2d"),
+      im = g.createImageData(16, 16);
+    for (let y = 0; y < 16; y++)
+      for (let x = 0; x < 16; x++) {
+        const i = (y * 16 + x) * 4,
+          dark = (x + y) % 16 < 8;
+        im.data[i] = dark ? 23 : 255;
+        im.data[i + 1] = dark ? 23 : 194;
+        im.data[i + 2] = dark ? 31 : 26;
+        im.data[i + 3] = 255;
+      }
+    g.putImageData(im, 0, 0);
+    hazPat = ctx.createPattern(cv, "repeat");
+  }
+  return hazPat;
+}
 
 function resize() {
   const cw = Math.max(200, wrap.clientWidth),
@@ -93,9 +127,14 @@ function resize() {
   groundY = H - 58;
   UI = Math.max(1, 0.95 / s);
   DPR = Math.min(window.devicePixelRatio || 1, Q.dpr);
-  canvas.width = Math.round(cw * DPR);
-  canvas.height = Math.round(ch * DPR);
+  const nw = Math.round(cw * DPR),
+    nh = Math.round(ch * DPR);
+  if (canvas.width !== nw || canvas.height !== nh) {
+    canvas.width = nw;
+    canvas.height = nh;
+  }
   ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+  if (COARSE) ctx.imageSmoothingQuality = "low";
   player.x = Math.round(Math.min(190, Math.max(105, W * 0.19)));
   const dy = groundY - oldG;
   if (dy && obstacles) {
@@ -258,6 +297,8 @@ const POWER = {
   magnet: { icon: "🧲", color: "#ff4fd8", dur: 8000 },
   fuel: { icon: "⛽", color: "#ffb36b", dur: 0 },
   plov: { icon: "🍚", color: "#ffd84f", dur: 0 },
+  hover: { icon: "🛹", color: "#53f7ff", dur: 9000 },
+  box: { icon: "🎁", color: "#ff4fd8", dur: 0 },
 };
 const SKINS = [
   { id: "default", n: "ZUMARY", a: null, b: null, cost: 0 },
@@ -319,7 +360,7 @@ const LEVELS = [
     max: 9.5,
     gap: 1.15,
     theme: 1,
-    types: ["block", "drone", "double"],
+    types: ["block", "drone", "double", "train"],
     coins: 35,
   },
   {
@@ -334,7 +375,7 @@ const LEVELS = [
     max: 10.5,
     gap: 1.1,
     theme: 2,
-    types: ["block", "drone", "pit"],
+    types: ["block", "drone", "pit", "train"],
     coins: 45,
     g: 0.4,
     jump: [-10.8, -9.5],
@@ -351,7 +392,7 @@ const LEVELS = [
     max: 11.5,
     gap: 1.05,
     theme: 4,
-    types: ["block", "drone", "pit", "double"],
+    types: ["block", "drone", "pit", "double", "train"],
     coins: 50,
     dark: true,
   },
@@ -367,7 +408,7 @@ const LEVELS = [
     max: 12,
     gap: 1.7,
     theme: 5,
-    types: ["block", "pit", "drone"],
+    types: ["block", "pit", "drone", "train"],
     coins: 60,
     boss: true,
   },
@@ -531,7 +572,12 @@ let maxLives = 1,
   shopOpen = false,
   curPanel = "shop",
   screenFn = null;
-let prefetched = -1;
+let prefetched = -1,
+  extraGap = 0,
+  cleanT = 0,
+  boardT = 0,
+  chaseX = -120,
+  trainHint = false;
 let shoutO = { text: "", t: 0, max: 1, c: "#fff" },
   flash = { c: "#fff", a: 0 };
 let fx, obstacles, items, particles, pops, stars, layers;
@@ -560,6 +606,7 @@ const player = {
   g: 0.65,
   grounded: true,
   jumps: 2,
+  pb: groundY,
   trail: [],
 };
 
@@ -654,7 +701,7 @@ function musicTick() {
     pent = [0, 3, 5, 7, 10];
   if (st % 4 === 0)
     beep(noteHz(root - 12 + [0, 0, 5, 3][st >> 2]), 0.18, "triangle", 0.05);
-  if (st % 2 === 0 || Math.random() < 0.35)
+  if (st % 2 === 0 || (!COARSE && Math.random() < 0.35))
     beep(
       noteHz(root + 12 + pent[(st * 3 + (st >> 3)) % 5]),
       0.08,
@@ -998,12 +1045,22 @@ let ART = null,
   midOff = 0,
   gndOff = 0,
   birds = [];
+const ARTOPT = { coarse: COARSE };
 function artFor(city) {
-  if (!ART || ART.city !== city) ART = Art.get(city, { coarse: COARSE });
+  const c = Art.peek(city);
+  if (c) {
+    ART = c;
+    return c;
+  }
+  if (!ART || !ART.far.width) {
+    ART = Art.get(city, ARTOPT);
+    return ART;
+  } // first paint only
+  Art.getAsync(city, ARTOPT); // otherwise build quietly in the background
   return ART;
 }
 function buildWeather() {
-  const n = Q.level >= 2 ? 0 : COARSE ? 24 : 45;
+  const n = Q.level >= 2 ? 0 : Q.level === 1 ? 24 : COARSE ? 32 : 45;
   wx = Array.from({ length: n }, () => ({
     x: rnd(0, W),
     y: rnd(0, groundY),
@@ -1261,6 +1318,170 @@ function showPanel(name) {
   );
 }
 
+/* ============ CHASE · TRAINS · HOVERBOARD · MYSTERY BOX ============ */
+function compactInPlace(a, keep) {
+  let j = 0;
+  for (let i = 0; i < a.length; i++) if (keep(a[i])) a[j++] = a[i];
+  a.length = j;
+  return a;
+}
+function chaseBark() {
+  beep(180, 0.1, "sawtooth", 0.06, -70);
+  setTimeout(() => beep(160, 0.12, "sawtooth", 0.06, -60), 140);
+  vib(30);
+}
+function openBox(x, y) {
+  const r = Math.random();
+  burst(x, y, "#ff4fd8", 24);
+  sfx.power();
+  if (r < 0.3) {
+    coins += 15;
+    score += 150;
+    pop(x, y - 14, "+◎15", "#ffd84f");
+    shout("+◎15", "#ffd84f", 800);
+  } else if (r < 0.5) {
+    shield = true;
+    shout(t("pw.shield"), "#53f7ff", 900);
+  } else if (r < 0.65) {
+    turbo = 100;
+    shout(t("box.turbo"), "#53f7ff", 1000);
+  } else if (r < 0.8) {
+    boardT = 9000;
+    shout(t("pw.hover"), "#53f7ff", 1000);
+  } else if (r < 0.92) {
+    if (lives < maxLives) {
+      lives++;
+      cleanT = 0;
+    } else shield = true;
+    shout(t("pw.plov"), "#ffd84f", 1000);
+  } else {
+    coins += 60;
+    score += 600;
+    shout(t("box.jackpot", { n: 60 }), "#ffd84f", 1300);
+    flash = { c: "#ffd84f", a: 0.3 };
+    zoom = 1.05;
+  }
+}
+function drawTrain(o) {
+  // metro car: its roof is a platform you can run on
+  ctx.fillStyle = "#2f6fd1";
+  rr(o.x, o.y, o.w, o.h, 6);
+  ctx.fill();
+  ctx.fillStyle = "#e8eefc";
+  ctx.fillRect(o.x, o.y + o.h - 16, o.w, 4);
+  ctx.fillStyle = "#9fd0ff";
+  for (let wx = o.x + 20; wx < o.x + o.w - 22; wx += 26) {
+    rr(wx, o.y + 11, 17, 14, 3);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#1b3a7a";
+  rr(o.x, o.y + 5, 13, o.h - 11, 4);
+  ctx.fill();
+  ctx.fillStyle = "#fff7b0";
+  ctx.beginPath();
+  ctx.arc(o.x + 5, o.y + o.h - 9, 3, 0, 7);
+  ctx.fill();
+  ctx.fillStyle = "#0e1124";
+  ctx.fillRect(o.x + 10, o.y + o.h - 3, o.w - 20, 3);
+  ctx.fillStyle = "#cfe3ff";
+  ctx.fillRect(o.x + 3, o.y, o.w - 6, 3);
+  ctx.strokeStyle = "rgba(255,255,255,.85)";
+  ctx.lineWidth = 1.4;
+  rr(o.x, o.y, o.w, o.h, 6);
+  ctx.stroke();
+}
+function drawBoard() {
+  if (boardT <= 0 || state === "ready") return;
+  if (boardT < 2000 && Math.floor(frame / 4) % 2) return;
+  const p = player,
+    bx = p.x - 5,
+    by = p.y + p.h - 2;
+  halo(bx, by, p.w + 10, 6, 0, "#53f7ff");
+  ctx.fillStyle = "#53f7ff";
+  rr(bx, by, p.w + 10, 5, 2.5);
+  ctx.fill();
+  ctx.fillStyle = "#12307a";
+  ctx.beginPath();
+  ctx.arc(bx + 7, by + 6, 2.6, 0, 7);
+  ctx.arc(bx + p.w + 3, by + 6, 2.6, 0, 7);
+  ctx.fill();
+}
+function drawChaser() {
+  // the guard and his dog (the closer they are, the fewer lives you have)
+  if (state === "ready" || chaseX < -70) return;
+  const gy = groundY,
+    x = chaseX,
+    r = Math.sin(frame * 0.5) * 5;
+  halo(x - 8, gy - 56, 60, 56, 0, "#ff3b5c");
+  if (lives < maxLives || state === "over" || state === "revive") {
+    const dx = x + 44,
+      b = Math.sin(frame * 0.7) * 4;
+    ctx.fillStyle = "#6b4a2a";
+    ctx.beginPath();
+    ctx.ellipse(dx, gy - 14, 14, 6.5, 0, 0, 7);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(dx + 14, gy - 19, 6, 0, 7);
+    ctx.fill();
+    ctx.fillRect(dx + 17, gy - 18, 7, 3.5);
+    ctx.beginPath();
+    ctx.moveTo(dx + 11, gy - 24);
+    ctx.lineTo(dx + 14, gy - 31);
+    ctx.lineTo(dx + 17, gy - 24);
+    ctx.fill();
+    ctx.strokeStyle = "#6b4a2a";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(dx - 8, gy - 9);
+    ctx.lineTo(dx - 12 + b, gy);
+    ctx.moveTo(dx - 3, gy - 9);
+    ctx.lineTo(dx - 4 - b, gy);
+    ctx.moveTo(dx + 6, gy - 9);
+    ctx.lineTo(dx + 10 - b, gy);
+    ctx.moveTo(dx + 11, gy - 9);
+    ctx.lineTo(dx + 16 + b, gy);
+    ctx.moveTo(dx - 13, gy - 16);
+    ctx.lineTo(dx - 20, gy - 22 + b);
+    ctx.stroke();
+    ctx.fillStyle = "#ff3b3b";
+    ctx.fillRect(dx + 15, gy - 21, 2, 2);
+  }
+  ctx.fillStyle = "#1d2754";
+  ctx.fillRect(x + 6 + r, gy - 15, 7, 15);
+  ctx.fillRect(x + 17 - r, gy - 15, 7, 15);
+  ctx.fillStyle = "#2f4bb0";
+  rr(x + 3, gy - 36, 24, 23, 5);
+  ctx.fill();
+  ctx.fillStyle = "#101626";
+  ctx.fillRect(x + 3, gy - 19, 24, 3);
+  ctx.fillStyle = "#ffd84f";
+  ctx.fillRect(x + 20, gy - 31, 4, 4);
+  ctx.strokeStyle = "#2f4bb0";
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x + 24, gy - 30);
+  ctx.lineTo(x + 40, gy - 27 + r);
+  ctx.stroke();
+  ctx.strokeStyle = "#111";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x + 40, gy - 27 + r);
+  ctx.lineTo(x + 48, gy - 36 + r);
+  ctx.stroke();
+  ctx.lineCap = "butt";
+  ctx.fillStyle = "#e0b48a";
+  ctx.beginPath();
+  ctx.arc(x + 15, gy - 43, 7, 0, 7);
+  ctx.fill();
+  ctx.fillStyle = "#1a2250";
+  rr(x + 7, gy - 53, 16, 7, 2);
+  ctx.fill();
+  ctx.fillRect(x + 12, gy - 48, 15, 2);
+  ctx.fillStyle = "#ff3b3b";
+  ctx.fillRect(x + 17, gy - 44, 2, 2);
+}
+
 /* ============ HELPERS ============ */
 const duck = () => duckKey || duckPtr || duckBtn;
 const comboMult = () => 1 + Math.min(4, Math.floor(combo / 5));
@@ -1304,17 +1525,43 @@ const mkCoin = (x, y) =>
 
 function spawnObstacle() {
   const sx = W + 20;
-  let t;
-  if (lvl) t = lvl.types[Math.floor(Math.random() * lvl.types.length)];
+  let kind;
+  if (lvl) kind = lvl.types[Math.floor(Math.random() * lvl.types.length)];
   else
-    t =
-      score > 150 && Math.random() < 0.28
-        ? "drone"
-        : score > 400 && Math.random() < 0.22
-          ? "double"
-          : "block";
+    kind =
+      score > 250 && Math.random() < 0.2
+        ? "train"
+        : score > 150 && Math.random() < 0.28
+          ? "drone"
+          : score > 400 && Math.random() < 0.22
+            ? "double"
+            : "block";
 
-  if (t === "drone") {
+  if (kind === "train") {
+    const w = rnd(150, 210),
+      h = 54;
+    obstacles.push({
+      t: "train",
+      x: sx,
+      y: groundY - h,
+      w,
+      h,
+      passed: false,
+      c: "#2f6fd1",
+    });
+    for (let i = 0; i < Math.floor(w / 28) - 1; i++)
+      items.push(mkCoin(sx + 24 + i * 28, groundY - h - 16));
+    extraGap = (w / Math.max(4, speed)) * 16;
+    if (!trainHint) {
+      trainHint = true;
+      if (!store.get("zr_trh", 0)) {
+        store.set("zr_trh", 1);
+        shout(t("train.hint"), "#9fd0ff", 2400);
+      }
+    }
+    return;
+  }
+  if (kind === "drone") {
     const y = groundY - 52;
     obstacles.push({
       t: "drone",
@@ -1331,7 +1578,7 @@ function spawnObstacle() {
         items.push(mkCoin(sx + 8 + i * 26, groundY - 14));
     return;
   }
-  if (t === "pit") {
+  if (kind === "pit") {
     const w = rnd(95, 135);
     obstacles.push({
       t: "pit",
@@ -1356,7 +1603,7 @@ function spawnObstacle() {
     w = tall ? rnd(25, 36) : rnd(32, 46);
   const c = Math.random() > 0.5 ? "#ff4fd8" : "#ff7a59";
   obstacles.push({ t: "block", x: sx, y: groundY - h, w, h, passed: false, c });
-  if (t === "double") {
+  if (kind === "double") {
     const h2 = rnd(28, 48),
       w2 = rnd(28, 40);
     obstacles.push({
@@ -1398,9 +1645,20 @@ function spawnShot(both) {
 }
 function spawnPower() {
   const list = up.jet
-    ? ["shield", "slow", "x2", "magnet", "plov", "fuel", "fuel"]
-    : ["shield", "slow", "x2", "magnet", "plov"];
-  const k = list[Math.floor(Math.random() * list.length)];
+    ? [
+        "shield",
+        "slow",
+        "x2",
+        "magnet",
+        "plov",
+        "hover",
+        "hover",
+        "fuel",
+        "fuel",
+      ]
+    : ["shield", "slow", "x2", "magnet", "plov", "hover", "hover"];
+  const k =
+    Math.random() < 0.2 ? "box" : list[Math.floor(Math.random() * list.length)];
   items.push({ k, x: W + 30, y: groundY - rnd(55, 110), r: 15 });
 }
 
@@ -1452,6 +1710,23 @@ function scrollWorld(d) {
 
 function hurt(o) {
   const p = player;
+  if (boardT > 0) {
+    // the hoverboard takes the hit
+    boardT = 0;
+    invul = 1000;
+    shake = 7;
+    freeze = 90;
+    flash = { c: "#53f7ff", a: 0.25 };
+    burst(p.x + 17, p.y + p.h, "#53f7ff", 20);
+    if (o.t === "pit") {
+      p.vy = -11;
+      p.grounded = false;
+      p.jumps = 1;
+    } else o.x = -999;
+    sfx.hit();
+    pop(p.x, p.y - 10, t("pop.boardBroke"), "#53f7ff");
+    return false;
+  }
   if (shield) {
     shield = false;
     invul = 900;
@@ -1473,8 +1748,15 @@ function hurt(o) {
   combo = 0;
   if (lives > 1) {
     lives--;
+    cleanT = 0;
     invul = 1600;
     shake = 10;
+    chaseBark();
+    if (lives === 1 && maxLives > 1)
+      setTimeout(() => {
+        if (state === "play" && lives === 1)
+          shout(t("chase.near"), "#ff6b8a", 1200);
+      }, 800);
     burst(p.x + 17, p.y + 22, "#ff4fd8", 18);
     if (o.t === "pit") {
       p.vy = -12;
@@ -1501,6 +1783,14 @@ function updateGame(delta) {
   fx.x2 = Math.max(0, fx.x2 - delta);
   fx.magnet = Math.max(0, fx.magnet - delta);
   invul = Math.max(0, invul - delta);
+  if (boardT > 0) boardT -= delta;
+  cleanT += delta;
+  if (cleanT > 14000 && lives < maxLives) {
+    lives++;
+    cleanT = 0;
+    toast(t("chase.back"));
+    beep(500, 0.1, "triangle", 0.05);
+  }
   if (turboT > 0) {
     turboT -= delta;
     if (turboT <= 0) {
@@ -1510,7 +1800,7 @@ function updateGame(delta) {
       zoom = 1.04;
     }
   }
-  if (lvl && maxLives > 1 && lives === 1) {
+  if (maxLives > 1 && lives === 1) {
     hbT -= delta;
     if (hbT <= 0) {
       hbT = 900;
@@ -1552,7 +1842,7 @@ function updateGame(delta) {
     const nz = (Math.floor(score / 500) + 1) % 4;
     if (prefetched !== nz) {
       prefetched = nz;
-      setTimeout(() => Art.get(THEMES[nz].city, { coarse: COARSE }), 60);
+      Art.getAsync(THEMES[nz].city, ARTOPT);
     }
   }
   if (cur.wx === "rain" && Math.random() < 0.0025)
@@ -1563,8 +1853,20 @@ function updateGame(delta) {
   scrollWorld(ev * f);
 
   const p = player;
+  let floorY = groundY;
+  const pcx0 = p.x + p.w / 2;
+  for (const o of obstacles)
+    if (
+      o.t === "train" &&
+      pcx0 > o.x + 3 &&
+      pcx0 < o.x + o.w - 3 &&
+      p.pb <= o.y + 10 &&
+      o.y < floorY
+    )
+      floorY = o.y;
+  if (p.grounded && p.y + p.h < floorY - 0.6) p.grounded = false; // the train ended: fall back to the street
   p.h = p.grounded && duck() ? 24 : 44;
-  if (p.grounded) p.y = groundY - p.h;
+  if (p.grounded) p.y = floorY - p.h;
   flying = !!up.jet && fuel > 0 && jumpHeld && !p.grounded && p.jumps <= 0;
   if (flying) {
     fuel = Math.max(0, fuel - delta);
@@ -1587,16 +1889,17 @@ function updateGame(delta) {
     p.y = 12;
     if (p.vy < 0) p.vy = 0;
   }
-  if (p.y + p.h >= groundY) {
+  if (p.y + p.h >= floorY) {
     if (!p.grounded && p.vy > 3) {
-      burst(p.x + p.w / 2, groundY, "#a78bfa", 5);
+      burst(p.x + p.w / 2, floorY, "#a78bfa", 5);
       sq = Math.min(0.45, p.vy / 30);
     }
-    p.y = groundY - p.h;
+    p.y = floorY - p.h;
     p.vy = 0;
     p.grounded = true;
     p.jumps = 2;
   } else p.grounded = false;
+  p.pb = p.y + p.h;
   if (p.grounded && fuel < fuelMax())
     fuel = Math.min(fuelMax(), fuel + delta * 1.4);
   sq *= Math.pow(0.82, f);
@@ -1610,10 +1913,10 @@ function updateGame(delta) {
   if (spawning && obstacleTimer >= nextObstacle) {
     spawnObstacle();
     obstacleTimer = 0;
-    nextObstacle = Math.max(
-      700,
-      rnd(1000, 1600) * cfg.gap * Math.max(0.62, 5.5 / speed),
-    );
+    nextObstacle =
+      Math.max(700, rnd(1000, 1600) * cfg.gap * Math.max(0.62, 5.5 / speed)) +
+      extraGap;
+    extraGap = 0;
   }
   itemTimer += delta;
   if (spawning && itemTimer >= nextItem) {
@@ -1658,10 +1961,17 @@ function updateGame(delta) {
       if (o.t === "pit") {
         if (p.grounded && pcx > o.x + 6 && pcx < o.x + o.w - 6 && hurt(o))
           return;
-      } else if (hit(box, o, 3)) {
+      } else if (
+        hit(box, o, 3) &&
+        !(o.t === "train" && p.y + p.h <= o.y + 12)
+      ) {
         if (hurt(o)) return;
       } else if (
-        hit({ x: box.x - 7, y: box.y - 7, w: box.w + 14, h: box.h + 14 }, o, 0)
+        o.t !== "train" &&
+        box.x - 7 < o.x + o.w &&
+        box.x + box.w + 7 > o.x &&
+        box.y - 7 < o.y + o.h &&
+        box.y + box.h + 7 > o.y
       )
         o.near = true;
     }
@@ -1681,7 +1991,7 @@ function updateGame(delta) {
       }
     }
   }
-  obstacles = obstacles.filter((o) => o.x + o.w > -10);
+  compactInPlace(obstacles, (o) => o.x + o.w > -10);
 
   for (const it of items) {
     it.x -= ev * f;
@@ -1723,14 +2033,19 @@ function updateGame(delta) {
         if (it.k === "shield") shield = true;
         else if (it.k === "fuel") fuel = fuelMax();
         else if (it.k === "plov") {
-          if (lvl && lives < maxLives) {
+          if (lives < maxLives) {
             lives++;
+            cleanT = 0;
             shout(t("plov1"), "#ffd84f", 1000);
           } else {
             shield = true;
             shout(t("plov2"), "#ffd84f", 1000);
           }
-        } else
+        } else if (it.k === "hover") {
+          boardT = 9000;
+          shout(t("pw.hover"), "#53f7ff", 900);
+        } else if (it.k === "box") openBox(it.x, it.y);
+        else
           fx[it.k] = POWER[it.k].dur + (it.k === "magnet" ? 3000 * up.mag : 0);
         burst(it.x, it.y, POWER[it.k].color, 18);
         sfx.power();
@@ -1738,14 +2053,14 @@ function updateGame(delta) {
       }
     }
   }
-  items = items.filter((i) => !i.got && i.x > -30);
+  compactInPlace(items, (i) => !i.got && i.x > -30);
 
   if (lvl && dist >= lvl.len) {
     winLevel();
     return;
   }
   updateParticles(delta);
-  updateHUD();
+  if (frame % 3 < f) updateHUD();
 }
 
 function updateParticles(delta) {
@@ -1756,15 +2071,28 @@ function updateParticles(delta) {
     q.vy += 0.12 * f;
     q.life -= 0.025 * f;
   }
-  if (particles.length) particles = particles.filter((q) => q.life > 0);
+  compactInPlace(particles, (q) => q.life > 0);
   for (const q of pops) {
     q.y -= 0.8 * f;
     q.life -= 0.018 * f;
   }
-  if (pops.length) pops = pops.filter((q) => q.life > 0);
+  compactInPlace(pops, (q) => q.life > 0);
   shake = Math.max(0, shake - 0.5 * f);
   flash.a = Math.max(0, flash.a - 0.03 * f);
   updateToast(delta);
+  {
+    const nearX = Math.max(24, player.x - 74),
+      midX = Math.max(8, player.x - 160);
+    const tx =
+      state === "over" || state === "revive"
+        ? player.x - 12
+        : lives >= maxLives
+          ? -120
+          : lives === 1
+            ? nearX
+            : midX;
+    chaseX += (tx - chaseX) * Math.min(1, 0.05 * f);
+  }
   if (up.pet) {
     pet.x += (player.x - 34 - pet.x) * 0.12 * f;
     pet.y += (player.y - 18 + Math.sin(frame * 0.1) * 5 - pet.y) * 0.12 * f;
@@ -1848,8 +2176,10 @@ function drawBackground() {
     ctx.globalAlpha = 1;
   }
   drawSkyBody();
-  drawClouds();
-  drawBirds();
+  if (Q.level < 2) {
+    drawClouds();
+    drawBirds();
+  }
 
   const sc = Math.max(1, Math.min(1.5, groundY / 292)),
     tw = Art.TW * sc;
@@ -1858,13 +2188,14 @@ function drawBackground() {
     fh = Art.FAR_H * sc,
     mh = Art.MID_H * sc;
   ctx.drawImage(A.far, fx0, groundY - fh, tw, fh);
-  ctx.drawImage(A.far, fx0 + tw, groundY - fh, tw, fh);
+  if (fx0 + tw < W) ctx.drawImage(A.far, fx0 + tw, groundY - fh, tw, fh);
   const ls = Math.min(1.45, (groundY - 14) / A.lmH),
     lw = A.lmW * ls,
     lh = A.lmH * ls;
-  ctx.drawImage(A.lm, lm.x - lw / 2, groundY - lh, lw, lh);
+  if (lm.x + lw / 2 > 0 && lm.x - lw / 2 < W)
+    ctx.drawImage(A.lm, lm.x - lw / 2, groundY - lh, lw, lh);
   ctx.drawImage(A.mid, mx0, groundY - mh, tw, mh);
-  ctx.drawImage(A.mid, mx0 + tw, groundY - mh, tw, mh);
+  if (mx0 + tw < W) ctx.drawImage(A.mid, mx0 + tw, groundY - mh, tw, mh);
 
   ctx.fillStyle = A.gBase;
   ctx.fillRect(-20, groundY, W + 40, H - groundY + 24);
@@ -1878,6 +2209,21 @@ function drawPlayer() {
   const p = player,
     small = p.h < 40;
   const [pa, pb] = skinColors();
+  {
+    const hg = Math.max(0, groundY - (p.y + p.h));
+    ctx.fillStyle = "rgba(0,0,0,.3)";
+    ctx.beginPath();
+    ctx.ellipse(
+      p.x + p.w / 2,
+      groundY + 3,
+      Math.max(8, 19 - hg * 0.06),
+      4,
+      0,
+      0,
+      7,
+    );
+    ctx.fill();
+  }
   ctx.save();
   const scx = p.x + p.w / 2,
     sby = p.y + p.h;
@@ -1942,6 +2288,7 @@ function drawPlayer() {
     noGlow();
   }
   ctx.restore();
+  drawBoard();
   drawFuelBar();
   drawPet();
   drawTurboFx();
@@ -1992,6 +2339,11 @@ function drawObstacles() {
       stripes(o.x + o.w, groundY - 1, 6, 26, "#ffc21a", "#17171f", 5);
       continue;
     }
+    if (o.t === "train") {
+      drawTrain(o);
+      continue;
+    }
+    halo(o.x, o.y, o.w, o.h, 0, "#ff3b5c");
     glow("#ff3b5c", 14);
     if (o.t === "block") {
       ctx.fillStyle = "#ffc21a";
@@ -1999,9 +2351,10 @@ function drawObstacles() {
       ctx.fill();
       noGlow();
       ctx.save();
-      rr(o.x, o.y, o.w, o.h, 4);
-      ctx.clip();
-      stripes(o.x, o.y, o.w, o.h, "#ffc21a", "#17171f", 7);
+      ctx.translate(o.x, o.y);
+      ctx.fillStyle = hazardPattern();
+      rr(0, 0, o.w, o.h, 4);
+      ctx.fill();
       ctx.restore();
       ctx.strokeStyle = "#fff";
       ctx.lineWidth = 1.6;
@@ -2061,6 +2414,14 @@ function drawItems() {
   for (const it of items) {
     if (it.k === "coin") {
       const sx = Math.abs(Math.cos(frame * 0.08 + it.x * 0.02));
+      halo(
+        it.x - it.r,
+        it.y - it.r,
+        it.r * 2,
+        it.r * 2,
+        0,
+        it.v ? "#fff3a0" : "#ffd84f",
+      );
       glow(it.v ? "#fff3a0" : "#ffd84f", it.v ? 18 : 12);
       ctx.fillStyle = it.v ? "#fff3a0" : "#ffd84f";
       ctx.beginPath();
@@ -2070,6 +2431,7 @@ function drawItems() {
     } else {
       const P = POWER[it.k],
         bob = Math.sin(frame * 0.1 + it.x) * 3;
+      halo(it.x - it.r, it.y - it.r + bob, it.r * 2, it.r * 2, 0, P.color);
       glow(P.color, 18);
       ctx.strokeStyle = P.color;
       ctx.lineWidth = 2;
@@ -2203,7 +2565,7 @@ function drawHUD() {
     m = 14 * u;
   ctx.textBaseline = "middle";
   let row = m + 8 * u;
-  if (lvl && state !== "ready") {
+  if (state !== "ready") {
     ctx.textAlign = "left";
     ctx.font = `700 ${Math.round(17 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
     ctx.fillStyle = "#ff6b8a";
@@ -2275,6 +2637,7 @@ function drawHUD() {
   ctx.textAlign = "center";
   const list = [];
   if (shield) list.push(["shield", 1]);
+  if (boardT > 0) list.push(["hover", boardT / 9000]);
   for (const k of ["slow", "x2", "magnet"])
     if (fx[k] > 0) list.push([k, fx[k] / POWER[k].dur]);
   for (const [k, pct] of list) {
@@ -2354,6 +2717,7 @@ function draw() {
   drawItems();
   drawParticles();
   drawObstacles();
+  drawChaser();
   drawPlayer();
   drawWeather();
   drawDark();
@@ -2364,7 +2728,7 @@ function draw() {
     ctx.fillRect(0, 0, W, H);
     ctx.globalAlpha = 1;
   }
-  if (lvl && maxLives > 1 && lives === 1 && state === "play") {
+  if (maxLives > 1 && lives === 1 && state === "play") {
     ctx.strokeStyle = "#ff3b5c";
     ctx.globalAlpha = 0.25 + 0.2 * Math.sin(frame * 0.18);
     ctx.lineWidth = 10 * UI;
@@ -2402,10 +2766,28 @@ function renderSkins() {
   );
 }
 const THUMBS = {};
+Art.cities.forEach((c) => {
+  const v = store.get("zr_th3_" + c, null);
+  if (v) THUMBS[c] = v;
+});
 function buildThumbs() {
-  Art.cities.forEach((c) => {
-    if (!THUMBS[c]) THUMBS[c] = Art.thumb(c);
-  });
+  const list = Art.cities.filter((c) => !THUMBS[c]);
+  const cur0 = LEVELS[sel] ? THEMES[LEVELS[sel].theme].city : null;
+  if (cur0 && list.includes(cur0)) {
+    list.splice(list.indexOf(cur0), 1);
+    list.unshift(cur0);
+  }
+  const next = () => {
+    const c = list.shift();
+    if (!c) return;
+    Art.thumb(c, (url) => {
+      THUMBS[c] = url;
+      store.set("zr_th3_" + c, url);
+      if (state === "ready" && !shopOpen && screenFn) screenFn();
+      setTimeout(next, 40);
+    });
+  };
+  next();
 }
 function renderLevels() {
   return (
@@ -2509,9 +2891,13 @@ function resetGame() {
   lvl = mode === "campaign" ? LEVELS[sel] : null;
   dist = 0;
   hits = 0;
-  maxLives = lvl ? 3 + up.life : 1;
+  maxLives = (lvl ? 3 : 2) + up.life;
   lives = maxLives;
   shotTimer = 1500;
+  cleanT = 0;
+  boardT = 0;
+  chaseX = -120;
+  extraGap = 0;
   fuel = fuelMax();
   flying = false;
   sq = 0;
@@ -2554,6 +2940,7 @@ function resetGame() {
     g: lvl && lvl.g ? lvl.g : 0.65,
     grounded: true,
     jumps: 2,
+    pb: groundY,
     trail: [],
   });
   duckKey = duckPtr = duckBtn = jumpHeld = false;
@@ -2665,7 +3052,9 @@ function doRevive() {
     vy: 0,
     grounded: true,
     jumps: 2,
+    pb: groundY,
   });
+  boardT = 0;
   $("overlay").classList.add("hidden");
   flash = { c: "#ffffff", a: 0.4 };
   zoom = 1.07;
@@ -2807,6 +3196,10 @@ function winLevel() {
 }
 
 function loop(t) {
+  if (lastT && t - lastT < 15) {
+    requestAnimationFrame(loop);
+    return;
+  }
   const raw = lastT ? t - lastT : 16.67;
   const delta = Math.min(raw, 40);
   lastT = t;
@@ -2820,8 +3213,9 @@ function loop(t) {
     updateGame(delta);
     // auto-lower quality on slow devices
     if (++fpsN > 0) fpsAcc += raw;
-    if (fpsN >= 90) {
-      if (fpsAcc / fpsN > 25 && Q.level < 2) setQuality(Q.level + 1);
+    if (fpsN >= 60) {
+      if (gfx === "auto" && fpsAcc / fpsN > 22 && Q.level < 3)
+        setQuality(Q.level + 1);
       fpsAcc = 0;
       fpsN = 0;
     }
@@ -3130,9 +3524,27 @@ document.addEventListener("fullscreenchange", () => {
   resize();
 });
 
+/* ============ GRAPHICS ============ */
+const GFX = ["auto", "high", "low"];
+let gfx = store.get("zr_gfx", "auto");
+if (!GFX.includes(gfx)) gfx = "auto";
+const gfxLabel = () =>
+  ($("gfxLabel").textContent = " " + t("gfx") + ": " + t("gfx." + gfx));
+function applyGfx() {
+  setQuality(gfx === "low" ? 3 : gfx === "high" ? 0 : COARSE ? 1 : 0);
+  gfxLabel();
+}
+$("gfxButton").addEventListener("click", () => {
+  gfx = GFX[(GFX.indexOf(gfx) + 1) % GFX.length];
+  store.set("zr_gfx", gfx);
+  applyGfx();
+  toast("🎨 " + t("gfx") + ": " + t("gfx." + gfx));
+});
+
 /* ============ LANGUAGE ============ */
 window.onLangChange = () => {
   hudLast.score = hudLast.best = hudLast.speed = hudLast.coins = undefined;
+  gfxLabel();
   if (!$("overlay").classList.contains("hidden")) {
     if (shopOpen) showPanel(curPanel);
     else if (screenFn) screenFn();
@@ -3146,11 +3558,8 @@ if ("ResizeObserver" in window)
 window.addEventListener("resize", resize);
 window.addEventListener("orientationchange", () => setTimeout(resize, 250));
 $("muteButton").firstChild.textContent = muted ? "🔇" : "🔊";
-resize();
+applyGfx();
 resetGame();
 showReady();
 requestAnimationFrame(loop);
-setTimeout(() => {
-  buildThumbs();
-  if (state === "ready" && !shopOpen) showReady();
-}, 300);
+setTimeout(buildThumbs, 150);

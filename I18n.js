@@ -687,6 +687,65 @@ const I18N = {
   },
 };
 
+Object.assign(I18N.uz, {
+  gfx: "GRAFIKA",
+  "gfx.auto": "AVTO",
+  "gfx.high": "YUQORI",
+  "gfx.low": "PAST",
+});
+Object.assign(I18N.en, {
+  gfx: "GRAPHICS",
+  "gfx.auto": "AUTO",
+  "gfx.high": "HIGH",
+  "gfx.low": "LOW",
+});
+Object.assign(I18N.ja, {
+  gfx: "画質",
+  "gfx.auto": "自動",
+  "gfx.high": "高",
+  "gfx.low": "低",
+});
+
+Object.assign(I18N.uz, {
+  "chase.back": "Qo'riqchi orqada qoldi!",
+  "chase.near": "ORQANGDA!",
+  "pop.boardBroke": "SKEYT SINDI",
+  "pw.hover": "SKEYT!",
+  "pw.box": "SOVG'A!",
+  "box.turbo": "TURBO TO'LDI!",
+  "box.jackpot": "JEKPOT! +◎{n}",
+  "train.hint": "Poyezd tepasiga sakrab chiq!",
+  "shop.life.d": "+1 hayot (kampaniya va cheksiz rejim)",
+  f1h: "Sakrash, engashish, poyezd tepasida yugurish",
+  f1p: "Tugmani ushlab baland sakra. Metro vagonlari ustiga chiq. Qo'riqchi va it seni quvadi — qoqilma!",
+});
+Object.assign(I18N.en, {
+  "chase.back": "The guard fell behind!",
+  "chase.near": "BEHIND YOU!",
+  "pop.boardBroke": "BOARD BROKEN",
+  "pw.hover": "HOVERBOARD!",
+  "pw.box": "MYSTERY BOX!",
+  "box.turbo": "TURBO CHARGED!",
+  "box.jackpot": "JACKPOT! +◎{n}",
+  "train.hint": "Jump on top of the train!",
+  "shop.life.d": "+1 life (campaign and endless)",
+  f1h: "Jump, duck, run on top of trains",
+  f1p: "Hold to jump higher. Climb on top of metro cars. A guard and his dog chase you — don't stumble!",
+});
+Object.assign(I18N.ja, {
+  "chase.back": "追っ手を引き離した！",
+  "chase.near": "すぐ後ろだ！",
+  "pop.boardBroke": "ボード破壊",
+  "pw.hover": "ホバーボード！",
+  "pw.box": "ミステリーボックス！",
+  "box.turbo": "ターボ満タン！",
+  "box.jackpot": "ジャックポット！+◎{n}",
+  "train.hint": "電車の屋根に飛び乗ろう！",
+  "shop.life.d": "ライフ+1（キャンペーン・エンドレス）",
+  f1h: "ジャンプ、しゃがみ、電車の屋根を走る",
+  f1p: "長押しで高くジャンプ。地下鉄の車両の上に乗れる。警備員と犬が追いかけてくる — つまずくな！",
+});
+
 let LANG = (() => {
   try {
     const s = localStorage.getItem("zr_lang");

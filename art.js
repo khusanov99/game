@@ -826,31 +826,90 @@ const Art = (() => {
   }
 
   /* ---------- public API ---------- */
+  // Sprites are drawn into world units by the game, so their pixel scale only affects sharpness vs memory.
   const cache = {},
-    order = [];
-  function get(city, opt = {}) {
-    if (cache[city]) return cache[city];
-    const sc = opt.coarse ? 1.5 : 2,
-      g = ground(city, sc),
-      L = LM[city];
-    const A = {
-      city,
-      far: strip(city, 0, sc),
-      mid: strip(city, 1, sc),
-      lm: landmark(city, sc),
-      gnd: g.cv,
-      gBase: g.base,
-      lmW: L.w,
-      lmH: L.h,
-    };
+    order = [],
+    pending = {};
+  const scales = (opt) =>
+    opt && opt.coarse ? { g: 1, s: 1, l: 1.25 } : { g: 1.5, s: 1.25, l: 1.75 };
+  const dispose = (A) => {
+    for (const k of ["far", "mid", "lm", "gnd"])
+      if (A[k]) {
+        A[k].width = 0;
+        A[k].height = 0;
+      }
+  };
+  function remember(city, A) {
     cache[city] = A;
     order.push(city);
-    if (order.length > 2) delete cache[order.shift()];
-    return A;
+    while (order.length > 2) {
+      const old = order.shift();
+      if (old !== city && cache[old]) {
+        dispose(cache[old]);
+        delete cache[old];
+      }
+    }
   }
-  function thumb(city) {
-    // small postcard for menus (built at 1x, not cached as a sprite)
+  const peek = (city) => cache[city] || null;
+  function parts(city, sc) {
+    const g = ground(city, sc.g),
+      L = LM[city];
+    return [
+      (P) => {
+        P.gnd = g.cv;
+        P.gBase = g.base;
+      },
+      (P) => {
+        P.far = strip(city, 0, sc.s);
+      },
+      (P) => {
+        P.mid = strip(city, 1, sc.s);
+      },
+      (P) => {
+        P.lm = landmark(city, sc.l);
+        P.lmW = L.w;
+        P.lmH = L.h;
+      },
+    ];
+  }
+  function get(city, opt = {}) {
+    // synchronous (only used for the very first paint)
+    if (cache[city]) return cache[city];
+    const P = { city };
+    parts(city, scales(opt)).forEach((f) => f(P));
+    remember(city, P);
+    return P;
+  }
+  function getAsync(city, opt = {}, cb) {
+    // builds one piece per timer tick so the game never freezes
+    if (cache[city]) {
+      if (cb) cb(cache[city]);
+      return;
+    }
+    if (pending[city]) {
+      if (cb) pending[city].push(cb);
+      return;
+    }
+    pending[city] = cb ? [cb] : [];
+    const P = { city },
+      steps = parts(city, scales(opt));
+    const run = (i) => {
+      if (i < steps.length) {
+        steps[i](P);
+        setTimeout(() => run(i + 1), 24);
+        return;
+      }
+      remember(city, P);
+      const cbs = pending[city];
+      delete pending[city];
+      cbs.forEach((f) => f(P));
+    };
+    setTimeout(() => run(0), 0);
+  }
+  function thumb(city, cb) {
+    // small postcard → saved by the game, so menus show it instantly
     const L = LM[city],
+      k = Math.min((240 / L.w) * 1.05, 122 / L.h),
       cv = mk(240, 130),
       c = cv.getContext("2d"),
       s = SKY[city];
@@ -859,10 +918,12 @@ const Art = (() => {
       [1, s[1]],
     ]);
     c.fillRect(0, 0, 240, 130);
-    const lm = landmark(city, 1),
-      k = Math.min((240 / L.w) * 1.05, (122 / L.h) * 1.0);
-    c.drawImage(lm, 120 - (L.w * k) / 2, 130 - L.h * k, L.w * k, L.h * k);
-    return cv.toDataURL("image/jpeg", 0.72);
+    const lm = landmark(city, k);
+    c.drawImage(lm, 120 - lm.width / 2, 130 - lm.height);
+    lm.width = 0;
+    const url = cv.toDataURL("image/jpeg", 0.7);
+    cv.width = 0;
+    cb(url);
   }
   return {
     TW,
@@ -871,6 +932,8 @@ const Art = (() => {
     FAR_H,
     MID_H,
     get,
+    getAsync,
+    peek,
     thumb,
     SKY,
     NIGHT,
