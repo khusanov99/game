@@ -96,7 +96,7 @@ window.Sprites =
         i.decoding = "async";
         i.onload = () => res(i);
         i.onerror = () => res(null);
-        i.src = url;
+        i.src = (window.SPRITE_DATA && window.SPRITE_DATA[url]) || url; // pictures embedded by characters-data.js, else the file itself
       }));
     const variantOf = (c, variant) => (c.file && typeof c.file === "object" ? (c.file[variant] ? variant : "default") : "default");
     const fileOf = (c, v) => (typeof c.file === "object" ? c.file[v] || c.file.default : c.file);

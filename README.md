@@ -12,10 +12,11 @@ An endless runner and campaign game set in Uzbek cities (Tashkent, Samarkand, Bu
 | `art.js` | Pre-rendered city scenery, parallax layers, ground, thumbnails |
 | `chars.js` | Built-in painted runner, guard, dog (fallback), coins, obstacles, icons |
 | `sprites.js` | Loads real PNG characters (runner, guard, dog) when you provide them |
+| `characters-data.js` | The same character pictures embedded as data (the game works even if the `assets` folder is missing) |
 | `assets/characters/` | Character pictures: `hero_run1/run2/slide.png` (runner), `dog.png`, `guard.png` (officer) |
 | `game.js` | Game engine, input, physics, spawning, audio, UI, saving |
 
-Script order matters: `i18n.js`, `art.js`, `chars.js`, `sprites.js`, `game.js`.
+Script order matters: `i18n.js`, `art.js`, `chars.js`, `characters-data.js`, `sprites.js`, `game.js` (`index.html` already does this).
 The only external resource is the Google Fonts stylesheet. If it is blocked, the game falls back to system fonts.
 
 ## Characters (real pictures)
