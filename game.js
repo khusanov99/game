@@ -33,6 +33,9 @@ const COARSE = window.matchMedia("(pointer:coarse)").matches;
 
 /* ============ QUALITY ============ */
 const Q = { level: 0, shadow: !COARSE, flat: false, dpr: 2, maxP: 140 };
+const PIXEL_BUDGET = COARSE
+  ? [560000, 400000, 280000, 190000]
+  : [2600000, 1600000, 900000, 500000]; // canvas pixels per quality level
 function setQuality(l) {
   Q.level = l;
   Q.shadow = l === 0 && !COARSE; // real shadowBlur only on desktop at the top level
@@ -127,6 +130,9 @@ function resize() {
   groundY = H - 58;
   UI = Math.max(1, 0.95 / s);
   DPR = Math.min(window.devicePixelRatio || 1, Q.dpr);
+  const want = cw * ch * DPR * DPR,
+    budget = PIXEL_BUDGET[Math.min(Q.level, 3)]; // hard cap on pixels drawn per frame (fill-rate is what freezes phones)
+  if (want > budget) DPR = Math.max(0.5, DPR * Math.sqrt(budget / want));
   const nw = Math.round(cw * DPR),
     nh = Math.round(ch * DPR);
   if (canvas.width !== nw || canvas.height !== nh) {
@@ -1215,31 +1221,35 @@ function drawSkyBody() {
   ctx.fill();
   ctx.globalAlpha = 1;
 }
+const CLOUDSP = [null, null];
+function cloudSprite(night) {
+  // a cloud is painted once; every frame it is a single drawImage
+  const k = night ? 1 : 0;
+  if (!CLOUDSP[k]) {
+    const cv = document.createElement("canvas");
+    cv.width = 160;
+    cv.height = 48;
+    const g = cv.getContext("2d"),
+      w = 100,
+      cx = 80,
+      cy = 28;
+    g.fillStyle = night ? "#9fb0ff" : "#fff3e0";
+    g.beginPath();
+    g.ellipse(cx, cy, w * 0.5, w * 0.12, 0, 0, 7);
+    g.ellipse(cx + w * 0.25, cy - w * 0.06, w * 0.3, w * 0.1, 0, 0, 7);
+    g.ellipse(cx - w * 0.25, cy - w * 0.03, w * 0.28, w * 0.09, 0, 0, 7);
+    g.fill();
+    CLOUDSP[k] = cv;
+  }
+  return CLOUDSP[k];
+}
 function drawClouds() {
-  ctx.fillStyle = cur.night ? "#9fb0ff" : "#fff3e0";
+  const sp = cloudSprite(!!cur.night);
   ctx.globalAlpha = cur.night ? 0.06 : 0.13;
   for (const c of clouds) {
-    ctx.beginPath();
-    ctx.ellipse(c.x, c.y, c.w * 0.5, c.w * 0.12, 0, 0, 7);
-    ctx.ellipse(
-      c.x + c.w * 0.25,
-      c.y - c.w * 0.06,
-      c.w * 0.3,
-      c.w * 0.1,
-      0,
-      0,
-      7,
-    );
-    ctx.ellipse(
-      c.x - c.w * 0.25,
-      c.y - c.w * 0.03,
-      c.w * 0.28,
-      c.w * 0.09,
-      0,
-      0,
-      7,
-    );
-    ctx.fill();
+    const k = c.w / 100;
+    if (c.x + 0.8 * c.w < 0 || c.x - 0.8 * c.w > W) continue; // off-screen clouds cost nothing
+    ctx.drawImage(sp, c.x - 80 * k, c.y - 28 * k, 160 * k, 48 * k);
   }
   ctx.globalAlpha = 1;
 }
@@ -3107,7 +3117,7 @@ function startGame() {
   state = "play";
   lastT = 0;
   fpsAcc = 0;
-  fpsN = -45;
+  fpsN = -15;
   if (COARSE && !fsOn) setFs(true);
   if (lvl)
     banner = {
@@ -3372,12 +3382,13 @@ function stepOnce(dt) {
 }
 function advance() {
   let n = 0;
-  while (acc >= STEP && n < 14) {
+  const MAXN = COARSE ? 8 : 14;
+  while (acc >= STEP && n < MAXN) {
     acc -= STEP;
     n++;
     stepOnce(STEP);
   }
-  if (n === 14) acc = 0; // after a long stall: drop the backlog instead of fast-forwarding
+  if (n === MAXN) acc = 0; // after a long stall: drop the backlog instead of fast-forwarding
 }
 function loop(t) {
   requestAnimationFrame(loop); // schedule first, so one exception can never freeze the game
@@ -3396,10 +3407,14 @@ function loop(t) {
   } // 90/120 Hz screens: simulate every frame, draw every other one
   if (state === "play" && ++fpsN > 0) {
     // auto-lower quality on slow devices
-    fpsAcc += raw;
-    if (fpsN >= 60) {
-      if (gfx === "auto" && fpsAcc / fpsN > 22 && Q.level < 3)
-        setQuality(Q.level + 1);
+    fpsAcc += Math.min(raw, 50); // one random hitch must not count as "slow device"
+    if (fpsN >= 20) {
+      // judge every 20 frames and react at once (before: 60 frames, ~3-6 s of freezing)
+      const avg = fpsAcc / fpsN;
+      if (gfx === "auto" && avg > 21 && Q.level < 3) {
+        setQuality(Math.min(3, Q.level + (avg > 34 ? 2 : 1))); // very slow → skip a level
+        if (COARSE) store.set("zr_q", Q.level); // next launch starts at the level this phone can handle
+      }
       fpsAcc = 0;
       fpsN = 0;
     }
@@ -3771,7 +3786,15 @@ if (!GFX.includes(gfx)) gfx = "auto";
 const gfxLabel = () =>
   ($("gfxLabel").textContent = " " + t("gfx") + ": " + t("gfx." + gfx));
 function applyGfx() {
-  setQuality(gfx === "low" ? 3 : gfx === "high" ? 0 : COARSE ? 1 : 0);
+  setQuality(
+    gfx === "low"
+      ? 3
+      : gfx === "high"
+        ? 0
+        : COARSE
+          ? Math.max(1, Math.min(3, store.get("zr_q", 1) | 0))
+          : 0,
+  );
   gfxLabel();
 }
 $("gfxButton").addEventListener("click", () => {
