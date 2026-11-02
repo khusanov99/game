@@ -24,6 +24,7 @@ if (!ctx.roundRect) {
 
 /* ============ WORLD SIZE (responsive) ============ */
 let W = 900, H = 350, groundY = 292, S = 1, UI = 1, DPR = 1;
+let PS = 1.55, CPS = 1.5;
 const COARSE = window.matchMedia("(pointer:coarse)").matches;
 
 /* ============ QUALITY ============ */
@@ -83,6 +84,7 @@ function resize() {
   if (w < 560) { s = cw / 560; w = 560; }
   else if (w > 1100) { s = cw / 1100; w = 1100; }
   S = s; W = w; H = ch / s; groundY = H - 58; UI = Math.max(1, 0.95 / s);
+  { const sf = Math.min(1.4, Math.max(1, UI * 0.9 + 0.1)); PS = 1.55 * sf; CPS = 1.5 * sf; }
   DPR = Math.min(window.devicePixelRatio || 1, Q.dpr);
   const want = cw * ch * DPR * DPR, budget = PIXEL_BUDGET[Math.min(Q.level, 3)];   // hard cap on pixels drawn per frame (fill-rate is what freezes phones)
   if (want > budget) DPR = Math.max(0.5, DPR * Math.sqrt(budget / want));
@@ -995,7 +997,7 @@ function drawBackground() {
   ctx.fillStyle = "rgba(255,255,255,.16)"; ctx.fillRect(-20, groundY, W + 40, 2);
 }
 
-const PS = 1.26, CPS = 1.2;                          // on-screen sprite scale (hitboxes stay the same)
+// on-screen sprite scale: set in resize() (bigger on small / portrait phones); hitboxes stay the same                          // on-screen sprite scale (hitboxes stay the same)
 const CSC = COARSE ? 1.5 : 2;                         // sprite density (phones use less memory)
 let RUN = null, RUN_SKIN = "", GRD = null, DOGS = null, COINSP = null;
 const BADGES = {}, OBST = {}, HEARTS = {};
@@ -1024,7 +1026,7 @@ function playerFrame() {                              // rig: 0-11 stride · 12 
 function drawPlayer() {
   const p = player, R = runnerSheet(), pb = skinGlow();
   const sy = p.grounded ? p.y + p.h : groundY, hg = Math.max(0, sy - (p.y + p.h));
-  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(p.x + p.w / 2, sy + 3, Math.max(8, 20 - hg * 0.06), 4, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(p.x + p.w / 2, sy + 3, Math.max(10, 26 - hg * 0.07), 5, 0, 0, 7); ctx.fill();
   ctx.save();
   ctx.translate(p.x + p.w / 2, p.y + p.h);
   ctx.scale(1 + sq * 0.5, 1 - sq * 0.5);                // squash & stretch

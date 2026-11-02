@@ -12,20 +12,21 @@ An endless runner and campaign game set in Uzbek cities (Tashkent, Samarkand, Bu
 | `art.js` | Pre-rendered city scenery, parallax layers, ground, thumbnails |
 | `chars.js` | Built-in painted runner, guard, dog (fallback), coins, obstacles, icons |
 | `sprites.js` | Optional: use your own PNG pictures instead (used only if `rig.js` is missing) |
-| `rig.js` | Realistic skeleton-animated characters: runner, policewoman, chasing dog (IK legs, swinging arms, back-light rim) |
+| `rig.js` | Skeleton-animated robots: hero robot, police robot, robot hound (IK legs, swinging arms, glowing parts, back-light rim) |
 | `assets/characters/` | Character pictures: `hero_run1/run2/slide.png` (runner), `dog.png`, `guard.png` (officer) |
 | `game.js` | Game engine, input, physics, spawning, audio, UI, saving |
 
 Script order matters: `i18n.js`, `art.js`, `chars.js`, `rig.js`, `sprites.js`, `game.js` (`index.html` already does this).
 The only external resource is the Google Fonts stylesheet. If it is blocked, the game falls back to system fonts.
 
-## Characters (skeleton animation)
+## Characters (skeleton-animated robots)
 
-The hero, the policewoman and the dog are drawn by `rig.js` from real bones: two-bone inverse-kinematics legs with the foot planted during the stance phase, swinging arms, bobbing hips, a flowing scarf, hair and ponytail, and a quadruped rotary gallop for the dog. Each is shaded like a solid volume and lit with a warm back-light. Every frame is drawn once into a small canvas at load (about 80–110 ms per character on a slow phone); during play the game only calls `drawImage`.
+The hero robot, the police robot (with a flashing siren and a glowing stun baton) and the robot hound are drawn by `rig.js` from real bones: two-bone inverse-kinematics legs with the foot planted during the stance phase, swinging arms, bobbing hips, a jet pack with a flame, an energy scarf and a quadruped rotary gallop for the hound. Plates are shaded like polished metal with glowing eyes, cores and soles, and lit with a warm back-light. Every frame is drawn once into a small canvas at load (about 80–110 ms per character on a slow phone); during play the game only calls `drawImage`.
 
 - Run cycle: 12 frames per stride. Poses: jump, fall, landing crouch, slide (duck) and hit.
-- Shop skins recolor the hero's jacket, trim, trousers and shoes (`LOOKS` at the top of `rig.js`).
-- To change proportions or the look, edit `figure()` (people) or `dogFig()` (dog) in `rig.js`.
+- Shop skins recolor the hero robot's armour, plates and glow (`LOOKS` at the top of the robot section in `rig.js`).
+- Characters are drawn larger on small and portrait screens (`PS` / `CPS` are set in `resize()` in `game.js`); hitboxes do not change.
+- To change the look, edit `figure()` / `drawHead()` (robots) or `dogFig()` (hound) in `rig.js`.
 - `assets/characters/` and `sprites.js` still hold the earlier picture-based characters. If `rig.js` is removed from `index.html`, the game uses those pictures instead (and the built-in painted characters if the pictures are missing).
 - `guard.png` is a preview image with a stock-site watermark: replace it with a licensed copy before using it.
 
