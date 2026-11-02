@@ -92,3 +92,6 @@ Opening `index.html` directly also works. A local server is better because it ma
 
 ## City Run (city.html)
 Subway-Surfers-style mode: the camera is behind the robot, running down the middle of an Uzbek city street (Tashkent → Samarkand → Bukhara → Khiva) on 3 lanes. Swipe left/right to change lane, up to jump, down to slide (keys: arrows / WASD, P pause, M mute). Collect spinning patterned coins (gold gems = 5). Two hits and the police robot + hound catch you. Coins go to the same wallet as the main game. Pseudo-3D on plain Canvas 2D, no libraries. Not tested on real phones — only headless Chromium.
+
+### City Run 3D (city3d.html)
+Real 3D version (WebGL, own tiny engine — no libraries): perspective buildings with lighting and fog, 3D robot built from jointed parts, 3D coins, parked cars, lamps and trees. Falls back to city.html if WebGL is missing. Uses facades.js (procedural Uzbek facade textures).

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#070816" />
+<title>ZUMARY — City Run 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--gold:#ffd84f;--cyan:#53f7ff;--pink:#ff4fd8;--text:#f5f7ff}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#070816;color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #hud{pointer-events:none}
+  .vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 55%,rgba(6,6,20,.55) 100%)}
+  .ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 40%,rgba(7,8,22,.35),rgba(7,8,22,.82))}
+  .ov.hidden{display:none}
+  .card{width:min(420px,100%);text-align:center;padding:22px 20px;border-radius:22px;background:rgba(10,12,30,.72);border:1px solid rgba(123,145,255,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  h1{font:800 clamp(26px,8vw,40px)/1.05 Orbitron,sans-serif;margin:0 0 6px;letter-spacing:1px;background:linear-gradient(90deg,var(--cyan),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:#aeb6e0;font-size:13px;line-height:1.6;margin:8px 0 14px}
+  .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+  .pill{padding:8px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font:700 14px Orbitron,sans-serif}
+  .pill small{display:block;font:600 9px Orbitron,sans-serif;letter-spacing:1.5px;color:#8c93b8;margin-bottom:2px}
+  button,a.btn{display:block;width:100%;margin-top:10px;padding:15px;border:0;border-radius:16px;font:800 15px Orbitron,sans-serif;letter-spacing:1.5px;color:#06121d;background:linear-gradient(90deg,var(--cyan),#8be9ff);cursor:pointer;text-decoration:none}
+  a.btn.ghost{background:transparent;color:#aeb6e0;border:1px solid rgba(255,255,255,.18);font-size:12px;padding:12px}
+  .coin{display:inline-block;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6b0,#f2b82a 60%,#b27208);vertical-align:-2px;margin-right:4px}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="ZUMARY City Run 3D"></canvas>
+<canvas id="hud"></canvas>
+<div class="vig"></div>
+<div class="ov" id="ov">
+  <div class="card">
+    <h1 id="oTitle"></h1>
+    <div class="sub" id="oSub"></div>
+    <div class="row" id="oRow"></div>
+    <button id="go" type="button"></button>
+    <a class="btn ghost" id="back" href="./index.html"></a>
+  </div>
+</div>
+<script src="./rig.js"></script>
+<script src="./facades.js"></script>
+<script src="./city3d.js"></script>
+</body>
+</html>
