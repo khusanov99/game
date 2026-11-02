@@ -746,6 +746,52 @@ Object.assign(I18N.ja, {
   f1p: "長押しで高くジャンプ。地下鉄の車両の上に乗れる。警備員と犬が追いかけてくる — つまずくな！",
 });
 
+Object.assign(I18N.uz, {
+  navSettings: "SOZLAMA",
+  "panel.settings.t": "SOZLAMALAR",
+  "panel.settings.d": "Ovoz, grafika va boshqaruvni o'zingga moslab ol.",
+  "set.music": "Musiqa ovozi",
+  "set.sfx": "Effekt ovozi",
+  "set.gfx": "Grafika",
+  "set.reduce": "Effektlarni kamaytirish",
+  "set.left": "Chapaqay boshqaruv",
+  "set.vib": "Tebranish",
+  "set.on": "YOQILGAN",
+  "set.off": "O'CHIRILGAN",
+  "stats.time": "VAQT",
+  "stats.best": "ENG UZOQ",
+});
+Object.assign(I18N.en, {
+  navSettings: "SETTINGS",
+  "panel.settings.t": "SETTINGS",
+  "panel.settings.d": "Tune sound, graphics and controls to your liking.",
+  "set.music": "Music volume",
+  "set.sfx": "Effects volume",
+  "set.gfx": "Graphics",
+  "set.reduce": "Reduce effects",
+  "set.left": "Left-handed controls",
+  "set.vib": "Vibration",
+  "set.on": "ON",
+  "set.off": "OFF",
+  "stats.time": "TIME",
+  "stats.best": "FARTHEST",
+});
+Object.assign(I18N.ja, {
+  navSettings: "設定",
+  "panel.settings.t": "設定",
+  "panel.settings.d": "サウンド、画質、操作を好みに合わせよう。",
+  "set.music": "音楽の音量",
+  "set.sfx": "効果音の音量",
+  "set.gfx": "画質",
+  "set.reduce": "演出を減らす",
+  "set.left": "左手用の操作",
+  "set.vib": "振動",
+  "set.on": "オン",
+  "set.off": "オフ",
+  "stats.time": "時間",
+  "stats.best": "最長距離",
+});
+
 let LANG = (() => {
   try {
     const s = localStorage.getItem("zr_lang");

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#070816" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -17,6 +17,7 @@
     />
     <link rel="stylesheet" href="style.css" />
   </head>
+
   <body>
     <main class="app">
       <header class="topbar">
@@ -89,7 +90,9 @@
                     ><button data-p="shop" type="button">
                       🛒<span data-i18n="navShop"></span></button
                     ><button data-p="medals" type="button">
-                      🏅<span data-i18n="navMedals"></span>
+                      🏅<span data-i18n="navMedals"></span></button
+                    ><button data-p="settings" type="button">
+                      ⚙️<span data-i18n="navSettings"></span>
                     </button>
                   </div>
                   <div id="dailyBox"></div>
@@ -191,6 +194,7 @@
     </main>
     <script src="./I18n.js"></script>
     <script src="./art.js"></script>
+    <script src="./chars.js"></script>
     <script src="./game.js"></script>
   </body>
 </html>
