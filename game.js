@@ -1009,7 +1009,7 @@ const runnerSheet = () => (RIGX && rigTry(() => RIGX.runner(skin, CSC))) || IMG.
 const badgeOf = (k) => BADGES[k] || (BADGES[k] = Chars.badge(POWER[k].icon, POWER[k].color, CSC));
 const heartSprite = (f) => HEARTS[f] || (HEARTS[f] = Chars.heart(f, CSC));
 const obstSprite = (v) => OBST[v] || (OBST[v] = Chars.obstacle(v, CSC));
-const coinSheet = () => COINSP || (COINSP = Chars.coins(CSC));
+const coinSheet = () => COINSP || (COINSP = (RIGX && rigTry(() => RIGX.coins(CSC))) || Chars.coins(CSC));
 const guardSheet = () => (RIGX && rigTry(() => RIGX.guard(CSC))) || IMG.get("guard", "default", CSC) || GRD || (GRD = Chars.guard(CSC));
 const dogSheet = () => (RIGX && rigTry(() => RIGX.dog(CSC))) || IMG.get("dog", "default", CSC) || DOGS || (DOGS = Chars.dogs(CSC));
 IMG.preload();                                   // start loading the image characters while the menu is shown
@@ -1108,7 +1108,7 @@ function drawItems() {
     if (it.k === "coin") {
       halo(it.x - it.r, it.y - it.r, it.r * 2, it.r * 2, 0, it.v ? "#fff3a0" : "#ffd84f");
       const sz = it.v ? 32 : 26;
-      ctx.drawImage((it.v ? CN.g : CN.n)[(Math.floor(frame * 0.18 + it.x * 0.05) & 7)], it.x - sz / 2, it.y - sz / 2, sz, sz);
+      ctx.drawImage((it.v ? CN.g : CN.n)[Math.floor(frame * 0.18 + it.x * 0.05) % (it.v ? CN.g : CN.n).length], it.x - sz / 2, it.y - sz / 2, sz, sz);
     } else {
       const bob = Math.sin(frame * 0.1 + it.x) * 3;
       halo(it.x - it.r, it.y - it.r + bob, it.r * 2, it.r * 2, 0, POWER[it.k].color);

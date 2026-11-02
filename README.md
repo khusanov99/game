@@ -88,3 +88,7 @@ Opening `index.html` directly also works. A local server is better because it ma
 - Sound, vibration, native fullscreen and orientation lock cannot be checked in headless mode.
 - The Japanese texts were written by the assistant. A native speaker should review them.
 - The characters and scenery are drawn in code, not taken from photos or sprite artwork. They are stylised, not photo-real or GTA-grade 3D art.
+
+
+## City Run (city.html)
+Subway-Surfers-style mode: the camera is behind the robot, running down the middle of an Uzbek city street (Tashkent → Samarkand → Bukhara → Khiva) on 3 lanes. Swipe left/right to change lane, up to jump, down to slide (keys: arrows / WASD, P pause, M mute). Collect spinning patterned coins (gold gems = 5). Two hits and the police robot + hound catch you. Coins go to the same wallet as the main game. Pseudo-3D on plain Canvas 2D, no libraries. Not tested on real phones — only headless Chromium.

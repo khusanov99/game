@@ -353,5 +353,140 @@ const Rig = (() => {
     return (cache[key] = { w: 96, h: 58, fx: 46, fy: 54, f: frames(key, 96, 58, 46, 54, sc, fr, "#ffc48a"), n: N, snarl: N });   // 0-11 running · 12-23 snarling
   }
 
-  return { runner, guard, dog, LOOKS, mk };
+  /* ---------- NEW COINS: engraved gold coins with an 8-point ikat star, beaded rim, rotating edge and a gloss sweep ---------- */
+  function coinFace(c, th, gem, sweep) {
+    const R = 11.2, k = Math.cos(th), ax = Math.max(0.1, Math.abs(k)), side = Math.abs(Math.sin(th)), dir = k >= 0 ? 1 : -1;
+    for (let i = Math.ceil(2.6 * side); i >= 1; i--) { c.fillStyle = i % 2 ? "#b27208" : "#9c6208"; c.beginPath(); c.ellipse(-dir * i * 0.9, 0, R * ax, R, 0, 0, TAU); c.fill(); }   // coin thickness
+    c.save(); c.scale(ax, 1);
+    c.fillStyle = "#c8860f"; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fill();
+    let g = c.createLinearGradient(-R, -R, R, R); g.addColorStop(0, gem ? "#fffbd0" : "#fff3a2"); g.addColorStop(0.5, "#f5bd2c"); g.addColorStop(1, "#c98a12");
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, R * 0.93, 0, TAU); c.fill();
+    c.fillStyle = "#fff6c0"; for (let i = 0; i < 16; i++) { const a = (i / 16) * TAU; c.beginPath(); c.arc(Math.cos(a) * R * 0.83, Math.sin(a) * R * 0.83, 0.55, 0, TAU); c.fill(); }   // beads
+    c.strokeStyle = "rgba(120,70,0,.55)"; c.lineWidth = 0.7; c.beginPath(); c.arc(0, 0, R * 0.72, 0, TAU); c.stroke();
+    g = c.createRadialGradient(-2, -3, 1, 0, 0, R * 0.7); g.addColorStop(0, "#fff0a0"); g.addColorStop(1, "#e3a01a"); c.fillStyle = g; c.beginPath(); c.arc(0, 0, R * 0.69, 0, TAU); c.fill();
+    c.beginPath(); for (let i = 0; i < 16; i++) { const a = (i / 16) * TAU - Math.PI / 2, r = i % 2 ? R * 0.27 : R * 0.6; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath();   // 8-point star
+    g = c.createLinearGradient(-R * 0.5, -R * 0.5, R * 0.5, R * 0.5); g.addColorStop(0, "#fff7c8"); g.addColorStop(1, "#c98512"); c.fillStyle = g; c.fill(); c.strokeStyle = "rgba(120,70,0,.7)"; c.lineWidth = 0.6; c.stroke();
+    if (gem) { c.fillStyle = "#53f7ff"; c.beginPath(); c.moveTo(0, -3.2); c.lineTo(2.6, 0); c.lineTo(0, 3.2); c.lineTo(-2.6, 0); c.closePath(); c.fill(); c.fillStyle = "rgba(255,255,255,.8)"; c.beginPath(); c.moveTo(0, -3.2); c.lineTo(1.2, -0.6); c.lineTo(-1.2, -0.6); c.closePath(); c.fill(); }
+    else { c.fillStyle = "#9c6208"; c.beginPath(); c.arc(0, 0, 1.5, 0, TAU); c.fill(); c.fillStyle = "#fff6c0"; c.beginPath(); c.arc(-0.4, -0.4, 0.55, 0, TAU); c.fill(); }
+    c.save(); c.beginPath(); c.arc(0, 0, R * 0.93, 0, TAU); c.clip();                                // gloss sweep
+    const gl = c.createLinearGradient(sweep * R - 4, -R, sweep * R + 4, R); gl.addColorStop(0, "rgba(255,255,255,0)"); gl.addColorStop(0.5, "rgba(255,255,255,.65)"); gl.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = gl; c.fillRect(-R, -R, R * 2, R * 2); c.restore();
+    c.restore();
+  }
+  function coins(sc) {
+    const key = "c3:" + sc; if (cache[key]) return cache[key];
+    const rs = sc * 1.6, make = (gem) => Array.from({ length: 16 }, (_, i) => {
+      const cv = mk(28 * rs, 28 * rs), c = cv.getContext("2d"); c.setTransform(rs, 0, 0, rs, 14 * rs, 14 * rs);
+      coinFace(c, (i / 16) * TAU, gem, ((i * 0.37) % 2) - 1); return cv;
+    });
+    return (cache[key] = { n: make(false), g: make(true), size: 28 });
+  }
+
+  /* ---------- BACK VIEW (for the city-street mode): the runner seen from behind ---------- */
+  function backFigure(c, P, S) {
+    const sq = P.sq || 1, hipY = -26 + (P.bob || 0), sw = P.sway || 0;
+    c.save(); c.scale(1 + (1 - sq) * 0.35, sq); c.rotate(P.tilt || 0);
+    const leg = (s, lift) => {
+      const ax = s * (4.9 + lift * 0.05), ay = -3.4 - lift, kx = s * (6 + lift * 0.12), ky = (hipY + ay) / 2 + lift * 0.1;
+      plate(c, s * 4.2, hipY, kx, ky, 9.2, 8, shade(S.arm, -0.08));
+      plate(c, kx, ky, ax, ay, 7.6, 6, shade(S.plate, -0.08));
+      joint(c, kx, ky, 3.8, S, 0);
+      c.fillStyle = shade(S.arm, -0.2); c.beginPath(); c.roundRect(ax - 4.4, ay - 1.6, 8.8, 5.4, 2); c.fill();
+      c.strokeStyle = S.glow; c.lineWidth = 1.5; glowOn(c, S.glow, 4); c.beginPath(); c.moveTo(ax - 3.6, ay + 3.7); c.lineTo(ax + 3.6, ay + 3.7); c.stroke(); glowOff(c);
+    };
+    const arm = (s, sw2, up, hold) => {
+      const sx = s * 10.8, sy = -45.5, ex = s * (12.8 + up * 1.5), ey = -38 - up * 12 + sw2 * 3, wx = s * (12 + up * 2.5), wy = -30 - up * 26 + sw2 * 7;
+      plate(c, sx, sy, ex, ey, 6.6, 5.6, S.arm); plate(c, ex, ey, wx, wy, 5.6, 5, S.plate); joint(c, ex, ey, 3.2, S, 0);
+      blob(c, wx, wy + 1.2, 3.4, 3.2, shade(S.dark, 0.1));
+      if (hold && S.baton) { c.strokeStyle = "#14161f"; c.lineWidth = 3; c.lineCap = "round"; c.beginPath(); c.moveTo(wx, wy); c.lineTo(wx + 1, wy - 9); c.stroke(); c.strokeStyle = S.glow; c.lineWidth = 2.2; glowOn(c, S.glow, 7); c.beginPath(); c.moveTo(wx + 1, wy - 8); c.lineTo(wx + 1.6, wy - 16); c.stroke(); glowOff(c); }
+    };
+    const L = P.lift || [0, 0];
+    leg(-1, L[0]); leg(1, L[1]);
+    blob(c, 0, hipY + 0.5, 8.4, 5.2, S.dark);
+    arm(-1, (P.arm || [0, 0])[0], P.up || 0); 
+    // torso (back plate)
+    let g = c.createLinearGradient(-9, 0, 9, 0); g.addColorStop(0, shade(S.arm, -0.55)); g.addColorStop(0.3, S.arm); g.addColorStop(0.5, shade(S.arm, 0.45)); g.addColorStop(0.75, S.arm); g.addColorStop(1, shade(S.arm, -0.6));
+    c.fillStyle = g; c.beginPath(); c.moveTo(-6.8, hipY - 1); c.lineTo(-9.4, -46); c.quadraticCurveTo(0, -50.5, 9.4, -46); c.lineTo(6.8, hipY - 1); c.closePath(); c.fill(); c.strokeStyle = "rgba(0,0,0,.3)"; c.lineWidth = 0.7; c.stroke();
+    c.fillStyle = S.dark; c.fillRect(-7, hipY - 3, 14, 4.2);
+    // jet pack with two nozzles and flames
+    g = c.createLinearGradient(-6, 0, 6, 0); g.addColorStop(0, shade(S.dark, -0.2)); g.addColorStop(0.5, shade(S.dark, 0.55)); g.addColorStop(1, shade(S.dark, -0.1));
+    c.fillStyle = g; c.beginPath(); c.roundRect(-6.4, -45, 12.8, 20, 3.4); c.fill(); c.strokeStyle = "rgba(255,255,255,.18)"; c.lineWidth = 0.7; c.stroke();
+    const fl = 5 + (P.flame || 0) * 5 + (P.boost || 0);
+    for (const s of [-1, 1]) {
+      const fg = c.createLinearGradient(0, -25, 0, -25 + fl * 1.5); fg.addColorStop(0, S.glow); fg.addColorStop(1, "rgba(255,255,255,0)"); c.fillStyle = fg;
+      c.beginPath(); c.moveTo(s * 3.4 - 1.8, -25); c.lineTo(s * 3.4, -25 + fl * 1.5); c.lineTo(s * 3.4 + 1.8, -25); c.closePath(); c.fill();
+      blob(c, s * 3.4, -26, 2.5, 2, S.dark); c.fillStyle = S.glow; glowOn(c, S.glow, 5); c.beginPath(); c.arc(s * 3.4, -25.6, 1.3, 0, TAU); c.fill(); glowOff(c);
+    }
+    c.strokeStyle = S.glow; c.lineWidth = 1.3; glowOn(c, S.glow, 6); c.beginPath(); c.moveTo(0, -43); c.lineTo(0, -30); c.stroke(); glowOff(c);                    // spine light
+    c.strokeStyle = S.acc; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-8.2, -34); c.lineTo(-6.6, -34); c.moveTo(6.6, -34); c.lineTo(8.2, -34); c.stroke();
+    // shoulder pods
+    for (const s of [-1, 1]) { blob(c, s * 10.8, -45.5, 5.4, 5.2, S.arm); c.strokeStyle = "rgba(255,255,255,.35)"; c.lineWidth = 0.8; c.beginPath(); c.arc(s * 10.8 - 0.5, -46.5, 3.4, Math.PI * 1.1, Math.PI * 1.75); c.stroke(); }
+    // scarf hanging down the back
+    if (!S.guard) {
+      const w = P.flow || 0, top = [], bot = [];
+      for (let i = 0; i <= 8; i++) { const t = i / 8, y = -48 + t * 21, x = Math.sin(w + t * 3.6) * (1.2 + t * 2.4) + sw * t * 3; top.push([x - 2.6 * (1 - t * 0.3), y]); bot.push([x + 2.6 * (1 - t * 0.3), y]); }
+      const pts = top.concat(bot.reverse()); const gs = c.createLinearGradient(0, -48, 0, -27); gs.addColorStop(0, shade(S.acc, 0.25)); gs.addColorStop(1, S.acc);
+      c.fillStyle = gs; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); c.closePath(); c.fill();
+      c.fillStyle = "#fff6c4"; for (let i = 1; i < 8; i += 2) { const p = top[i], q = bot[bot.length - 1 - i], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2; c.beginPath(); c.moveTo(mx, my - 1.2); c.lineTo(mx + 1.2, my); c.lineTo(mx, my + 1.2); c.lineTo(mx - 1.2, my); c.fill(); }
+    }
+    arm(1, (P.arm || [0, 0])[1], P.up || 0, true);
+    // neck + head (seen from behind)
+    plate(c, 0, -48, 0, -52, 4.4, 4, S.dark);
+    const hy = -59 + (P.nod || 0);
+    if (S.siren) {
+      const on = Math.floor((P.flow || 0) / 1.6) % 2;
+      glowOn(c, on ? "#ff3b4d" : "#3b7bff", 9); c.fillStyle = on ? "#ff3b4d" : "#3b7bff"; c.beginPath(); c.arc(0, hy - 7, 3.6, Math.PI, TAU); c.fill(); glowOff(c);
+    } else {
+      c.strokeStyle = shade(S.dark, 0.3); c.lineWidth = 1.2; c.lineCap = "round"; c.beginPath(); c.moveTo(-2.4, hy - 6.6); c.quadraticCurveTo(-4 + sw, hy - 10, -3 + sw * 1.5, hy - 12.6); c.stroke();
+      glowOn(c, S.acc, 6); c.fillStyle = S.acc; c.beginPath(); c.arc(-3 + sw * 1.5, hy - 12.8, 1.7, 0, TAU); c.fill(); glowOff(c);
+    }
+    g = c.createRadialGradient(-2, hy - 3, 1, 0, hy, 8); g.addColorStop(0, shade(S.plate, 0.15)); g.addColorStop(1, shade(S.plate, -0.55));
+    c.fillStyle = g; c.beginPath(); c.ellipse(0, hy, 7.2, 7.4, 0, 0, TAU); c.fill(); c.strokeStyle = "rgba(0,0,0,.3)"; c.lineWidth = 0.7; c.stroke();
+    c.fillStyle = S.arm; c.beginPath(); c.roundRect(-1.5, hy - 7.2, 3, 9, 1.2); c.fill();
+    for (const s of [-1, 1]) { blob(c, s * 7.4, hy + 0.6, 2.6, 3, S.dark); c.strokeStyle = S.glow; c.lineWidth = 0.9; glowOn(c, S.glow, 3); c.beginPath(); c.arc(s * 7.4, hy + 0.6, 1.5, 0, TAU); c.stroke(); glowOff(c); }
+    c.strokeStyle = S.glow; c.lineWidth = 1.2; glowOn(c, S.glow, 5); c.beginPath(); c.moveTo(-3.4, hy + 5); c.lineTo(3.4, hy + 5); c.stroke(); glowOff(c);
+    c.restore();
+  }
+  function backPose(i, n, o = {}) {
+    const p = i / n, a = Math.sin(TAU * p), b = Math.sin(TAU * p + Math.PI);
+    return Object.assign({ lift: [Math.max(0, a) * 12, Math.max(0, b) * 12], arm: [b, a], bob: 1.6 * Math.abs(Math.cos(TAU * p)) - 0.6, sway: Math.sin(TAU * p) * 0.6, flow: p * TAU * 2, flame: 0.5 + 0.5 * Math.sin(TAU * p * 2), tilt: Math.sin(TAU * p) * 0.025 }, o);
+  }
+  function runnerBack(skin, sc) {
+    const key = "rb:" + skin + ":" + sc; if (cache[key]) return cache[key];
+    const S = LOOKS[skin] || LOOKS.default, N = 12;
+    const run = Array.from({ length: N }, (_, i) => (c) => backFigure(c, backPose(i, N), S));
+    const extra = [
+      (c) => backFigure(c, backPose(0, N, { lift: [8, 11], arm: [0, 0], up: 0.8, bob: -1, boost: 4, flow: 2.4 }), S),                           // jump
+      (c) => backFigure(c, backPose(1, N, { sq: 0.56, lift: [0, 0], arm: [-0.6, -0.6], bob: 4, nod: 2 }), S),                                 // slide
+      (c) => backFigure(c, backPose(0, N, { lift: [3, 0], up: 1, arm: [0, 0], tilt: 0.12, nod: 1, flow: 3 }), S),                                // hit
+    ];
+    return (cache[key] = { w: 48, h: 80, fx: 24, fy: 76, f: frames(key, 48, 80, 24, 76, sc, run.concat(extra), "#ffb97a"), n: N, jump: N, slide: N + 1, hit: N + 2, unit: 1.85 / 59 });
+  }
+  function guardBack(sc) {
+    const key = "gb:" + sc; if (cache[key]) return cache[key];
+    const N = 12, run = Array.from({ length: N }, (_, i) => (c) => backFigure(c, backPose(i, N, { arm: [Math.sin(TAU * i / N + Math.PI), -0.2] }), GUARD));
+    return (cache[key] = { w: 48, h: 80, fx: 24, fy: 76, f: frames(key, 48, 80, 24, 76, sc, run, "#ffa66b"), n: N, unit: 1.85 / 59 });
+  }
+  function dogBackFig(c, p, S) {
+    const a = Math.sin(TAU * p), b = Math.sin(TAU * p + Math.PI), lf = [Math.max(0, a) * 7, Math.max(0, b) * 7], sh = Math.sin(TAU * p) * 0.8;
+    const paw = (x, y, w, col) => { blob(c, x, y, w, 2.6, col); };
+    for (const s of [-1, 1]) { const l = lf[s < 0 ? 1 : 0]; plate(c, s * 3.6, -13, s * 3.8, -3.6 - l * 0.7, 4.6, 3.6, shade(S.metal, -0.4)); paw(s * 3.8, -2.6 - l * 0.7, 2.7, shade(S.dark, 0)); }
+    const tw = Math.sin(TAU * p * 2) * 2;
+    c.strokeStyle = S.dark; c.lineWidth = 2.4; c.lineCap = "round"; c.beginPath(); c.moveTo(0, -17); c.quadraticCurveTo(tw, -24, tw * 1.6, -30); c.stroke();
+    glowOn(c, S.glow, 6); c.fillStyle = S.glow; c.beginPath(); c.arc(tw * 1.6, -30.6, 1.9, 0, TAU); c.fill(); glowOff(c);
+    let g = c.createLinearGradient(-11, 0, 11, 0); g.addColorStop(0, shade(S.metal, -0.5)); g.addColorStop(0.45, shade(S.metal, 0.4)); g.addColorStop(1, shade(S.metal, -0.55));
+    c.fillStyle = g; c.beginPath(); c.ellipse(sh * 0.4, -16, 10.5, 9, 0, 0, TAU); c.fill(); c.strokeStyle = "rgba(0,0,0,.3)"; c.lineWidth = 0.7; c.stroke();
+    for (const s of [-1, 1]) { const l = lf[s < 0 ? 0 : 1]; plate(c, s * 6.4, -14, s * 7.2, -4 - l, 7.4, 4.6, S.metal); joint(c, s * 7, -9 - l * 0.5, 2.8, { dark: S.dark, acc: S.acc }, 0); paw(s * 7.4, -2.6 - l, 3.2, S.dark); }
+    c.strokeStyle = S.glow; c.lineWidth = 1.2; glowOn(c, S.glow, 5); c.beginPath(); c.moveTo(0, -24); c.lineTo(0, -12); c.stroke(); glowOff(c);
+    g = c.createRadialGradient(-1, -27, 1, 0, -25, 6); g.addColorStop(0, shade(S.metal, 0.3)); g.addColorStop(1, shade(S.metal, -0.5)); c.fillStyle = g; c.beginPath(); c.ellipse(sh * 0.3, -25, 4.8, 4.6, 0, 0, TAU); c.fill();
+    c.fillStyle = S.dark; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(s * 2.4, -28); c.lineTo(s * 4.8, -34); c.lineTo(s * 4.4, -28); c.closePath(); c.fill(); }
+    c.strokeStyle = S.acc; c.lineWidth = 2; glowOn(c, S.acc, 4); c.beginPath(); c.moveTo(-4, -22); c.lineTo(4, -22); c.stroke(); glowOff(c);
+  }
+  function dogBack(sc) {
+    const key = "db:" + sc; if (cache[key]) return cache[key];
+    const N = 12, fr = Array.from({ length: N }, (_, i) => (c) => dogBackFig(c, i / N, DM));
+    return (cache[key] = { w: 40, h: 44, fx: 20, fy: 40, f: frames(key, 40, 44, 20, 40, sc, fr, "#ffc48a"), n: N, unit: 1.2 / 30 });
+  }
+
+  return { runner, guard, dog, coins, runnerBack, guardBack, dogBack, LOOKS, GUARD, mk };
 })();
