@@ -4,17 +4,33 @@ An endless runner and campaign game set in Uzbek cities (Tashkent, Samarkand, Bu
 
 ## Files
 
-| File         | Purpose                                                        |
-| ------------ | -------------------------------------------------------------- |
-| `index.html` | Page markup and script loading order                           |
-| `style.css`  | Layout, mobile bottom-sheet menus, touch pad, settings         |
-| `i18n.js`    | Uzbek / English / Japanese texts and language switching        |
-| `art.js`     | Pre-rendered city scenery, parallax layers, ground, thumbnails |
-| `chars.js`   | Pre-rendered runner, guard, dog, coins, obstacles, icons       |
-| `game.js`    | Game engine, input, physics, spawning, audio, UI, saving       |
+| File | Purpose |
+|---|---|
+| `index.html` | Page markup and script loading order |
+| `style.css` | Layout, mobile bottom-sheet menus, touch pad, settings |
+| `i18n.js` | Uzbek / English / Japanese texts and language switching |
+| `art.js` | Pre-rendered city scenery, parallax layers, ground, thumbnails |
+| `chars.js` | Built-in painted runner, guard, dog (fallback), coins, obstacles, icons |
+| `sprites.js` | Loads real PNG characters (runner, guard, dog) when you provide them |
+| `assets/characters/` | Character pictures: `hero_run1/run2/slide.png` (runner), `dog.png`, `guard.png` (officer) |
+| `game.js` | Game engine, input, physics, spawning, audio, UI, saving |
 
-Script order matters: `i18n.js`, `art.js`, `chars.js`, `game.js`.
+Script order matters: `i18n.js`, `art.js`, `chars.js`, `sprites.js`, `game.js`.
 The only external resource is the Google Fonts stylesheet. If it is blocked, the game falls back to system fonts.
+
+## Characters (real pictures)
+
+The game uses the ZUMARY hero, the dog and the police officer as pictures (`assets/characters/`).
+`sprites.js` slices and scales them once at load. The hero uses 3 poses (running stride 1 and 2, slide); the dog and the officer are single pictures animated by code (gallop / run).
+
+- Skins in the shop recolor only the painted fallback character; the hero picture is the same for every skin.
+- To change a character: replace the PNG (transparent background, facing right) and adjust its entry in `CONFIG` at the top of `sprites.js` (height on screen, which picture is which pose, `motion` for animating a still picture).
+- If a picture is missing, the built-in painted character is used, so the game never breaks.
+- `guard.png` is a preview image with a stock-site watermark: replace it with a licensed, watermark-free copy before publishing.
+
+## The "caught" scene
+
+When the last life is lost the officer and the dog rush in and "bonk" the hero (DOPPOS! / BONK! / ボコッ！ in the three languages). The result screen appears after about 1.5 seconds (tap to skip).
 
 ## Run locally
 

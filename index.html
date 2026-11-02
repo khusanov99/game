@@ -2,43 +2,30 @@
 <html lang="uz">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#070816" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>ZUMARY Run</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
   </head>
-
   <body>
     <main class="app">
       <header class="topbar">
         <div class="brand">
           <div class="brand-icon">ϟ</div>
           <div>
-            <div class="brand-name" data-i18n-html="brand">
-              ZUMARY <span>Runner</span>
-            </div>
+            <div class="brand-name" data-i18n-html="brand">ZUMARY <span>Runner</span></div>
             <div class="brand-sub" data-i18n="brandSub"></div>
           </div>
         </div>
         <div class="topright">
           <div class="lang" aria-label="Language">
-            <button type="button" data-lang="uz">UZ</button
-            ><button type="button" data-lang="en">EN</button
-            ><button type="button" data-lang="ja">日本語</button>
+            <button type="button" data-lang="uz">UZ</button><button type="button" data-lang="en">EN</button><button type="button" data-lang="ja">日本語</button>
           </div>
-          <div class="live-pill">
-            <span class="live-dot"></span><span data-i18n="online"></span>
-          </div>
+          <div class="live-pill"><span class="live-dot"></span><span data-i18n="online"></span></div>
         </div>
       </header>
 
@@ -51,22 +38,10 @@
       <section class="game-shell" id="shell">
         <div class="game-inner">
           <div class="hud">
-            <div class="stat">
-              <div class="stat-label" data-i18n="lScore"></div>
-              <div class="stat-value" id="score">000000</div>
-            </div>
-            <div class="stat">
-              <div class="stat-label" data-i18n="lBest"></div>
-              <div class="stat-value" id="best">000000</div>
-            </div>
-            <div class="stat">
-              <div class="stat-label" data-i18n="lSpeed"></div>
-              <div class="stat-value" id="speed">1.0x</div>
-            </div>
-            <div class="stat">
-              <div class="stat-label" data-i18n="lCoins"></div>
-              <div class="stat-value" id="coins">0</div>
-            </div>
+            <div class="stat"><div class="stat-label" data-i18n="lScore"></div><div class="stat-value" id="score">000000</div></div>
+            <div class="stat"><div class="stat-label" data-i18n="lBest"></div><div class="stat-value" id="best">000000</div></div>
+            <div class="stat"><div class="stat-label" data-i18n="lSpeed"></div><div class="stat-value" id="speed">1.0x</div></div>
+            <div class="stat"><div class="stat-label" data-i18n="lCoins"></div><div class="stat-value" id="coins">0</div></div>
           </div>
 
           <div class="stage">
@@ -75,126 +50,80 @@
               <div class="game-overlay" id="overlay">
                 <div class="overlay-card">
                   <div class="lang lang-menu" aria-label="Language">
-                    <button type="button" data-lang="uz">UZ</button
-                    ><button type="button" data-lang="en">EN</button
-                    ><button type="button" data-lang="ja">日本語</button>
+                    <button type="button" data-lang="uz">UZ</button><button type="button" data-lang="en">EN</button><button type="button" data-lang="ja">日本語</button>
                   </div>
                   <div class="overlay-icon" id="oIcon">✦</div>
                   <h2 id="oTitle"></h2>
                   <p id="oText"></p>
                   <div class="nav" id="nav">
-                    <button data-p="play" type="button">
-                      🏁<span data-i18n="navPlay"></span></button
-                    ><button data-p="missions" type="button">
-                      📋<span data-i18n="navMissions"></span></button
-                    ><button data-p="shop" type="button">
-                      🛒<span data-i18n="navShop"></span></button
-                    ><button data-p="medals" type="button">
-                      🏅<span data-i18n="navMedals"></span></button
-                    ><button data-p="settings" type="button">
-                      ⚙️<span data-i18n="navSettings"></span>
-                    </button>
+                    <button data-p="play" type="button">🏁<span data-i18n="navPlay"></span></button><button data-p="missions" type="button">📋<span data-i18n="navMissions"></span></button><button data-p="shop" type="button">🛒<span data-i18n="navShop"></span></button><button data-p="medals" type="button">🏅<span data-i18n="navMedals"></span></button><button data-p="settings" type="button">⚙️<span data-i18n="navSettings"></span></button>
                   </div>
                   <div id="dailyBox"></div>
                   <div class="seg" id="mode">
-                    <button data-m="campaign" data-i18n="modeCampaign"></button
-                    ><button data-m="endless" data-i18n="modeEndless"></button>
+                    <button data-m="campaign" data-i18n="modeCampaign"></button><button data-m="endless" data-i18n="modeEndless"></button>
                   </div>
                   <div class="seg" id="diff">
-                    <button data-d="easy" data-i18n="diffEasy"></button
-                    ><button data-d="normal" data-i18n="diffNormal"></button
-                    ><button data-d="hard" data-i18n="diffHard"></button>
+                    <button data-d="easy" data-i18n="diffEasy"></button><button data-d="normal" data-i18n="diffNormal"></button><button data-d="hard" data-i18n="diffHard"></button>
                   </div>
                   <div id="levelBox"></div>
                   <div id="skinBox"></div>
                   <div id="topBox"></div>
                   <div id="shopBox"></div>
                   <button class="primary-btn" id="startButton"></button>
-                  <button
-                    class="ghost-btn"
-                    id="menuButton"
-                    type="button"
-                  ></button>
-                  <button
-                    class="ghost-btn"
-                    id="shareButton"
-                    type="button"
-                    data-i18n="share"
-                  ></button>
+                  <button class="ghost-btn" id="menuButton" type="button"></button>
+                  <button class="ghost-btn" id="shareButton" type="button" data-i18n="share"></button>
                 </div>
               </div>
             </div>
 
             <div class="pad">
-              <button class="pad-btn" id="padDuck" type="button">
-                <b>⬇</b><span data-i18n="padDuck"></span>
-              </button>
-              <button class="pad-btn pad-turbo" id="padTurbo" type="button">
-                <b>⚡</b><span data-i18n="padTurbo"></span>
-              </button>
-              <button class="pad-btn pad-jump" id="padJump" type="button">
-                <b>⬆</b><span data-i18n="padJump"></span>
-              </button>
+              <button class="pad-btn" id="padDuck" type="button"><b>⬇</b><span data-i18n="padDuck"></span></button>
+              <button class="pad-btn pad-turbo" id="padTurbo" type="button"><b>⚡</b><span data-i18n="padTurbo"></span></button>
+              <button class="pad-btn pad-jump" id="padJump" type="button"><b>⬆</b><span data-i18n="padJump"></span></button>
             </div>
           </div>
 
           <div class="game-footer">
             <div class="controls-hint">
-              <kbd>SPACE</kbd><kbd>↑</kbd><span data-i18n="hintJump"></span
-              ><span>·</span> <kbd>↓</kbd><span data-i18n="hintDuck"></span
-              ><span>·</span> <kbd>T</kbd><span data-i18n="hintTurbo"></span
-              ><span>·</span> <kbd>P</kbd><span data-i18n="hintPause"></span
-              ><span>·</span><kbd>M</kbd><span data-i18n="hintSound"></span>
+              <kbd>SPACE</kbd><kbd>↑</kbd><span data-i18n="hintJump"></span><span>·</span>
+              <kbd>↓</kbd><span data-i18n="hintDuck"></span><span>·</span>
+              <kbd>T</kbd><span data-i18n="hintTurbo"></span><span>·</span>
+              <kbd>P</kbd><span data-i18n="hintPause"></span><span>·</span><kbd>M</kbd><span data-i18n="hintSound"></span>
             </div>
             <div class="btns">
-              <button class="mini-btn" id="pauseButton" type="button">
-                ❚❚<span class="lbl" data-i18n="btnPause"></span>
-              </button>
-              <button class="mini-btn" id="muteButton" type="button">
-                🔊<span class="lbl" data-i18n="btnSound"></span>
-              </button>
-              <button class="mini-btn" id="gfxButton" type="button">
-                🎨<span class="lbl" id="gfxLabel"></span>
-              </button>
-              <button class="mini-btn" id="restartButton" type="button">
-                ↻<span class="lbl" data-i18n="btnRestart"></span>
-              </button>
-              <button class="mini-btn" id="fullscreenButton" type="button">
-                ⛶<span class="lbl" data-i18n="btnFull"></span>
-              </button>
+              <button class="mini-btn" id="pauseButton" type="button">❚❚<span class="lbl" data-i18n="btnPause"></span></button>
+              <button class="mini-btn" id="muteButton" type="button">🔊<span class="lbl" data-i18n="btnSound"></span></button>
+              <button class="mini-btn" id="gfxButton" type="button">🎨<span class="lbl" id="gfxLabel"></span></button>
+              <button class="mini-btn" id="restartButton" type="button">↻<span class="lbl" data-i18n="btnRestart"></span></button>
+              <button class="mini-btn" id="fullscreenButton" type="button">⛶<span class="lbl" data-i18n="btnFull"></span></button>
             </div>
           </div>
         </div>
       </section>
 
       <section class="feature-grid">
-        <article class="feature">
-          <div class="feature-icon">⚡</div>
-          <div>
-            <h3 data-i18n="f1h"></h3>
-            <p data-i18n="f1p"></p>
-          </div>
-        </article>
-        <article class="feature">
-          <div class="feature-icon">◈</div>
-          <div>
-            <h3 data-i18n="f2h"></h3>
-            <p data-i18n="f2p"></p>
-          </div>
-        </article>
-        <article class="feature">
-          <div class="feature-icon">◎</div>
-          <div>
-            <h3 data-i18n="f3h"></h3>
-            <p data-i18n="f3p"></p>
-          </div>
-        </article>
+        <article class="feature"><div class="feature-icon">⚡</div><div><h3 data-i18n="f1h"></h3><p data-i18n="f1p"></p></div></article>
+        <article class="feature"><div class="feature-icon">◈</div><div><h3 data-i18n="f2h"></h3><p data-i18n="f2p"></p></div></article>
+        <article class="feature"><div class="feature-icon">◎</div><div><h3 data-i18n="f3h"></h3><p data-i18n="f3p"></p></div></article>
       </section>
       <footer class="bottom-note" data-i18n="foot"></footer>
     </main>
-    <script src="./I18n.js"></script>
+    <script src="./i18n.js"></script>
     <script src="./art.js"></script>
     <script src="./chars.js"></script>
-    <script src="./game.js"></script>
+    <script src="./sprites.js"></script>
+    <script>
+      /* start the game only when every file it needs was loaded; otherwise say exactly which one is missing */
+      (function () {
+        var need = { "i18n.js": typeof I18N, "art.js": typeof Art, "chars.js": typeof Chars }, miss = [];
+        for (var k in need) if (need[k] === "undefined") miss.push(k);
+        if (miss.length) {
+          document.body.insertAdjacentHTML("afterbegin",
+            '<div style="position:fixed;z-index:99999;left:0;right:0;top:0;padding:14px 16px;background:#b3002d;color:#fff;font:600 15px/1.4 system-ui,sans-serif">' +
+            "Fayl yuklanmadi / File not loaded: <b>" + miss.join(", ") +
+            "</b><br>Bu fayl(lar) index.html bilan bir papkada bo'lishi va nomi aynan shunday (kichik harflar) bo'lishi kerak.</div>");
+        } else document.write('<script src="./game.js"><\/script>');
+      })();
+    </script>
   </body>
 </html>
