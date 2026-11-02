@@ -24,8 +24,8 @@ h1 span{color:var(--cyan);text-shadow:0 0 30px rgba(83,247,255,.35)}
 /* ---- game shell ---- */
 .game-shell{padding:1px;border-radius:24px;background:linear-gradient(135deg,rgba(83,247,255,.65),rgba(167,139,250,.15) 45%,rgba(255,79,216,.5));box-shadow:0 25px 90px rgba(0,0,0,.35)}
 .game-inner{overflow:hidden;border-radius:23px;background:#090b1b}
-.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px;background:rgba(15,18,39,.95);border-bottom:1px solid var(--line)}
-.stat{min-width:0;padding:9px 13px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.018)}
+.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 14px;background:linear-gradient(#04050d,#0a0c1c);border-bottom:2px solid rgba(255,216,79,.35)}
+.stat{min-width:0;padding:4px 12px;border:0;border-left:3px solid var(--gold);border-radius:0;background:transparent}
 .stat-label{color:var(--muted);font-size:9px;letter-spacing:1.5px;margin-bottom:6px;white-space:nowrap}
 .stat-value{font:700 clamp(14px,2.6vw,22px) Orbitron,sans-serif;white-space:nowrap;font-variant-numeric:tabular-nums}
 #score{color:var(--cyan)}#best{color:var(--purple)}#speed{color:#ff8fce}#coins{color:var(--gold)}

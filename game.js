@@ -581,14 +581,17 @@ function drawChaser() {                       // the guard and his dog (the clos
   const close = lives === 1 || state === "over" || state === "revive";
   halo(chaseX - 8, gy - 56, 80, 56, 0, "#ff3b5c");
   const caught = state === "over" || state === "revive";
+  ctx.fillStyle = "rgba(0,0,0,.32)"; ctx.beginPath(); ctx.ellipse(gx + 4, gy + 3, 22, 4.2, 0, 0, 7); ctx.fill();          // ground shadows
+  if (lives < maxLives || caught) { ctx.beginPath(); ctx.ellipse(gx + 40, gy + 3, 24, 3.6, 0, 0, 7); ctx.fill(); }
   if (caught && bustT > 150) {                          // the officer swings: leans in hard, then back, once per bonk
     const ph = Math.max(0, (bustT - BUST_FIRST + BUST_EVERY * 0.7) % BUST_EVERY) / BUST_EVERY, swing = Math.sin(Math.min(1, ph * 1.15) * Math.PI);
-    ctx.save(); ctx.translate(gx + 6, gy); ctx.rotate(0.05 + swing * 0.42); ctx.translate(-gx - 6, -gy);
-    ctx.drawImage(G.f[0], gx - G.fx * CPS, gy - G.fy * CPS, G.w * CPS, G.h * CPS);
+    ctx.save(); ctx.translate(gx + 6, gy); ctx.rotate(0.03 + swing * (G.swing === undefined ? 0.42 : 0.2)); ctx.translate(-gx - 6, -gy);
+    ctx.drawImage(G.f[G.swing === undefined ? 0 : G.swing], gx - G.fx * CPS, gy - G.fy * CPS, G.w * CPS, G.h * CPS);
     ctx.restore();
-  } else ctx.drawImage(G.f[Math.floor(frame * 0.42) & 7], gx - G.fx * CPS, gy - G.fy * CPS, G.w * CPS, G.h * CPS);
+  } else ctx.drawImage(G.f[Math.floor((frame * 0.42 * (G.n || 8)) / 8) % (G.n || 8)], gx - G.fx * CPS, gy - G.fy * CPS, G.w * CPS, G.h * CPS);
   if (lives < maxLives || caught) {
-    const di = caught ? 8 + (Math.floor(bustT / 90) & 7) : (Math.floor(frame * 0.55) & 7) + (close ? 8 : 0);
+    const dn = D.n || 8, ds = D.snarl === undefined ? 8 : D.snarl;
+    const di = caught ? ds + (Math.floor(bustT / 70) % dn) : (Math.floor((frame * 0.55 * dn) / 8) % dn) + (close ? ds : 0);
     const hop = caught ? Math.abs(Math.sin(bustT / 110)) * 14 * CPS : 0;   // the dog jumps at the runner
     ctx.drawImage(D.f[di], gx + (caught ? 36 : 34) - D.fx * CPS, gy - hop - D.fy * CPS, D.w * CPS, D.h * CPS);
   }
@@ -913,7 +916,6 @@ function updateBust(delta) {
     const hx = p.x + p.w / 2, hy = p.y - 8;
     burst(hx, hy, "#ffd84f", 10); burst(hx, hy, "#ffffff", 5);
     pop(hx + (bustHit % 2 ? -38 : 34), hy - 30 - (bustHit % 3) * 12, t("bust.hit"), bustHit % 2 ? "#ffd84f" : "#ff8ad8");
-    if (bustHit === 1) shout(t("bust.caught"), "#ff6b8a", 1100);
   }
 }
 function updateParticles(delta) {
@@ -993,28 +995,31 @@ function drawBackground() {
   ctx.fillStyle = "rgba(255,255,255,.16)"; ctx.fillRect(-20, groundY, W + 40, 2);
 }
 
-const PS = 1.18, CPS = 1.12;                          // on-screen sprite scale (hitboxes stay the same)
+const PS = 1.26, CPS = 1.2;                          // on-screen sprite scale (hitboxes stay the same)
 const CSC = COARSE ? 1.5 : 2;                         // sprite density (phones use less memory)
 let RUN = null, RUN_SKIN = "", GRD = null, DOGS = null, COINSP = null;
 const BADGES = {}, OBST = {}, HEARTS = {};
 /* real PNG characters (sprites.js) are used when enabled and loaded; otherwise the painted ones from chars.js */
 const IMG = typeof Sprites !== "undefined" ? Sprites : { get: () => null, preload() {} };   // sprites.js missing? the game still runs with the painted characters
-const runnerSheet = () => IMG.get("runner", skin, CSC) || ((!RUN || RUN_SKIN !== skin) ? ((RUN = Chars.runner(skin, CSC)), (RUN_SKIN = skin), RUN) : RUN);
+const RIGX = typeof Rig !== "undefined" ? Rig : null;          // rig.js: realistic skeleton characters (falls back to pictures / painted ones if it is missing)
+const rigTry = (fn) => { try { return fn(); } catch (e) { return null; } };
+const runnerSheet = () => (RIGX && rigTry(() => RIGX.runner(skin, CSC))) || IMG.get("runner", skin, CSC) || ((!RUN || RUN_SKIN !== skin) ? ((RUN = Chars.runner(skin, CSC)), (RUN_SKIN = skin), RUN) : RUN);
 const badgeOf = (k) => BADGES[k] || (BADGES[k] = Chars.badge(POWER[k].icon, POWER[k].color, CSC));
 const heartSprite = (f) => HEARTS[f] || (HEARTS[f] = Chars.heart(f, CSC));
 const obstSprite = (v) => OBST[v] || (OBST[v] = Chars.obstacle(v, CSC));
 const coinSheet = () => COINSP || (COINSP = Chars.coins(CSC));
-const guardSheet = () => IMG.get("guard", "default", CSC) || GRD || (GRD = Chars.guard(CSC));
-const dogSheet = () => IMG.get("dog", "default", CSC) || DOGS || (DOGS = Chars.dogs(CSC));
+const guardSheet = () => (RIGX && rigTry(() => RIGX.guard(CSC))) || IMG.get("guard", "default", CSC) || GRD || (GRD = Chars.guard(CSC));
+const dogSheet = () => (RIGX && rigTry(() => RIGX.dog(CSC))) || IMG.get("dog", "default", CSC) || DOGS || (DOGS = Chars.dogs(CSC));
 IMG.preload();                                   // start loading the image characters while the menu is shown
 function skinGlow() { const sk = SKINS.find((k) => k.id === skin) || SKINS[0]; return sk.b || cur.b; }
-function playerFrame() {                              // 0-7 run cycle · 8 jump · 9 fall · 10 land · 11 duck · 12 hit
-  if (state === "over" || state === "revive") return 12;
+function playerFrame() {                              // rig: 0-11 stride · 12 jump · 13 fall · 14 land · 15 slide · 16 hit  (painted: 0-7 · 8 · 9 · 10 · 11 · 12)
+  const R = runnerSheet(), n = R.n || 8, F = R.n ? R : { jump: 8, fall: 9, land: 10, duck: 11, hit: 12 };
+  if (state === "over" || state === "revive") return F.hit;
   const p = player;
-  if (!p.grounded) return flying || p.vy < -1 ? 8 : 9;
-  if (landT > 0) return 10;
-  if (p.h < 40) return 11;
-  return Math.floor(runPhase) & 7;
+  if (!p.grounded) return flying || p.vy < -1 ? F.jump : F.fall;
+  if (landT > 0) return F.land;
+  if (p.h < 40) return F.duck;
+  return Math.floor((runPhase * n) / 8) % n;
 }
 function drawPlayer() {
   const p = player, R = runnerSheet(), pb = skinGlow();
@@ -1174,10 +1179,19 @@ function drawHUD() {
   const u = UI, m = 14 * u;
   ctx.textBaseline = "middle";
   let row = m + 8 * u;
-  if (state !== "ready") {
-    const HF = heartSprite(true), HE = heartSprite(false), hn = Math.min(maxLives, 6);
-    for (let i = 0; i < hn; i++) ctx.drawImage(i < lives ? HF : HE, m + i * 22 * u, row - 10 * u, 20 * u, 18 * u);
-    row += 22 * u;
+  if (state !== "ready") {                                    // health: slim segmented bar (one segment per life)
+    const segs = Math.min(maxLives, 6), sw = (segs > 3 ? 20 : 28) * u, sh = 7 * u, gp = 3 * u, by = row + 9 * u;
+    ctx.textAlign = "left"; ctx.font = `700 ${Math.round(8.5 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`; ctx.fillStyle = "rgba(255,255,255,.78)";
+    ctx.fillText(t("hud.health"), m, row);
+    for (let i = 0; i < segs; i++) {
+      const x = m + i * (sw + gp);
+      ctx.fillStyle = "rgba(0,0,0,.6)"; rr(x - 1.2 * u, by - 1.2 * u, sw + 2.4 * u, sh + 2.4 * u, 2 * u); ctx.fill();
+      if (i < lives) {
+        ctx.fillStyle = lives === 1 && maxLives > 1 ? (Math.floor(frame / 18) % 2 ? "#ff3b3b" : "#ff9a9a") : lives / maxLives < 0.67 ? "#ffd34a" : "#46e08c";
+        rr(x, by, sw, sh, 1.6 * u); ctx.fill(); ctx.fillStyle = "rgba(255,255,255,.3)"; ctx.fillRect(x, by, sw, sh * 0.38);
+      } else { ctx.strokeStyle = "rgba(255,255,255,.22)"; ctx.lineWidth = 1; rr(x, by, sw, sh, 1.6 * u); ctx.stroke(); }
+    }
+    row = by + sh + 13 * u;
   }
   if (combo >= 2 && state !== "ready") {
     ctx.textAlign = "left"; ctx.font = `700 ${Math.round(14 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
@@ -1216,6 +1230,14 @@ function drawHUD() {
     ctx.fillStyle = P.color;
     ctx.fillRect(x + 5 * u, m - 4 * u + bh - 6 * u, (bw - 10 * u) * Math.min(1, pct), 3 * u);
   }
+  if (state === "play" && maxLives > 1 && (lives < maxLives || chaseX > -70)) {          // wanted level: stars light up as the police close in
+    const lit = Math.min(5, maxLives - lives + 1), sz = Math.round(15 * u), flash2 = lives === 1 && Math.floor(frame / 16) % 2;
+    ctx.textAlign = "right"; ctx.font = `700 ${sz}px sans-serif`; ctx.textBaseline = "middle";
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = i < lit ? (lives === 1 ? (flash2 ? "#ff4a5a" : "#4a8bff") : "#ffd84f") : "rgba(255,255,255,.2)";
+      ctx.fillText("★", W - m - (4 - i) * (sz + 1 * u) + 0, m + 42 * u);
+    }
+  }
   if (banner.t > 0) {
     ctx.globalAlpha = Math.max(0, Math.min(1, banner.t / 500, (banner.max - banner.t) / 300 + 0.2));
     ctx.fillStyle = cur.a; glow(cur.a, 20);
@@ -1245,12 +1267,73 @@ function drawHUD() {
   }
 }
 
+/* ============ CINEMATIC LAYER (colour grade, vignette, bloom, speed lines, BUSTED) ============ */
+let VIG = null, VIGK = "", BLM = null;
+function gradeSprite() {                          // one small canvas, stretched over the screen: warm sky, cool ground, dark corners
+  const k = Math.round(W) + "x" + Math.round(H);
+  if (VIGK !== k) {
+    VIGK = k;
+    const cv = document.createElement("canvas"); cv.width = 128; cv.height = Math.max(40, Math.round((128 * H) / W));
+    const g = cv.getContext("2d"), r = Math.hypot(cv.width, cv.height) / 2;
+    const lg = g.createLinearGradient(0, 0, 0, cv.height);
+    lg.addColorStop(0, "rgba(255,150,70,.15)"); lg.addColorStop(0.55, "rgba(255,150,70,0)"); lg.addColorStop(1, "rgba(30,110,150,.17)");
+    g.fillStyle = lg; g.fillRect(0, 0, cv.width, cv.height);
+    const gr = g.createRadialGradient(cv.width / 2, cv.height * 0.55, r * 0.34, cv.width / 2, cv.height * 0.55, r * 1.02);
+    gr.addColorStop(0, "rgba(8,6,20,0)"); gr.addColorStop(1, "rgba(8,6,20,.58)");
+    g.fillStyle = gr; g.fillRect(0, 0, cv.width, cv.height);
+    VIG = cv;
+  }
+  return VIG;
+}
+function speedLines() {
+  const k = Math.min(1, Math.max(0, (speed - 6) / 6) + (turboT > 0 ? 0.55 : 0));
+  if (k < 0.03 || state !== "play" || CFG.reduce || Q.level >= 2) return;
+  const n = Math.round(4 + k * 8);
+  ctx.fillStyle = "#fff6e6";
+  for (let i = 0; i < n; i++) {
+    const x = W - ((runPhase * 60 * (1 + (i % 4) * 0.45) + i * 173) % (W + 260)), y = 14 + ((i * 67) % Math.max(60, groundY - 26)), len = 70 + (i % 3) * 55;
+    ctx.globalAlpha = 0.05 + 0.1 * k * (0.5 + (i % 3) * 0.25); ctx.fillRect(x, y, len, 1.3);
+  }
+  ctx.globalAlpha = 1;
+}
+function bloomPass() {                              // soft glow: shrink the picture, stretch it back on top with "screen"
+  if (Q.level !== 0 || COARSE || CFG.reduce) return;
+  const bw = 160, bh = Math.max(40, Math.round((bw * canvas.height) / canvas.width));
+  if (!BLM) { BLM = document.createElement("canvas"); BLM.g = BLM.getContext("2d"); }
+  if (BLM.width !== bw || BLM.height !== bh) { BLM.width = bw; BLM.height = bh; }
+  BLM.g.drawImage(canvas, 0, 0, bw, bh);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = 0.2;
+  ctx.drawImage(BLM, 0, 0, canvas.width, canvas.height); ctx.restore();
+}
+function drawBusted() {
+  if (!(state === "over" || state === "revive") || bustT <= 0 || !$("overlay").classList.contains("hidden")) return;
+  const k = Math.min(1, bustT / 280), bar = H * 0.115 * k;
+  ctx.fillStyle = "rgba(8,10,26," + (0.34 * k) + ")"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
+  if (bustT < 380) return;
+  const e = Math.min(1, (bustT - 380) / 240), sc = 1 + (1 - e) * 0.7, u = UI;
+  ctx.save(); ctx.translate(W / 2, H * 0.36); ctx.scale(sc, sc); ctx.globalAlpha = e;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = `800 ${Math.round(Math.min(58 * u, (W * 0.8) / Math.max(6, t("bust.caught").length * 0.8)))}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
+  ctx.lineJoin = "round"; ctx.lineWidth = 6 * u; ctx.strokeStyle = "rgba(0,0,0,.65)"; ctx.strokeText(t("bust.caught"), 2, 3);
+  ctx.fillStyle = "#f1f2f7"; ctx.fillText(t("bust.caught"), 0, 0);
+  ctx.font = `600 ${Math.round(11 * u)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`; ctx.fillStyle = "#ff6b84";
+  ctx.fillText(t("bust.sub"), 0, 34 * u);
+  ctx.restore();
+}
+function drawCinema() {
+  if (CFG.reduce && Q.level >= 1) return;
+  if (!Q.flat && Q.level < 3) ctx.drawImage(gradeSprite(), 0, 0, W, H);
+  speedLines();
+}
+
 function draw() {
   ctx.save();
   if (shake > 0 && !CFG.reduce) ctx.translate(rnd(-shake, shake), rnd(-shake, shake));
   if (zoom > 1.002 && !CFG.reduce) { ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-W / 2, -H / 2); }
   drawBackground(); drawFinish(); drawBoss(); drawItems(); drawParticles(); drawObstacles(); drawChaser(); drawPlayer(); drawWeather(); drawDark();
   ctx.restore();
+  drawCinema(); bloomPass(); drawBusted();
   if (flash.a > 0.01 && !CFG.reduce) { ctx.globalAlpha = flash.a; ctx.fillStyle = flash.c; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   if (maxLives > 1 && lives === 1 && state === "play") {
     ctx.strokeStyle = "#ff3b5c"; ctx.globalAlpha = 0.25 + 0.2 * Math.sin(frame * 0.18); ctx.lineWidth = 10 * UI;

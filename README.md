@@ -11,23 +11,30 @@ An endless runner and campaign game set in Uzbek cities (Tashkent, Samarkand, Bu
 | `i18n.js` | Uzbek / English / Japanese texts and language switching |
 | `art.js` | Pre-rendered city scenery, parallax layers, ground, thumbnails |
 | `chars.js` | Built-in painted runner, guard, dog (fallback), coins, obstacles, icons |
-| `sprites.js` | Loads real PNG characters (runner, guard, dog) when you provide them |
-| `characters-data.js` | The same character pictures embedded as data (the game works even if the `assets` folder is missing) |
+| `sprites.js` | Optional: use your own PNG pictures instead (used only if `rig.js` is missing) |
+| `rig.js` | Realistic skeleton-animated characters: runner, policewoman, chasing dog (IK legs, swinging arms, back-light rim) |
 | `assets/characters/` | Character pictures: `hero_run1/run2/slide.png` (runner), `dog.png`, `guard.png` (officer) |
 | `game.js` | Game engine, input, physics, spawning, audio, UI, saving |
 
-Script order matters: `i18n.js`, `art.js`, `chars.js`, `characters-data.js`, `sprites.js`, `game.js` (`index.html` already does this).
+Script order matters: `i18n.js`, `art.js`, `chars.js`, `rig.js`, `sprites.js`, `game.js` (`index.html` already does this).
 The only external resource is the Google Fonts stylesheet. If it is blocked, the game falls back to system fonts.
 
-## Characters (real pictures)
+## Characters (skeleton animation)
 
-The game uses the ZUMARY hero, the dog and the police officer as pictures (`assets/characters/`).
-`sprites.js` slices and scales them once at load. The hero uses 3 poses (running stride 1 and 2, slide); the dog and the officer are single pictures animated by code (gallop / run).
+The hero, the policewoman and the dog are drawn by `rig.js` from real bones: two-bone inverse-kinematics legs with the foot planted during the stance phase, swinging arms, bobbing hips, a flowing scarf, hair and ponytail, and a quadruped rotary gallop for the dog. Each is shaded like a solid volume and lit with a warm back-light. Every frame is drawn once into a small canvas at load (about 80–110 ms per character on a slow phone); during play the game only calls `drawImage`.
 
-- Skins in the shop recolor only the painted fallback character; the hero picture is the same for every skin.
-- To change a character: replace the PNG (transparent background, facing right) and adjust its entry in `CONFIG` at the top of `sprites.js` (height on screen, which picture is which pose, `motion` for animating a still picture).
-- If a picture is missing, the built-in painted character is used, so the game never breaks.
-- `guard.png` is a preview image with a stock-site watermark: replace it with a licensed, watermark-free copy before publishing.
+- Run cycle: 12 frames per stride. Poses: jump, fall, landing crouch, slide (duck) and hit.
+- Shop skins recolor the hero's jacket, trim, trousers and shoes (`LOOKS` at the top of `rig.js`).
+- To change proportions or the look, edit `figure()` (people) or `dogFig()` (dog) in `rig.js`.
+- `assets/characters/` and `sprites.js` still hold the earlier picture-based characters. If `rig.js` is removed from `index.html`, the game uses those pictures instead (and the built-in painted characters if the pictures are missing).
+- `guard.png` is a preview image with a stock-site watermark: replace it with a licensed copy before using it.
+
+## Cinematic look and HUD
+
+- Colour grade (warm sky, cool ground), vignette, bloom (desktop at the highest quality only), speed lines when fast or in turbo, soft ground shadows under everyone, warm rim light on the characters.
+- GTA-style HUD: segmented health bar (one segment per life) and "wanted" stars that light up as the police close in (they flash red and blue on the last life).
+- When the officer catches you the screen letterboxes and a big **BUSTED** appears (translated).
+- The effects switch off in steps when the frame rate drops (quality levels) or with "Reduce effects".
 
 ## The "caught" scene
 
@@ -79,4 +86,4 @@ Opening `index.html` directly also works. A local server is better because it ma
 - No real Android or iPhone device was available, so real-device frame rate, touch feel and thermal behaviour were not measured. CPU throttling was only an approximation.
 - Sound, vibration, native fullscreen and orientation lock cannot be checked in headless mode.
 - The Japanese texts were written by the assistant. A native speaker should review them.
-- The art is drawn in code, not taken from photos or sprite artwork.
+- The characters and scenery are drawn in code, not taken from photos or sprite artwork. They are stylised, not photo-real or GTA-grade 3D art.
