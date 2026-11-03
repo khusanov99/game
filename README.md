@@ -112,3 +112,12 @@ Measured in headless Chromium with software rendering (no GPU), so absolute numb
 - Soak test (simulated 30 min of play): JS heap 2.5 → 2.9 MB, draw time flat; 40 restarts left no leftover objects.
 - Already present before: fixed 120 Hz simulation (refresh-rate independent), sprite caches, particle cap per level.
 - Not measured: real CPU/GPU %, battery/thermal, loading time on real networks, touch latency on real devices.
+
+## Evolution pass (v4) — what was done, and what was not
+Done (2D main game, tested in headless Chromium only):
+- **3D button** redesigned as a proper CTA card (opaque, wraps text, 58 px tall); checked at 320 / 390 px portrait and 844×390 landscape.
+- **Settings** (settings.js): 6 collapsible sections, ~38 controls, all wired to real behaviour and saved (`zr_cfg`, `zr_gfx`): graphics preset (Auto/Ultra/High/Medium/Low/Custom) + render scale, FPS limit (only rates the device reports: 30/60/90/120/144/max), 10 effect toggles, adaptive quality, battery saver, low-memory mode, reduced background processing, auto optimisation, thermal-friendly mode, FPS counter, volumes, vibration, swipe sensitivity, camera effects, auto-pause, hints, fullscreen, UI scale, shake intensity, layout, left-handed, reduced motion, high contrast, colour-friendly UI (interface colours only), larger UI, simplified effects, reset.
+- **Coin types**: gold, crystal, energy, ZUMARY coin — pre-rendered rotating sprites, distinct pickup effects/sounds, rare-coin mission + achievement.
+- **World events** (endless + non-boss levels): energy storm (coins ×2), meteor shower (dodge telegraphed impacts, leaves crystals), city blackout (score ×1.5), magnet zone, speed zone (speed/score ×1.5). Event mission + achievement, XP bonus.
+- Already existed and kept: power-ups (magnet, shield, turbo, ×2, slow-motion, hoverboard), combo multiplier, daily missions, XP, medals.
+Not done in this pass: redesign of the 2D cities and of the robot characters, secret paths / bonus zones, city-specific missions, billboards/drones/animated signs, and the new coin types and world events in the 3D mode (3D keeps its own coins/power-ups/helicopter event).

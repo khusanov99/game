@@ -28,14 +28,17 @@ let PS = 1.55, CPS = 1.5;
 const COARSE = window.matchMedia("(pointer:coarse)").matches;
 
 /* ============ QUALITY ============ */
+const FX = { particles: true, blur: true, bloom: !COARSE, shake: 1, cam: true, light: true, shadow: true, env: true, coinGlow: true, charFx: true, bg: true, hints: true };   // filled by settings.js
+let RS = 1, FLOOR = 0, SWIPE = 30, FPSCAP = 0;                  // render scale, quality floor, swipe distance, fps cap (0 = auto, -1 = device maximum)
 const Q = { level: 0, shadow: !COARSE, flat: false, dpr: 2, maxP: 140 };
 const PIXEL_BUDGET = COARSE ? [560000, 400000, 280000, 190000] : [1500000, 1100000, 800000, 500000];   // canvas pixels per quality level
 function setQuality(l) {
+  l = Math.max(l, FLOOR);
   Q.level = l;
-  Q.shadow = gfx === "ultra" && !COARSE;      // real shadowBlur is very expensive: only when the player explicitly picks ULTRA on desktop
+  Q.shadow = gfx === "ultra" && !COARSE && FX.shadow;      // real shadowBlur is very expensive: only when the player explicitly picks ULTRA on desktop
   Q.flat = l >= 2;
   Q.dpr = [2, 1.5, 1, 0.75][Math.min(l, 3)];
-  Q.maxP = [140, 70, 40, 24][Math.min(l, 3)];
+  Q.maxP = [140, 70, 40, 24][Math.min(l, 3)] >> (CFG.lowmem ? 1 : 0);
   skyKey = ""; gndKey = "";
   buildWeather();
   resize();
@@ -59,7 +62,7 @@ function glowSprite(c) {                // pre-rendered soft glow: one cheap dra
   return GLOWS[c];
 }
 const halo = (x, y, w, h, r, c) => {
-  if (Q.shadow || Q.flat) return;
+  if (Q.shadow || Q.flat || !FX.bloom) return;
   const d = Math.max(w, h) * 2.3, cx = x + w / 2, cy = y + h / 2;
   ctx.globalAlpha = 0.55; ctx.drawImage(glowSprite(c), cx - d / 2, cy - d / 2, d, d); ctx.globalAlpha = 1;
 };
@@ -85,7 +88,7 @@ function resize() {
   else if (w > 1100) { s = cw / 1100; w = 1100; }
   S = s; W = w; H = ch / s; groundY = H - 58; UI = Math.max(1, 0.95 / s);
   { const sf = Math.min(1.4, Math.max(1, UI * 0.9 + 0.1)); PS = 1.55 * sf; CPS = 1.5 * sf; }
-  DPR = Math.min(window.devicePixelRatio || 1, Q.dpr);
+  DPR = Math.min(window.devicePixelRatio || 1, Q.dpr, CFG.lowmem ? 1 : 9) * RS;
   const want = cw * ch * DPR * DPR, budget = PIXEL_BUDGET[Math.min(Q.level, 3)];   // hard cap on pixels drawn per frame (fill-rate is what freezes phones)
   if (want > budget) DPR = Math.max(0.5, DPR * Math.sqrt(budget / want));
   const nw = Math.round(cw * DPR), nh = Math.round(ch * DPR);
@@ -309,6 +312,8 @@ const MPOOL = [
   { k: "turbo", t: (n) => t("m.turbo", { n }), g: [1, 3], r: 50 },
   { k: "fly", t: (n) => t("m.fly", { n }), g: [5, 12], r: 60, need: "jet" },
   { k: "win", t: (n) => t("m.win", { n }), g: [1, 2], r: 80 },
+  { k: "rare", t: (n) => t("m.rare", { n }), g: [2, 5], r: 55 },
+  { k: "evt", t: (n) => t("m.evt", { n }), g: [2, 4], r: 60 },
 ];
 function genMissions() {
   const pool = MPOOL.filter((m) => !m.need || up[m.need]), out = [];
@@ -336,6 +341,8 @@ const ACH = [
   { id: "a8", get n() { return t("ach.a8.n"); }, get d() { return t("ach.a8.d"); }, ok: () => (prog.stars[1] || 0) > 0, r: 40 },
   { id: "a9", get n() { return t("ach.a9.n"); }, get d() { return t("ach.a9.d"); }, ok: () => (prog.stars[5] || 0) > 0, r: 200 },
   { id: "a10", get n() { return t("ach.a10.n"); }, get d() { return t("ach.a10.d"); }, ok: () => meta.streak >= 3, r: 50 },
+  { id: "a12", get n() { return t("ach.a12.n"); }, get d() { return t("ach.a12.d"); }, ok: () => (meta.events | 0) >= 10, r: 80 },
+  { id: "a13", get n() { return t("ach.a13.n"); }, get d() { return t("ach.a13.d"); }, ok: () => (meta.rare | 0) >= 30, r: 90 },
   { id: "a11", get n() { return t("ach.a11.n"); }, get d() { return t("ach.a11.d"); }, ok: () => meta.turbos >= 5, r: 60 },
 ];
 function checkAch() {
@@ -616,14 +623,14 @@ function spawnP(x, y, vx, vy, sz, life, color) {
   q.x = x; q.y = y; q.vx = vx; q.vy = vy; q.s = sz; q.life = life; q.color = color; particles.push(q);
 }
 function burst(x, y, color, n = 12) {
-  if (particles.length > Q.maxP) return;
+  if (!FX.particles || particles.length > Q.maxP) return;
   if (CFG.reduce) n = Math.ceil(n / 3);
   for (let i = 0; i < n; i++) spawnP(x, y, rnd(-3, 3), rnd(-4, 2), rnd(2, 5), 1, color);
 }
 function pop(x, y, s, color) { pops.push({ x, y, s, color, life: 1 }); }
 
 /* ============ SPAWNING ============ */
-const mkCoin = (x, y) => (Math.random() < 0.08 ? { k: "coin", x, y, r: 11, v: 5 } : { k: "coin", x, y, r: 9 });
+const mkCoin = (x, y) => rollCoin(x, y);
 
 function endlessTypes() {
   return score < 150 ? ["block"] : score < 250 ? ["block", "block", "drone"] : score < 400 ? ["block", "drone", "train", "block"] : ["block", "drone", "train", "double", "pit"];
@@ -651,7 +658,7 @@ function mkTrain(off) {
   const w = rnd(150, 210), h = 54, sx = W + 20 + off;
   obstacles.push({ t: "train", x: sx, y: groundY - h, w, h, passed: false, c: "#2f6fd1" });
   for (let i = 0; i < Math.floor(w / 28) - 1; i++) items.push(mkCoin(sx + 24 + i * 28, groundY - h - 16));
-  if (!trainHint) { trainHint = true; if (!store.get("zr_trh", 0)) { store.set("zr_trh", 1); shout(t("train.hint"), "#9fd0ff", 2400); } }
+  if (!trainHint) { trainHint = true; if (!store.get("zr_trh", 0)) { store.set("zr_trh", 1); FX.hints && shout(t("train.hint"), "#9fd0ff", 2400); } }
   return off + w;
 }
 function spawnPattern() {                                // returns the length (px) of the pattern that was placed
@@ -760,6 +767,7 @@ function updateGame(delta) {
   fx.slow = Math.max(0, fx.slow - delta);
   fx.x2 = Math.max(0, fx.x2 - delta);
   fx.magnet = Math.max(0, fx.magnet - delta);
+  WE_update(delta, f);
   invul = Math.max(0, invul - delta);
   if (boardT > 0) boardT -= delta;
   cleanT += delta;
@@ -769,9 +777,9 @@ function updateGame(delta) {
   banner.t = Math.max(0, banner.t - delta);
 
   const cfg = lvl || DIFF[diff];
-  score += f * 0.12;
+  score += f * 0.12 * WE.score;
   speed = lvl ? lvl.base + (lvl.max - lvl.base) * Math.min(1, dist / lvl.len) : Math.min(cfg.base + score / 180, cfg.max);
-  const ev = speed * (fx.slow > 0 ? 0.65 : 1) * (turboT > 0 ? 1.7 : 1);
+  const ev = speed * (fx.slow > 0 ? 0.65 : 1) * (turboT > 0 ? 1.7 : 1) * WE.spd;
   runTime += delta; runDist += (ev * f) / PX_M;
 
   let T;
@@ -880,12 +888,7 @@ function updateGame(delta) {
     if (grab) {
       it.got = true;
       if (it.k === "coin") {
-        coins += it.v || 1; addCombo(); turboAdd(4); mAdd("coin", it.v || 1);
-        const g = 25 * mult() * (it.v || 1);
-        score += g;
-        pop(it.x, it.y, "+" + g, "#ffd84f");
-        burst(it.x, it.y, "#ffd84f", 5);
-        sfx.coin();
+        coinCollect(it);
       } else {
         if (it.k === "shield") shield = true;
         else if (it.k === "fuel") fuel = fuelMax();
@@ -984,14 +987,14 @@ function drawBackground() {
     for (const s of stars) { ctx.globalAlpha = s.a; ctx.fillRect(s.x, s.y, s.s, s.s); }
     ctx.globalAlpha = 1;
   }
-  if (speed >= 8 && Q.level < 2 && state === "play") {
+  if (FX.blur && speed >= 8 && Q.level < 2 && state === "play") {
     ctx.strokeStyle = "#fff"; ctx.globalAlpha = 0.1; ctx.lineWidth = 1.5; ctx.beginPath();
     const n = Math.min(10, Math.floor((speed - 7) * 3));
     for (let i = 0; i < n; i++) { const x = W - ((frame * speed * 2.5 + i * 137) % (W + 140)), y = 14 + ((i * 53.7) % (groundY - 40)); ctx.moveTo(x, y); ctx.lineTo(x + 30 + speed * 4, y); }
     ctx.stroke(); ctx.globalAlpha = 1;
   }
   drawSkyBody();
-  if (Q.level < 2) { drawClouds(); drawBirds(); }
+  if (Q.level < 2 && FX.bg) { drawClouds(); drawBirds(); }
   drawCity(A, lm.x, 1);
   if (fadeT > 0 && prevA && prevA !== A && prevA.far.width) drawCity(prevA, prevLm, fadeT);   // smooth city-to-city transition
   ctx.fillStyle = "rgba(255,255,255,.16)"; ctx.fillRect(-20, groundY, W + 40, 2);
@@ -1026,7 +1029,7 @@ function playerFrame() {                              // rig: 0-11 stride · 12 
 function drawPlayer() {
   const p = player, R = runnerSheet(), pb = skinGlow();
   const sy = p.grounded ? p.y + p.h : groundY, hg = Math.max(0, sy - (p.y + p.h));
-  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(p.x + p.w / 2, sy + 3, Math.max(10, 26 - hg * 0.07), 5, 0, 0, 7); ctx.fill();
+  if (FX.shadow) { ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(p.x + p.w / 2, sy + 3, Math.max(10, 26 - hg * 0.07), 5, 0, 0, 7); ctx.fill(); }
   ctx.save();
   ctx.translate(p.x + p.w / 2, p.y + p.h);
   ctx.scale(1 + sq * 0.5, 1 - sq * 0.5);                // squash & stretch
@@ -1036,8 +1039,8 @@ function drawPlayer() {
     ctx.scale(1 + kick * 0.1, 1 - kick * 0.12);
   }
   ctx.globalAlpha = invul > 0 && Math.floor(frame / 3) % 2 ? 0.35 : 1;
-  halo(-p.w / 2, -p.h, p.w, p.h, 8, pb);
-  glow(pb, 20);
+  if (FX.charFx) halo(-p.w / 2, -p.h, p.w, p.h, 8, pb);
+  if (FX.charFx) glow(pb, 20);
   ctx.drawImage(R.f[playerFrame()], -R.fx * PS, -R.fy * PS, R.w * PS, R.h * PS);
   noGlow(); ctx.globalAlpha = 1;
   if (shield) {
@@ -1054,8 +1057,7 @@ function drawPlayer() {
   }
   drawBoard();
   drawFuelBar();
-  drawPet();
-  drawTurboFx();
+  if (FX.charFx) { drawPet(); drawTurboFx(); }
 }
 
 function drawFuelBar() {
@@ -1105,13 +1107,16 @@ function drawObstacles() {
 function drawItems() {
   const CN = coinSheet();
   for (const it of items) {
-    if (it.k === "coin") {
-      halo(it.x - it.r, it.y - it.r, it.r * 2, it.r * 2, 0, it.v ? "#fff3a0" : "#ffd84f");
-      const sz = it.v ? 32 : 26;
-      ctx.drawImage((it.v ? CN.g : CN.n)[Math.floor(frame * 0.18 + it.x * 0.05) % (it.v ? CN.g : CN.n).length], it.x - sz / 2, it.y - sz / 2, sz, sz);
+    if (it.k === "coin" && it.ct) {
+      const fr = coinTypeSheets()[it.ct], sz = it.ct === 3 ? 40 : 34;
+      if (FX.coinGlow) halo(it.x - it.r, it.y - it.r, it.r * 2, it.r * 2, 0, COIN_T[it.ct].col);
+      ctx.drawImage(fr[Math.floor(frame * (it.ct === 2 ? 0.26 : 0.18) + it.x * 0.05) % fr.length], it.x - sz / 2, it.y - sz / 2, sz, sz);
+    } else if (it.k === "coin") {
+      if (FX.coinGlow) halo(it.x - it.r, it.y - it.r, it.r * 2, it.r * 2, 0, "#ffd84f");
+      ctx.drawImage(CN.n[Math.floor(frame * 0.18 + it.x * 0.05) % CN.n.length], it.x - 13, it.y - 13, 26, 26);
     } else {
       const bob = Math.sin(frame * 0.1 + it.x) * 3;
-      halo(it.x - it.r, it.y - it.r + bob, it.r * 2, it.r * 2, 0, POWER[it.k].color);
+      if (FX.coinGlow) halo(it.x - it.r, it.y - it.r + bob, it.r * 2, it.r * 2, 0, POWER[it.k].color);
       ctx.drawImage(badgeOf(it.k), it.x - 19, it.y + bob - 19, 38, 38);
     }
   }
@@ -1288,8 +1293,8 @@ function gradeSprite() {                          // one small canvas, stretched
   return VIG;
 }
 function speedLines() {
-  const k = Math.min(1, Math.max(0, (speed - 6) / 6) + (turboT > 0 ? 0.55 : 0));
-  if (k < 0.03 || state !== "play" || CFG.reduce || Q.level >= 2) return;
+  const k = Math.min(1, Math.max(0, (speed - 6) / 6) + (turboT > 0 ? 0.55 : 0) + (WE.kind === "speed" ? 0.5 : 0));
+  if (!FX.blur || k < 0.03 || state !== "play" || CFG.reduce || Q.level >= 2) return;
   const n = Math.round(4 + k * 8);
   ctx.fillStyle = "#fff6e6";
   for (let i = 0; i < n; i++) {
@@ -1299,7 +1304,7 @@ function speedLines() {
   ctx.globalAlpha = 1;
 }
 function bloomPass() {                              // soft glow: shrink the picture, stretch it back on top with "screen"
-  if (Q.level !== 0 || COARSE || CFG.reduce) return;
+  if (!FX.bloom || Q.level > 1 || CFG.reduce) return;
   const bw = 160, bh = Math.max(40, Math.round((bw * canvas.height) / canvas.width));
   if (!BLM) { BLM = document.createElement("canvas"); BLM.g = BLM.getContext("2d"); }
   if (BLM.width !== bw || BLM.height !== bh) { BLM.width = bw; BLM.height = bh; }
@@ -1325,18 +1330,18 @@ function drawBusted() {
 }
 function drawCinema() {
   if (CFG.reduce && Q.level >= 1) return;
-  if (!Q.flat && Q.level < 3) ctx.drawImage(gradeSprite(), 0, 0, W, H);
+  if (FX.light && !Q.flat && Q.level < 3) ctx.drawImage(gradeSprite(), 0, 0, W, H);
   speedLines();
 }
 
 function draw() {
   ctx.save();
-  if (shake > 0 && !CFG.reduce) ctx.translate(rnd(-shake, shake), rnd(-shake, shake));
-  if (zoom > 1.002 && !CFG.reduce) { ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-W / 2, -H / 2); }
-  drawBackground(); drawFinish(); drawBoss(); drawItems(); drawParticles(); drawObstacles(); drawChaser(); drawPlayer(); drawWeather(); drawDark();
+  if (shake > 0 && FX.shake > 0 && !CFG.reduce) { const sh = shake * FX.shake; ctx.translate(rnd(-sh, sh), rnd(-sh, sh)); }
+  if (zoom > 1.002 && FX.cam && !CFG.reduce) { ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-W / 2, -H / 2); }
+  drawBackground(); WE_drawBack(); drawFinish(); drawBoss(); drawItems(); drawParticles(); drawObstacles(); drawChaser(); drawPlayer(); WE_drawFront(); if (FX.env) drawWeather(); if (FX.light) drawDark();
   ctx.restore();
   drawCinema(); bloomPass(); drawBusted();
-  if (flash.a > 0.01 && !CFG.reduce) { ctx.globalAlpha = flash.a; ctx.fillStyle = flash.c; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  if (flash.a > 0.01 && FX.cam && !CFG.reduce) { ctx.globalAlpha = flash.a; ctx.fillStyle = flash.c; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   if (maxLives > 1 && lives === 1 && state === "play") {
     ctx.strokeStyle = "#ff3b5c"; ctx.globalAlpha = 0.25 + 0.2 * Math.sin(frame * 0.18); ctx.lineWidth = 10 * UI;
     ctx.strokeRect(0, 0, W, H); ctx.globalAlpha = 1;
@@ -1432,7 +1437,7 @@ function showReady() {
 
 /* ============ FLOW ============ */
 function resetGame() {
-  state = "ready";
+  state = "ready"; WE_reset();
   lvl = mode === "campaign" ? LEVELS[sel] : null;
   dist = 0; hits = 0; maxLives = (lvl ? 3 : 2) + up.life; lives = maxLives; shotTimer = 1500; cleanT = 0; boardT = 0; chaseX = -120; extraGap = 0;
   spawnPx = 0; nextGapPx = 380; skill = 0.5; skillT = 0; hitFlag = false; runTime = 0; runDist = 0; runPhase = 0; landT = 0; coyote = 0; jumpBuf = -1e9; fadeT = 0; prevA = null; acc = 0;
@@ -1456,7 +1461,7 @@ function startGame() {
   $("overlay").classList.add("hidden");
   beep(660, 0.1, "triangle");
   startMusic();
-  if (up.jet && !store.get("zr_jh", 0)) { store.set("zr_jh", 1); shout(t("jet.hint"), "#ffb36b", 3400); }
+  if (up.jet && !store.get("zr_jh", 0)) { store.set("zr_jh", 1); FX.hints && shout(t("jet.hint"), "#ffb36b", 3400); }
 }
 function goMenu() { resetGame(); showReady(); }
 function pauseGame() {
@@ -1564,6 +1569,160 @@ function winLevel() {
   }, 900);
 }
 
+/* ============ COIN TYPES — gold / crystal / energy / ZUMARY (pre-rendered sprites, no real-time effects) ============ */
+const COIN_T = [
+  { id: "gold", col: "#ffd84f", xp: 0 }, { id: "crystal", col: "#6cf3ff", xp: 1 }, { id: "energy", col: "#ff4fd8", xp: 2 }, { id: "zumary", col: "#b388ff", xp: 8 },
+];
+let CTS = null;
+function coinTypeSheets() {
+  if (CTS) return CTS;
+  CTS = []; const N = 12, sz = 44, c = sz / 2;
+  for (let ty = 1; ty < 4; ty++) {
+    const frames = [];
+    for (let i = 0; i < N; i++) {
+      const cv = document.createElement("canvas"); cv.width = cv.height = sz; const g = cv.getContext("2d");
+      const ph = (i / N) * Math.PI * 2, sx = Math.max(0.14, Math.abs(Math.cos(ph)));
+      g.translate(c, c);
+      if (ty === 1) {                                           // premium crystal: faceted hexagonal gem with a travelling sparkle
+        g.save(); g.scale(sx, 1);
+        g.beginPath(); for (let k = 0; k < 6; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 3; g.lineTo(Math.cos(a) * 16, Math.sin(a) * 16); } g.closePath();
+        const gr = g.createLinearGradient(-14, -16, 14, 16); gr.addColorStop(0, "#f2ffff"); gr.addColorStop(0.45, "#46d2ff"); gr.addColorStop(1, "#1c5fd0");
+        g.fillStyle = gr; g.fill(); g.lineWidth = 2; g.strokeStyle = "#0a3e78"; g.stroke();
+        g.strokeStyle = "rgba(255,255,255,.65)"; g.lineWidth = 1; g.beginPath();
+        for (let k = 0; k < 6; k += 2) { const a = -Math.PI / 2 + (k * Math.PI) / 3; g.moveTo(0, 0); g.lineTo(Math.cos(a) * 16, Math.sin(a) * 16); } g.stroke();
+        g.restore();
+        const s = 3 + 4 * Math.abs(Math.sin(ph * 1.5)); g.fillStyle = "#fff"; g.beginPath(); g.moveTo(-6, -8 - s); g.lineTo(-4.5, -8); g.lineTo(-6, -8 + s); g.lineTo(-7.5, -8); g.closePath(); g.moveTo(-6 - s, -8); g.lineTo(-6, -9.5); g.lineTo(-6 + s, -8); g.lineTo(-6, -6.5); g.closePath(); g.fill();
+      } else if (ty === 2) {                                    // rare energy coin: plasma orb in a spinning ring, lightning core
+        const gl = g.createRadialGradient(0, 0, 2, 0, 0, 21); gl.addColorStop(0, "rgba(255,120,235,.75)"); gl.addColorStop(1, "rgba(255,79,216,0)");
+        g.fillStyle = gl; g.fillRect(-c, -c, sz, sz);
+        const core = g.createRadialGradient(0, 0, 1, 0, 0, 11); core.addColorStop(0, "#fff"); core.addColorStop(0.5, "#ff7ae6"); core.addColorStop(1, "#7a1fd1");
+        g.fillStyle = core; g.beginPath(); g.arc(0, 0, 11, 0, 7); g.fill();
+        g.lineWidth = 3; g.strokeStyle = "#ff4fd8"; g.beginPath(); g.ellipse(0, 0, 16 * sx, 16, 0, 0, 7); g.stroke();
+        g.lineWidth = 1.2; g.strokeStyle = "#fff"; g.beginPath(); g.ellipse(0, 0, 16 * sx, 16, 0, 0.3, 2.2); g.stroke();
+        g.fillStyle = "#fff"; g.beginPath(); g.moveTo(2, -9); g.lineTo(-5, 1); g.lineTo(-1, 1); g.lineTo(-3, 9); g.lineTo(5, -2); g.lineTo(1, -2); g.closePath(); g.fill();
+      } else {                                                  // special ZUMARY coin: gold body, violet ring, engraved Z, orbiting sparks
+        g.save(); g.scale(sx, 1);
+        const gr = g.createLinearGradient(-16, -16, 16, 16); gr.addColorStop(0, "#fff0a8"); gr.addColorStop(0.5, "#ffc93a"); gr.addColorStop(1, "#b8780a");
+        g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 17, 0, 7); g.fill();
+        g.lineWidth = 3.2; g.strokeStyle = "#8b5cf6"; g.beginPath(); g.arc(0, 0, 15, 0, 7); g.stroke();
+        g.lineWidth = 1; g.strokeStyle = "rgba(255,255,255,.7)"; g.beginPath(); g.arc(0, 0, 12, 0, 7); g.stroke();
+        g.fillStyle = "#4a2a9a"; g.font = "800 17px Orbitron, Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("Z", 0, 1);
+        g.fillStyle = "rgba(255,255,255,.55)"; g.beginPath(); g.ellipse(-6, -8, 5, 2.2, -0.6, 0, 7); g.fill();
+        g.restore();
+        g.fillStyle = "#e9dcff"; for (let k = 0; k < 3; k++) { const a = ph + (k * Math.PI * 2) / 3; g.beginPath(); g.arc(Math.cos(a) * 20, Math.sin(a) * 20, 1.6, 0, 7); g.fill(); }
+      }
+      frames.push(cv);
+    }
+    CTS[ty] = frames;
+  }
+  return CTS;
+}
+const rings = [];
+function ring(x, y, col, r1 = 34) { if (rings.length < 10) rings.push({ x, y, r: 6, r1, col, life: 1 }); }
+function rollCoin(x, y) {
+  const r = Math.random();
+  if (r < 0.012) return { k: "coin", x, y, r: 13, ct: 3, v: 10 };
+  if (r < 0.04) return { k: "coin", x, y, r: 12, ct: 2, v: 5 };
+  if (r < 0.11) return { k: "coin", x, y, r: 11, ct: 1, v: 3 };
+  return { k: "coin", x, y, r: 9 };
+}
+function coinCollect(it) {
+  const ct = it.ct | 0, ty = COIN_T[ct], cv = Math.max(1, Math.round((it.v || 1) * WE.coin));
+  coins += cv; addCombo(); turboAdd(ct === 2 ? 25 : 4); mAdd("coin", cv);
+  if (ct) { meta.rare = (meta.rare | 0) + 1; mAdd("rare", 1); meta.xp += ty.xp; }
+  const g = 25 * mult() * cv; score += g;
+  pop(it.x, it.y, "+" + g, ty.col);
+  if (ct === 0) { burst(it.x, it.y, "#ffd84f", 5); sfx.coin(); }
+  else if (ct === 1) { burst(it.x, it.y, "#6cf3ff", 9); burst(it.x, it.y, "#ffffff", 4); ring(it.x, it.y, "#6cf3ff", 30); beep(1568, 0.08, "triangle", 0.05); setTimeout(() => beep(2093, 0.12, "triangle", 0.045), 60); }
+  else if (ct === 2) { burst(it.x, it.y, "#ff4fd8", 14); ring(it.x, it.y, "#ff4fd8", 44); flash = { c: "#ff4fd8", a: 0.12 }; beep(220, 0.16, "sawtooth", 0.05, 700); }
+  else { burst(it.x, it.y, "#b388ff", 18); burst(it.x, it.y, "#ffd84f", 14); ring(it.x, it.y, "#ffd84f", 60); ring(it.x, it.y, "#b388ff", 42); flash = { c: "#b388ff", a: 0.2 }; zoom = 1.04; shout(t("coin.zumary"), "#e0ccff", 1100);
+    [523, 659, 784, 1047].forEach((f2, i) => setTimeout(() => beep(f2, 0.12, "triangle", 0.06), i * 70)); vib(20); }
+}
+
+/* ============ DYNAMIC WORLD EVENTS — storm, meteors, blackout, magnet zone, speed zone ============ */
+const WE_DEF = { storm: { dur: 9000, col: "#8fb4ff", ic: "⚡" }, meteor: { dur: 10000, col: "#ff8a5c", ic: "☄" }, blackout: { dur: 8000, col: "#9aa3ff", ic: "🌃" }, magnet: { dur: 8000, col: "#ff4fd8", ic: "🧲" }, speed: { dur: 7000, col: "#53f7ff", ic: "»" } };
+const WE = { t: 20000, kind: "", left: 0, tot: 1, coin: 1, score: 1, spd: 1, dark: 0, hits0: 0, mT: 0, bT: 0, gateX: -1, meteors: [], bolts: [], bolt: 0 };
+function WE_reset() { WE.t = rnd(14000, 22000); WE.kind = ""; WE.left = 0; WE.coin = 1; WE.score = 1; WE.spd = 1; WE.dark = 0; WE.meteors.length = 0; WE.bolts.length = 0; WE.bolt = 0; WE.gateX = -1; rings.length = 0; }
+function WE_start(kind) {
+  const d = WE_DEF[kind]; WE.kind = kind; WE.left = WE.tot = d.dur; WE.hits0 = hits; WE.mT = 500; WE.bT = 300;
+  WE.coin = kind === "storm" ? 2 : kind === "speed" ? 1.5 : 1; WE.score = kind === "blackout" ? 1.5 : kind === "speed" ? 1.5 : 1; WE.spd = kind === "speed" ? 1.3 : 1;
+  if (kind === "speed") WE.gateX = W + 40;
+  banner = { text: d.ic + " " + t("ev." + kind), sub: t("ev." + kind + ".d"), t: 2400, max: 2400 }; sfx.zone(); flash = { c: d.col, a: 0.16 };
+}
+function WE_end() {
+  const ok = hits === WE.hits0;
+  WE.kind = ""; WE.coin = 1; WE.score = 1; WE.spd = 1; WE.meteors.length = 0; WE.t = rnd(16000, 28000);
+  meta.events = (meta.events | 0) + 1; mAdd("evt", 1); meta.xp += ok ? 6 : 2;
+  if (ok) { score += 150; pop(player.x + 30, player.y - 30, t("ev.clean"), "#50ffb0"); } saveMeta();
+}
+function WE_update(delta, f) {
+  if (state !== "play" || (lvl && lvl.boss)) return;
+  const p = player, ev = speed;
+  if (!WE.kind) { WE.t -= delta; if (WE.t <= 0 && runTime > 10000) WE_start(["storm", "meteor", "blackout", "magnet", "speed"][Math.floor(Math.random() * 5)]); else if (WE.t <= 0) WE.t = 4000; WE.dark = Math.max(0, WE.dark - delta / 700); return; }
+  WE.left -= delta;
+  const k = WE.kind;
+  WE.dark = k === "blackout" ? Math.min(1, WE.dark + delta / 600, WE.left / 600) : Math.max(0, WE.dark - delta / 700);
+  if (k === "magnet") fx.magnet = Math.max(fx.magnet, 300);
+  if (k === "storm") { WE.bolt -= delta; if (WE.bolt <= 0) { WE.bolt = rnd(500, 1500); WE.bolts.push({ x: rnd(40, W - 40), life: 1 }); if (Q.level < 3) flash = { c: "#cfe0ff", a: 0.22 }; shake = Math.max(shake, 2); beep(90, 0.2, "sawtooth", 0.04, -40); } }
+  if (k === "speed" && WE.gateX > -60) WE.gateX -= ev * 1.25 * f;
+  if (k === "meteor") {
+    WE.mT -= delta;
+    if (WE.mT <= 0 && WE.left > 1500 && WE.meteors.length < 4) { WE.mT = rnd(800, 1400); WE.meteors.push({ tx: Math.min(W - 60, p.x + rnd(70, 360)), t: 1100, T: 1100, x: 0, y: -40, hit: false }); }
+  }
+  for (const m of WE.meteors) {
+    m.t -= delta; m.tx -= ev * f; const q = Math.max(0, 1 - m.t / m.T);
+    m.x = m.tx + (1 - q) * 200; m.y = -40 + (groundY + 6) * q * q;
+    if (!m.hit && q > 0.35 && invul <= 0 && Math.abs(m.x - (p.x + p.w / 2)) < 18 + p.w / 2 && Math.abs(m.y - (p.y + p.h / 2)) < 16 + p.h / 2) { m.hit = true; m.t = -1; burst(m.x, m.y, "#ff8a5c", 16); if (hurt({ t: "meteor", x: 0, w: 0 })) return; }
+    if (m.t <= 0 && !m.hit) {
+      m.hit = true; shake = Math.max(shake, 6); burst(m.tx, groundY - 4, "#ff8a5c", 14); burst(m.tx, groundY - 4, "#ffd84f", 8); ring(m.tx, groundY - 6, "#ff8a5c", 52); beep(70, 0.22, "sawtooth", 0.06, -30);
+      if (invul <= 0 && Math.abs(m.tx - (p.x + p.w / 2)) < 30 + p.w / 2 && p.y + p.h > groundY - 34) { if (hurt({ t: "meteor", x: 0, w: 0 })) return; }
+      for (let i = -1; i <= 1; i++) items.push({ k: "coin", x: m.tx + i * 26, y: groundY - 34 - (i === 0 ? 16 : 0), r: 11, ct: 1, v: 3 });   // crystal shards
+    }
+  }
+  compactInPlace(WE.meteors, (m) => !m.hit || m.t > -600);
+  for (const b of WE.bolts) { b.life -= delta / 220; b.x -= ev * f * 0.5; }
+  compactInPlace(WE.bolts, (b) => b.life > 0);
+  if (WE.left <= 0) WE_end();
+}
+function WE_drawBack() {
+  if (WE.dark > 0.01 && FX.light) { ctx.globalAlpha = (0.58 + (Math.random() < 0.04 ? 0.15 : 0)) * WE.dark; ctx.fillStyle = "#050818"; ctx.fillRect(-20, -20, W + 40, H + 40); ctx.globalAlpha = 1; }
+  if (WE.kind === "storm" && FX.env) { ctx.globalAlpha = 0.22; ctx.fillStyle = "#1a2460"; ctx.fillRect(-20, -20, W + 40, H + 40); ctx.globalAlpha = 1; }
+}
+function WE_drawFront() {
+  const p = player, k = WE.kind;
+  if (k && state === "play") {                                         // thin event bar, top centre
+    const d = WE_DEF[k], bw = Math.min(180, W * 0.4), bx = (W - bw) / 2, by = 8 * UI;
+    ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(bx, by, bw, 4); ctx.fillStyle = d.col; ctx.fillRect(bx, by, bw * Math.max(0, WE.left / WE.tot), 4);
+  }
+  if (k === "storm" && FX.env) {
+    ctx.strokeStyle = "#e6f0ff"; ctx.lineWidth = 2.2; ctx.lineJoin = "round";
+    for (const b of WE.bolts) {
+      ctx.globalAlpha = Math.min(1, b.life * 1.6); ctx.beginPath(); let x = b.x, y = 0; ctx.moveTo(x, y);
+      for (let i = 0; i < 7; i++) { x += ((i * 37 + b.x * 3) % 29) - 14; y += groundY / 7; ctx.lineTo(x, Math.min(y, groundY)); } ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (k === "magnet") { const a = (frame * 0.05) % 1; ctx.strokeStyle = "#ff4fd8"; for (let i = 0; i < 2; i++) { const q = (a + i * 0.5) % 1; ctx.globalAlpha = (1 - q) * 0.35; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x + p.w / 2, p.y + p.h / 2, 30 + q * 160, 0, 7); ctx.stroke(); } ctx.globalAlpha = 1; }
+  if (k === "speed" && WE.gateX > -60) {                               // energy gate sweeping past
+    const gx = WE.gateX, h = groundY; ctx.fillStyle = "#53f7ff"; ctx.globalAlpha = 0.85; ctx.fillRect(gx - 5, 30, 5, h - 30); ctx.fillRect(gx + 40, 30, 5, h - 30); ctx.fillRect(gx - 5, 30, 50, 5);
+    ctx.globalAlpha = 0.18; ctx.fillRect(gx, 35, 40, h - 35); ctx.globalAlpha = 1;
+  }
+  for (const m of WE.meteors) {
+    if (!m.hit) {
+      const q = 1 - m.t / m.T; ctx.strokeStyle = "#ff4d4d"; ctx.globalAlpha = 0.3 + 0.4 * Math.abs(Math.sin(frame * 0.3)); ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.ellipse(m.tx, groundY + 2, 18 + 14 * q, 5 + 3 * q, 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = "rgba(255,170,90,.55)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x + 46, m.y - 70); ctx.stroke();
+      ctx.fillStyle = "#ffb36b"; ctx.beginPath(); ctx.arc(m.x, m.y, 12, 0, 7); ctx.fill(); ctx.fillStyle = "#ff5a1f"; ctx.beginPath(); ctx.arc(m.x - 3, m.y - 2, 7, 0, 7); ctx.fill();
+    }
+  }
+  for (let i = rings.length - 1; i >= 0; i--) {
+    const r = rings[i]; r.life -= 0.045; r.r += (r.r1 - r.r) * 0.16;
+    if (r.life <= 0) { rings.splice(i, 1); continue; }
+    ctx.globalAlpha = r.life * 0.8; ctx.strokeStyle = r.col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 7); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
 /* ============ MAIN LOOP — fixed 120 Hz simulation, rendering at the screen's own pace ============ */
 const STEP = 1000 / 120;
 function stepOnce(dt) {
@@ -1581,7 +1740,7 @@ function advance() {
   while (acc >= STEP && n < MAXN) { acc -= STEP; n++; stepOnce(STEP); }
   if (n === MAXN) acc = 0;                                  // after a long stall: drop the backlog instead of fast-forwarding
 }
-let ceilQ = 0, goodWin = 0, lastDown = -1e9, lastDraw = 0, perfOn = false, perfEl = null, pf = { n: 0, sum: 0, worst: 0, slow: 0, fps: 0, avg: 0, wst: 0, long: 0, t0: 0 };
+let ceilQ = 0, baseQ = 0, goodWin = 0, nextDraw = 0, thermalT = 0, hzRing = [], hz = 60, lastDown = -1e9, lastDraw = 0, perfOn = false, perfEl = null, pf = { n: 0, sum: 0, worst: 0, slow: 0, fps: 0, avg: 0, wst: 0, long: 0, t0: 0 };
 function perfTick(raw, t) {                                  // FPS monitor: F3 or ?fps=1 shows it; updates the text once per second only
   pf.n++; pf.sum += raw; if (raw > pf.worst) pf.worst = raw; if (raw > 33.4) pf.slow++;
   if (!pf.t0) pf.t0 = t;
@@ -1606,22 +1765,28 @@ function loop(t) {
   lastT = t;
   rafAvg += (raw - rafAvg) * 0.05;
   perfTick(raw, t);
+  if (hzRing.length < 90) { hzRing.push(raw); if (hzRing.length === 90) { const s = hzRing.slice().sort((a, b) => a - b); hz = 1000 / s[45]; } }   // refresh-rate probe (median of 90 frames)
   acc += Math.min(raw, 100);
   advance();
+  thermalT = state === "play" ? thermalT + raw : Math.max(0, thermalT - raw * 0.5);
   if (state !== "play") {                                  // menus / pause / game-over: nothing fast moves, so redraw at ~30 fps (pause: ~4 fps)
-    if (t - lastDraw < (state === "pause" ? 250 : 32)) return;
-  } else if (rafAvg < 11.5) { skipDraw = !skipDraw; if (skipDraw) return; }   // 90/120 Hz screens: simulate every frame, draw every other one
+    if (t - lastDraw < (state === "pause" ? 250 : CFG.bgsave === false ? 32 : 60)) return;
+  } else {
+    const cap = FPSCAP > 0 ? FPSCAP : CFG.thermal && thermalT > 180000 ? 30 : CFG.battery ? 30 : 0;   // thermal-friendly: after 3 min of play the draw rate drops to 30
+    if (cap > 0) { const dt = 1000 / cap; if (t < nextDraw - 1.5) return; nextDraw = Math.max(nextDraw + dt, t - dt); }
+    else if (FPSCAP === 0 && rafAvg < 11.5) { skipDraw = !skipDraw; if (skipDraw) return; }   // auto on 90/120 Hz screens: simulate every frame, draw every other one
+  }
   lastDraw = t;
   if (state === "play" && ++fpsN > 0) {                    // adaptive quality: lowers fast when slow, raises slowly when the device has headroom
     fpsAcc += Math.min(raw, 50);                           // one random hitch must not count as "slow device"
     if (fpsN >= 20) {                                      // judge every 20 frames
       const avg = fpsAcc / fpsN;
-      if (gfx === "auto" && avg > 21 && Q.level < 3) {
+      if (CFG.adaptive !== false && avg > 21 && Q.level < 3) {
         const from = Q.level;
         setQuality(Math.min(3, Q.level + (avg > 34 ? 2 : 1)));        // very slow → skip a level
         ceilQ = Math.max(ceilQ, from + 1); goodWin = 0; lastDown = t;  // never climb back to a level that just failed
         if (COARSE) store.set("zr_q", Q.level);                       // next launch starts at the level this phone can handle
-      } else if (gfx === "auto" && avg < (rafAvg < 11.5 ? 11 : 18) && Q.level > Math.max(ceilQ, COARSE ? 1 : 0) && t - lastDown > 15000) {
+      } else if (CFG.adaptive !== false && avg < (rafAvg < 11.5 ? 11 : 18) && Q.level > Math.max(ceilQ, baseQ, FLOOR) && t - lastDown > 15000) {
         if (++goodWin >= 10) { setQuality(Q.level - 1); goodWin = 0; lastDown = t - 8000; if (COARSE) store.set("zr_q", Q.level); }   // ~3.5 s of clear headroom
       } else goodWin = 0;
       fpsAcc = 0; fpsN = 0;
@@ -1629,7 +1794,7 @@ function loop(t) {
   }
   if (state !== "pause" || !document.hidden) draw();
 }
-window.ZR = { get perf() { return pf; }, get Q() { return Q; }, get state() { return state; }, step(raw) { acc += Math.min(raw, 100); advance(); }, draw };   // small test hook (used by the automated tests)
+window.ZR = { get hz() { return hz; }, get FX() { return FX; }, get perf() { return pf; }, get Q() { return Q; }, get state() { return state; }, step(raw) { acc += Math.min(raw, 100); advance(); }, draw };   // small test hook (used by the automated tests)
 
 /* ============ INPUT — one reliable path for keyboard, mouse and touch ============ */
 const JUMP_KEYS = ["Space", "ArrowUp", "KeyW"], DUCK_KEYS = ["ArrowDown", "KeyS"];
@@ -1662,7 +1827,7 @@ document.addEventListener("keyup", (e) => {
 
 let py = 0;
 canvas.addEventListener("pointerdown", (e) => { py = e.clientY; pressJump(); });
-canvas.addEventListener("pointermove", (e) => { if ((e.buttons || e.pointerType === "touch") && e.clientY - py > 30) duckPtr = true; });
+canvas.addEventListener("pointermove", (e) => { if ((e.buttons || e.pointerType === "touch") && e.clientY - py > SWIPE) duckPtr = true; });
 ["pointerup", "pointercancel"].forEach((n) => canvas.addEventListener(n, () => { duckPtr = false; releaseJump(); }));
 
 function holdButton(el, down, up) {                          // multi-touch safe: tracks every finger on the button
@@ -1681,7 +1846,7 @@ holdButton($("padDuck"), () => { duckBtn = true; }, () => { duckBtn = false; });
 // keep the browser out of the way while playing (scroll, pull-to-refresh, pinch, double-tap zoom)
 document.addEventListener("touchmove", (e) => { if (state === "play") e.preventDefault(); }, { passive: false });
 ["gesturestart", "gesturechange", "dblclick"].forEach((n) => document.addEventListener(n, (e) => { if (state === "play") e.preventDefault(); }));
-window.addEventListener("blur", () => { resetInputs(); if (state === "play") pauseGame(); });
+window.addEventListener("blur", () => { resetInputs(); if (state === "play" && CFG.autopause !== false) pauseGame(); });
 
 $("startButton").addEventListener("click", () => { if (shopOpen) goMenu(); else if (state === "revive") doRevive(); else if (state === "pause") resumeGame(); else startGame(); });
 $("restartButton").addEventListener("click", () => { resetGame(); startGame(); });
@@ -1775,8 +1940,11 @@ $("shopBox").addEventListener("input", (e) => {
   if (ac) { busS.gain.value = CFG.sfx; busM.gain.value = CFG.music; }
 });
 $("shopBox").addEventListener("change", (e) => { if (e.target.dataset.vol) beep(660, 0.07, "triangle", 0.06); });
-document.addEventListener("visibilitychange", () => { if (document.hidden) pauseGame(); });
-window.addEventListener("pagehide", () => { saveMeta(); pauseGame(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { if (CFG.autopause !== false) pauseGame(); else invul = Math.max(invul, 1500); if (CFG.bgsave !== false && ac && ac.state === "running") ac.suspend().catch(() => {}); }
+  else if (ac && ac.state === "suspended" && !muted) ac.resume().catch(() => {});
+});
+window.addEventListener("pagehide", () => { saveMeta(); if (CFG.autopause !== false) pauseGame(); });
 shell.addEventListener("contextmenu", (e) => e.preventDefault());
 document.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) b.blur(); });
 
@@ -1814,12 +1982,18 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 /* ============ GRAPHICS ============ */
-const GFX = ["auto", "ultra", "high", "medium", "low"];
+const GFX = ["auto", "ultra", "high", "medium", "low", "custom"];
 let gfx = store.get("zr_gfx", "auto");
 if (!GFX.includes(gfx)) gfx = "auto";
 const gfxLabel = () => ($("gfxLabel").textContent = " " + t("gfx") + ": " + t("gfx." + gfx));
 const GFX_LVL = { ultra: 0, high: 1, medium: 2, low: 3 };
-function applyGfx() { ceilQ = 0; setQuality(gfx in GFX_LVL ? GFX_LVL[gfx] : COARSE ? Math.max(1, Math.min(3, store.get("zr_q", 1) | 0)) : 1); gfxLabel(); }
+function applyGfx() {
+  const fixed = gfx === "custom" ? Math.max(0, Math.min(3, CFG.cq | 0)) : GFX_LVL[gfx];
+  baseQ = fixed !== undefined ? fixed : COARSE ? 1 : 0;                                       // best level adaptive quality may climb back to
+  ceilQ = 0;
+  setQuality(fixed !== undefined ? fixed : COARSE ? Math.max(1, Math.min(3, CFG.autoopt === false ? 1 : store.get("zr_q", 1) | 0)) : 1);
+  gfxLabel();
+}
 $("gfxButton").addEventListener("click", () => {
   gfx = GFX[(GFX.indexOf(gfx) + 1) % GFX.length]; store.set("zr_gfx", gfx); applyGfx();
   toast("🎨 " + t("gfx") + ": " + t("gfx." + gfx));

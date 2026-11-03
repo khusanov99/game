@@ -295,3 +295,14 @@ document.addEventListener("click", (e) => {
   if (b) setLang(b.dataset.lang);
 });
 applyI18n();
+
+Object.assign(I18N.uz, { "c3.title": "SHAHAR YUGURISH 3D", "c3.sub": "Haqiqiy 3D · 6 shahar · 3 qator" });
+Object.assign(I18N.en, { "c3.title": "CITY RUN 3D", "c3.sub": "True 3D · 6 cities · 3 lanes" });
+Object.assign(I18N.ja, { "c3.title": "シティラン 3D", "c3.sub": "本格3D · 6つの街 · 3レーン" });
+Object.assign(I18N.uz, { "coin.zumary": "ZUMARY TANGASI!", "ev.storm": "ENERGIYA BO'RONI", "ev.storm.d": "Tangalar ×2!", "ev.meteor": "METEOR YOMG'IRI", "ev.meteor.d": "Yerdagi qizil halqadan qoch — kristall qoladi", "ev.blackout": "SHAHARDA TOK O'CHDI", "ev.blackout.d": "Qorong'ida ball ×1.5", "ev.magnet": "MAGNIT ZONASI", "ev.magnet.d": "Tangalar o'zi uchib keladi", "ev.speed": "TEZLIK ZONASI", "ev.speed.d": "Tezlik va ball ×1.5", "ev.clean": "Toza o'tding! +150",
+  "m.rare": "Bugun {n} ta noyob tanga yig' (kristall, energiya, ZUMARY)", "m.evt": "{n} ta dunyo voqeasini yengib o't", "ach.a12.n": "Bo'ron ovchisi", "ach.a12.d": "10 ta dunyo voqeasini yengib o't", "ach.a13.n": "Noyob kolleksioner", "ach.a13.d": "30 ta noyob tanga yig'" });
+Object.assign(I18N.en, { "coin.zumary": "ZUMARY COIN!", "ev.storm": "ENERGY STORM", "ev.storm.d": "Coins ×2!", "ev.meteor": "METEOR SHOWER", "ev.meteor.d": "Dodge the red rings — crystals are left behind", "ev.blackout": "CITY BLACKOUT", "ev.blackout.d": "Score ×1.5 in the dark", "ev.magnet": "MAGNET ZONE", "ev.magnet.d": "Coins fly to you", "ev.speed": "SPEED ZONE", "ev.speed.d": "Speed and score ×1.5", "ev.clean": "Clean run! +150",
+  "m.rare": "Collect {n} rare coins today (crystal, energy, ZUMARY)", "m.evt": "Survive {n} world events", "ach.a12.n": "Storm chaser", "ach.a12.d": "Survive 10 world events", "ach.a13.n": "Rare collector", "ach.a13.d": "Collect 30 rare coins" });
+Object.assign(I18N.ja, { "coin.zumary": "ZUMARYコイン!", "ev.storm": "エナジーストーム", "ev.storm.d": "コイン×2!", "ev.meteor": "流星群", "ev.meteor.d": "赤い輪を避けて — クリスタルが残る", "ev.blackout": "市街停電", "ev.blackout.d": "暗闇でスコア×1.5", "ev.magnet": "マグネットゾーン", "ev.magnet.d": "コインが寄ってくる", "ev.speed": "スピードゾーン", "ev.speed.d": "速度とスコア×1.5", "ev.clean": "ノーミス! +150",
+  "m.rare": "レアコインを{n}枚集める (クリスタル・エナジー・ZUMARY)", "m.evt": "ワールドイベントを{n}回乗り切る", "ach.a12.n": "嵐の追跡者", "ach.a12.d": "ワールドイベントを10回乗り切る", "ach.a13.n": "レアコレクター", "ach.a13.d": "レアコインを30枚集める" });
+if (typeof applyI18n === "function") applyI18n();

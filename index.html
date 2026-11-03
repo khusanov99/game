@@ -70,7 +70,7 @@
                   <div id="topBox"></div>
                   <div id="shopBox"></div>
                   <button class="primary-btn" id="startButton"></button>
-                  <a class="ghost-btn" id="cityLink" href="./city3d.html" data-i18n="cityRun" style="display:block;text-align:center;text-decoration:none">🏙</a>
+                  <a class="city3d-cta" id="cityLink" href="./city3d.html"><span class="c3-ico" aria-hidden="true">3D</span><span class="c3-txt"><b data-i18n="c3.title"></b><small data-i18n="c3.sub"></small></span><span class="c3-go" aria-hidden="true">›</span></a>
                   <button class="ghost-btn" id="menuButton" type="button"></button>
                   <button class="ghost-btn" id="shareButton" type="button" data-i18n="share"></button>
                 </div>
@@ -124,7 +124,7 @@
             '<div style="position:fixed;z-index:99999;left:0;right:0;top:0;padding:14px 16px;background:#b3002d;color:#fff;font:600 15px/1.4 system-ui,sans-serif">' +
             "Fayl yuklanmadi / File not loaded: <b>" + miss.join(", ") +
             "</b><br>Bu fayl(lar) index.html bilan bir papkada bo'lishi va nomi aynan shunday (kichik harflar) bo'lishi kerak.</div>");
-        } else document.write('<script src="./game.js"><\/script>');
+        } else document.write('<script src="./game.js"><\/script><script src="./settings.js"><\/script>');
       })();
     </script>
   </body>
