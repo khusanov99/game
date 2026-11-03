@@ -95,3 +95,10 @@ Subway-Surfers-style mode: the camera is behind the robot, running down the midd
 
 ### City Run 3D (city3d.html)
 Real 3D version (WebGL, own tiny engine — no libraries): perspective buildings with lighting and fog, 3D robot built from jointed parts, 3D coins, parked cars, lamps and trees. Falls back to city.html if WebGL is missing. Uses facades.js (procedural Uzbek facade textures).
+
+**City Run 3D — v2 (performance + features)**
+- Performance: batched characters, preallocated buffers, time-sliced city generation (no hitches), dynamic-resolution governor (lowers/raises render resolution automatically to hold the frame rate), 4 quality tiers chosen from CPU cores / memory / GPU name. Software-GL headless run: ~3 ms JS per frame. Real iPhone/Android devices were NOT tested, so "never freezes on every phone" cannot be guaranteed — the governor is the safety net.
+- 6 cities cycling every 700 m: Tashkent, Samarkand, Bukhara, Khiva, Fergana (mountains), Neon Tashkent (night + rain).
+- Obstacles: low barriers, gates (slide), cones, pits, ramps, boost pads, carts, laser beams, buses, cars, moving traffic — ~14 spawn patterns.
+- Power-ups: Magnet, Shield, Turbo (smash through), Double coins, Jetpack. Helicopter searchlight event, ZUMARY letter bonus, close-call combos, multiplier up to x6.
+- Meta: daily missions (seeded by date), XP/levels, revive for 100 coins, procedural music, rain.
