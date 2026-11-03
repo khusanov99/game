@@ -102,3 +102,13 @@ Real 3D version (WebGL, own tiny engine — no libraries): perspective buildings
 - Obstacles: low barriers, gates (slide), cones, pits, ramps, boost pads, carts, laser beams, buses, cars, moving traffic — ~14 spawn patterns.
 - Power-ups: Magnet, Shield, Turbo (smash through), Double coins, Jetpack. Helicopter searchlight event, ZUMARY letter bonus, close-call combos, multiplier up to x6.
 - Meta: daily missions (seeded by date), XP/levels, revive for 100 coins, procedural music, rain.
+
+## Main game performance pass (v3)
+Measured in headless Chromium with software rendering (no GPU), so absolute numbers are pessimistic and real devices were NOT measured.
+- Desktop heat: real `shadowBlur` is now only used when the player picks ULTRA; desktop pixel budget cut (2.6M → 1.5M px); overlay `backdrop-filter` blur removed (it re-blurred the live canvas every frame). Software-render cost at the top level: 48 ms → 32 ms per frame; auto mode now starts at HIGH.
+- Idle: menus/game-over redraw at ~30 fps, pause at ~4 fps, hidden tab does no work at all (measured: 60 → 8 draws / 2 s while paused).
+- Adaptive quality: drops fast when slow, now also climbs back after ~3.5 s of headroom, never returning to a level that just failed (no oscillation). Manual levels: AUTO / ULTRA / HIGH / MEDIUM / LOW (Settings or the 🎨 button).
+- FPS monitor: press F3 or open `index.html?fps=1` (fps, frame time, worst frame, slow frames, long tasks, quality level, canvas size, particles). `ZR.perf` exposes the same numbers.
+- Soak test (simulated 30 min of play): JS heap 2.5 → 2.9 MB, draw time flat; 40 restarts left no leftover objects.
+- Already present before: fixed 120 Hz simulation (refresh-rate independent), sprite caches, particle cap per level.
+- Not measured: real CPU/GPU %, battery/thermal, loading time on real networks, touch latency on real devices.

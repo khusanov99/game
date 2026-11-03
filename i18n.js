@@ -229,9 +229,9 @@ const I18N = {
   },
 };
 
-Object.assign(I18N.uz, { gfx: "GRAFIKA", "gfx.auto": "AVTO", "gfx.high": "YUQORI", "gfx.low": "PAST" });
-Object.assign(I18N.en, { gfx: "GRAPHICS", "gfx.auto": "AUTO", "gfx.high": "HIGH", "gfx.low": "LOW" });
-Object.assign(I18N.ja, { gfx: "画質", "gfx.auto": "自動", "gfx.high": "高", "gfx.low": "低" });
+Object.assign(I18N.uz, { gfx: "GRAFIKA", "gfx.auto": "AVTO", "gfx.ultra": "ULTRA", "gfx.high": "YUQORI", "gfx.medium": "O'RTACHA", "gfx.low": "PAST" });
+Object.assign(I18N.en, { gfx: "GRAPHICS", "gfx.auto": "AUTO", "gfx.ultra": "ULTRA", "gfx.high": "HIGH", "gfx.medium": "MEDIUM", "gfx.low": "LOW" });
+Object.assign(I18N.ja, { gfx: "画質", "gfx.auto": "自動", "gfx.ultra": "最高", "gfx.high": "高", "gfx.medium": "中", "gfx.low": "低" });
 
 Object.assign(I18N.uz, {
   "chase.back": "Qo'riqchi orqada qoldi!", "chase.near": "ORQANGDA!", "pop.boardBroke": "SKEYT SINDI", "pw.hover": "SKEYT!", "pw.box": "SOVG'A!",
