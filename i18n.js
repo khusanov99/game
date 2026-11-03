@@ -10,6 +10,7 @@ const I18N = {
     heroP: "Sakra. Engash. Tanga yig'. Omon qol. Rekordingni yangila!<br>Qanchalik uzoqqa bora olasan?",
     lScore: "NATIJA", lBest: "REKORD", lSpeed: "TEZLIK", lCoins: "TANGA",
     navPlay: "O'YIN", navMissions: "VAZIFA", navShop: "DO'KON", navMedals: "MEDAL",
+    cityRun: "SHAHAR YUGURISH 3D · 3 QATOR",
     modeCampaign: "KAMPANIYA", modeEndless: "CHEKSIZ", diffEasy: "OSON", diffNormal: "O'RTACHA", diffHard: "QIYIN",
     menuBtn: "☰ MENYU", share: "📤 ULASHISH", padDuck: "ENGASH", padTurbo: "TURBO", padJump: "SAKRASH",
     hintJump: "SAKRASH (2x)", hintDuck: "ENGASH", hintTurbo: "TURBO", hintPause: "PAUZA", hintSound: "OVOZ",
@@ -84,6 +85,7 @@ const I18N = {
     heroP: "Jump. Duck. Collect coins. Survive. Break your record!<br>How far can you go?",
     lScore: "SCORE", lBest: "BEST", lSpeed: "SPEED", lCoins: "COINS",
     navPlay: "PLAY", navMissions: "MISSIONS", navShop: "SHOP", navMedals: "MEDALS",
+    cityRun: "CITY RUN 3D · 3 LANES",
     modeCampaign: "CAMPAIGN", modeEndless: "ENDLESS", diffEasy: "EASY", diffNormal: "NORMAL", diffHard: "HARD",
     menuBtn: "☰ MENU", share: "📤 SHARE", padDuck: "DUCK", padTurbo: "TURBO", padJump: "JUMP",
     hintJump: "JUMP (2x)", hintDuck: "DUCK", hintTurbo: "TURBO", hintPause: "PAUSE", hintSound: "SOUND",
@@ -158,6 +160,7 @@ const I18N = {
     heroP: "ジャンプ、しゃがみ、コイン集め。生き残って記録を更新しよう！<br>どこまで行けるかな？",
     lScore: "スコア", lBest: "ベスト", lSpeed: "スピード", lCoins: "コイン",
     navPlay: "プレイ", navMissions: "ミッション", navShop: "ショップ", navMedals: "メダル",
+    cityRun: "シティラン 3D · 3レーン",
     modeCampaign: "キャンペーン", modeEndless: "エンドレス", diffEasy: "かんたん", diffNormal: "ふつう", diffHard: "むずかしい",
     menuBtn: "☰ メニュー", share: "📤 シェア", padDuck: "しゃがむ", padTurbo: "ターボ", padJump: "ジャンプ",
     hintJump: "ジャンプ(2段)", hintDuck: "しゃがむ", hintTurbo: "ターボ", hintPause: "ポーズ", hintSound: "サウンド",
@@ -226,9 +229,9 @@ const I18N = {
   },
 };
 
-Object.assign(I18N.uz, { gfx: "GRAFIKA", "gfx.auto": "AVTO", "gfx.high": "YUQORI", "gfx.low": "PAST" });
-Object.assign(I18N.en, { gfx: "GRAPHICS", "gfx.auto": "AUTO", "gfx.high": "HIGH", "gfx.low": "LOW" });
-Object.assign(I18N.ja, { gfx: "画質", "gfx.auto": "自動", "gfx.high": "高", "gfx.low": "低" });
+Object.assign(I18N.uz, { gfx: "GRAFIKA", "gfx.auto": "AVTO", "gfx.ultra": "ULTRA", "gfx.high": "YUQORI", "gfx.medium": "O'RTACHA", "gfx.low": "PAST" });
+Object.assign(I18N.en, { gfx: "GRAPHICS", "gfx.auto": "AUTO", "gfx.ultra": "ULTRA", "gfx.high": "HIGH", "gfx.medium": "MEDIUM", "gfx.low": "LOW" });
+Object.assign(I18N.ja, { gfx: "画質", "gfx.auto": "自動", "gfx.ultra": "最高", "gfx.high": "高", "gfx.medium": "中", "gfx.low": "低" });
 
 Object.assign(I18N.uz, {
   "chase.back": "Qo'riqchi orqada qoldi!", "chase.near": "ORQANGDA!", "pop.boardBroke": "SKEYT SINDI", "pw.hover": "SKEYT!", "pw.box": "SOVG'A!",

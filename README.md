@@ -88,3 +88,27 @@ Opening `index.html` directly also works. A local server is better because it ma
 - Sound, vibration, native fullscreen and orientation lock cannot be checked in headless mode.
 - The Japanese texts were written by the assistant. A native speaker should review them.
 - The characters and scenery are drawn in code, not taken from photos or sprite artwork. They are stylised, not photo-real or GTA-grade 3D art.
+
+
+## City Run (city.html)
+Subway-Surfers-style mode: the camera is behind the robot, running down the middle of an Uzbek city street (Tashkent → Samarkand → Bukhara → Khiva) on 3 lanes. Swipe left/right to change lane, up to jump, down to slide (keys: arrows / WASD, P pause, M mute). Collect spinning patterned coins (gold gems = 5). Two hits and the police robot + hound catch you. Coins go to the same wallet as the main game. Pseudo-3D on plain Canvas 2D, no libraries. Not tested on real phones — only headless Chromium.
+
+### City Run 3D (city3d.html)
+Real 3D version (WebGL, own tiny engine — no libraries): perspective buildings with lighting and fog, 3D robot built from jointed parts, 3D coins, parked cars, lamps and trees. Falls back to city.html if WebGL is missing. Uses facades.js (procedural Uzbek facade textures).
+
+**City Run 3D — v2 (performance + features)**
+- Performance: batched characters, preallocated buffers, time-sliced city generation (no hitches), dynamic-resolution governor (lowers/raises render resolution automatically to hold the frame rate), 4 quality tiers chosen from CPU cores / memory / GPU name. Software-GL headless run: ~3 ms JS per frame. Real iPhone/Android devices were NOT tested, so "never freezes on every phone" cannot be guaranteed — the governor is the safety net.
+- 6 cities cycling every 700 m: Tashkent, Samarkand, Bukhara, Khiva, Fergana (mountains), Neon Tashkent (night + rain).
+- Obstacles: low barriers, gates (slide), cones, pits, ramps, boost pads, carts, laser beams, buses, cars, moving traffic — ~14 spawn patterns.
+- Power-ups: Magnet, Shield, Turbo (smash through), Double coins, Jetpack. Helicopter searchlight event, ZUMARY letter bonus, close-call combos, multiplier up to x6.
+- Meta: daily missions (seeded by date), XP/levels, revive for 100 coins, procedural music, rain.
+
+## Main game performance pass (v3)
+Measured in headless Chromium with software rendering (no GPU), so absolute numbers are pessimistic and real devices were NOT measured.
+- Desktop heat: real `shadowBlur` is now only used when the player picks ULTRA; desktop pixel budget cut (2.6M → 1.5M px); overlay `backdrop-filter` blur removed (it re-blurred the live canvas every frame). Software-render cost at the top level: 48 ms → 32 ms per frame; auto mode now starts at HIGH.
+- Idle: menus/game-over redraw at ~30 fps, pause at ~4 fps, hidden tab does no work at all (measured: 60 → 8 draws / 2 s while paused).
+- Adaptive quality: drops fast when slow, now also climbs back after ~3.5 s of headroom, never returning to a level that just failed (no oscillation). Manual levels: AUTO / ULTRA / HIGH / MEDIUM / LOW (Settings or the 🎨 button).
+- FPS monitor: press F3 or open `index.html?fps=1` (fps, frame time, worst frame, slow frames, long tasks, quality level, canvas size, particles). `ZR.perf` exposes the same numbers.
+- Soak test (simulated 30 min of play): JS heap 2.5 → 2.9 MB, draw time flat; 40 restarts left no leftover objects.
+- Already present before: fixed 120 Hz simulation (refresh-rate independent), sprite caches, particle cap per level.
+- Not measured: real CPU/GPU %, battery/thermal, loading time on real networks, touch latency on real devices.

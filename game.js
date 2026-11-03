@@ -29,10 +29,10 @@ const COARSE = window.matchMedia("(pointer:coarse)").matches;
 
 /* ============ QUALITY ============ */
 const Q = { level: 0, shadow: !COARSE, flat: false, dpr: 2, maxP: 140 };
-const PIXEL_BUDGET = COARSE ? [560000, 400000, 280000, 190000] : [2600000, 1600000, 900000, 500000];   // canvas pixels per quality level
+const PIXEL_BUDGET = COARSE ? [560000, 400000, 280000, 190000] : [1500000, 1100000, 800000, 500000];   // canvas pixels per quality level
 function setQuality(l) {
   Q.level = l;
-  Q.shadow = l === 0 && !COARSE;      // real shadowBlur only on desktop at the top level
+  Q.shadow = gfx === "ultra" && !COARSE;      // real shadowBlur is very expensive: only when the player explicitly picks ULTRA on desktop
   Q.flat = l >= 2;
   Q.dpr = [2, 1.5, 1, 0.75][Math.min(l, 3)];
   Q.maxP = [140, 70, 40, 24][Math.min(l, 3)];
@@ -1009,7 +1009,7 @@ const runnerSheet = () => (RIGX && rigTry(() => RIGX.runner(skin, CSC))) || IMG.
 const badgeOf = (k) => BADGES[k] || (BADGES[k] = Chars.badge(POWER[k].icon, POWER[k].color, CSC));
 const heartSprite = (f) => HEARTS[f] || (HEARTS[f] = Chars.heart(f, CSC));
 const obstSprite = (v) => OBST[v] || (OBST[v] = Chars.obstacle(v, CSC));
-const coinSheet = () => COINSP || (COINSP = Chars.coins(CSC));
+const coinSheet = () => COINSP || (COINSP = (RIGX && rigTry(() => RIGX.coins(CSC))) || Chars.coins(CSC));
 const guardSheet = () => (RIGX && rigTry(() => RIGX.guard(CSC))) || IMG.get("guard", "default", CSC) || GRD || (GRD = Chars.guard(CSC));
 const dogSheet = () => (RIGX && rigTry(() => RIGX.dog(CSC))) || IMG.get("dog", "default", CSC) || DOGS || (DOGS = Chars.dogs(CSC));
 IMG.preload();                                   // start loading the image characters while the menu is shown
@@ -1108,7 +1108,7 @@ function drawItems() {
     if (it.k === "coin") {
       halo(it.x - it.r, it.y - it.r, it.r * 2, it.r * 2, 0, it.v ? "#fff3a0" : "#ffd84f");
       const sz = it.v ? 32 : 26;
-      ctx.drawImage((it.v ? CN.g : CN.n)[(Math.floor(frame * 0.18 + it.x * 0.05) & 7)], it.x - sz / 2, it.y - sz / 2, sz, sz);
+      ctx.drawImage((it.v ? CN.g : CN.n)[Math.floor(frame * 0.18 + it.x * 0.05) % (it.v ? CN.g : CN.n).length], it.x - sz / 2, it.y - sz / 2, sz, sz);
     } else {
       const bob = Math.sin(frame * 0.1 + it.x) * 3;
       halo(it.x - it.r, it.y - it.r + bob, it.r * 2, it.r * 2, 0, POWER[it.k].color);
@@ -1581,29 +1581,55 @@ function advance() {
   while (acc >= STEP && n < MAXN) { acc -= STEP; n++; stepOnce(STEP); }
   if (n === MAXN) acc = 0;                                  // after a long stall: drop the backlog instead of fast-forwarding
 }
+let ceilQ = 0, goodWin = 0, lastDown = -1e9, lastDraw = 0, perfOn = false, perfEl = null, pf = { n: 0, sum: 0, worst: 0, slow: 0, fps: 0, avg: 0, wst: 0, long: 0, t0: 0 };
+function perfTick(raw, t) {                                  // FPS monitor: F3 or ?fps=1 shows it; updates the text once per second only
+  pf.n++; pf.sum += raw; if (raw > pf.worst) pf.worst = raw; if (raw > 33.4) pf.slow++;
+  if (!pf.t0) pf.t0 = t;
+  if (t - pf.t0 >= 1000) {
+    pf.fps = Math.round((pf.n * 1000) / (t - pf.t0)); pf.avg = pf.sum / pf.n; pf.wst = pf.worst; pf.slowN = pf.slow;
+    pf.n = pf.sum = pf.worst = pf.slow = 0; pf.t0 = t;
+    if (perfOn) perfEl.textContent = `${pf.fps} fps  avg ${pf.avg.toFixed(1)}ms  worst ${pf.wst.toFixed(0)}ms\nslow(>33ms) ${pf.slowN}  long tasks ${pf.long}\nQ${Q.level} ${gfx}${gfx === "auto" ? " (max " + ceilQ + ")" : ""}  ${canvas.width}x${canvas.height}  dpr ${DPR.toFixed(2)}\nparticles ${particles ? particles.length : 0}`;
+  }
+}
+function togglePerf() {
+  perfOn = !perfOn;
+  if (perfOn && !perfEl) { perfEl = document.createElement("div"); perfEl.id = "perf"; document.body.appendChild(perfEl); }
+  if (perfEl) perfEl.style.display = perfOn ? "block" : "none";
+}
+if ("PerformanceObserver" in window) { try { new PerformanceObserver((l) => { pf.long += l.getEntries().length; }).observe({ entryTypes: ["longtask"] }); } catch (e) {} }
+if (/[?&]fps\b/.test(location.search)) setTimeout(togglePerf, 0);
 function loop(t) {
   requestAnimationFrame(loop);                             // schedule first, so one exception can never freeze the game
   if (window.__ZR_MANUAL) { lastT = 0; return; }
+  if (document.hidden) { lastT = 0; return; }              // background tab: no simulation, no drawing, no heat
   const raw = lastT ? t - lastT : 16.67;
   lastT = t;
   rafAvg += (raw - rafAvg) * 0.05;
+  perfTick(raw, t);
   acc += Math.min(raw, 100);
   advance();
-  if (rafAvg < 11.5) { skipDraw = !skipDraw; if (skipDraw) return; }          // 90/120 Hz screens: simulate every frame, draw every other one
-  if (state === "play" && ++fpsN > 0) {                    // auto-lower quality on slow devices
+  if (state !== "play") {                                  // menus / pause / game-over: nothing fast moves, so redraw at ~30 fps (pause: ~4 fps)
+    if (t - lastDraw < (state === "pause" ? 250 : 32)) return;
+  } else if (rafAvg < 11.5) { skipDraw = !skipDraw; if (skipDraw) return; }   // 90/120 Hz screens: simulate every frame, draw every other one
+  lastDraw = t;
+  if (state === "play" && ++fpsN > 0) {                    // adaptive quality: lowers fast when slow, raises slowly when the device has headroom
     fpsAcc += Math.min(raw, 50);                           // one random hitch must not count as "slow device"
-    if (fpsN >= 20) {                                      // judge every 20 frames and react at once (before: 60 frames, ~3-6 s of freezing)
+    if (fpsN >= 20) {                                      // judge every 20 frames
       const avg = fpsAcc / fpsN;
       if (gfx === "auto" && avg > 21 && Q.level < 3) {
+        const from = Q.level;
         setQuality(Math.min(3, Q.level + (avg > 34 ? 2 : 1)));        // very slow → skip a level
+        ceilQ = Math.max(ceilQ, from + 1); goodWin = 0; lastDown = t;  // never climb back to a level that just failed
         if (COARSE) store.set("zr_q", Q.level);                       // next launch starts at the level this phone can handle
-      }
+      } else if (gfx === "auto" && avg < (rafAvg < 11.5 ? 11 : 18) && Q.level > Math.max(ceilQ, COARSE ? 1 : 0) && t - lastDown > 15000) {
+        if (++goodWin >= 10) { setQuality(Q.level - 1); goodWin = 0; lastDown = t - 8000; if (COARSE) store.set("zr_q", Q.level); }   // ~3.5 s of clear headroom
+      } else goodWin = 0;
       fpsAcc = 0; fpsN = 0;
     }
   }
   if (state !== "pause" || !document.hidden) draw();
 }
-window.ZR = { get state() { return state; }, step(raw) { acc += Math.min(raw, 100); advance(); }, draw };   // small test hook (used by the automated tests)
+window.ZR = { get perf() { return pf; }, get Q() { return Q; }, get state() { return state; }, step(raw) { acc += Math.min(raw, 100); advance(); }, draw };   // small test hook (used by the automated tests)
 
 /* ============ INPUT — one reliable path for keyboard, mouse and touch ============ */
 const JUMP_KEYS = ["Space", "ArrowUp", "KeyW"], DUCK_KEYS = ["ArrowDown", "KeyS"];
@@ -1620,6 +1646,7 @@ function pressJump() {
 }
 function releaseJump() { jumpHeld = false; }
 document.addEventListener("keydown", (e) => {
+  if (e.code === "F3") { e.preventDefault(); togglePerf(); return; }
   if (JUMP_KEYS.includes(e.code)) { e.preventDefault(); if (!e.repeat) pressJump(); }
   else if (DUCK_KEYS.includes(e.code)) { e.preventDefault(); duckKey = true; }
   else if (e.code === "KeyT" || e.code === "ShiftLeft" || e.code === "ShiftRight") { useTurbo(); }
@@ -1787,11 +1814,12 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 /* ============ GRAPHICS ============ */
-const GFX = ["auto", "high", "low"];
+const GFX = ["auto", "ultra", "high", "medium", "low"];
 let gfx = store.get("zr_gfx", "auto");
 if (!GFX.includes(gfx)) gfx = "auto";
 const gfxLabel = () => ($("gfxLabel").textContent = " " + t("gfx") + ": " + t("gfx." + gfx));
-function applyGfx() { setQuality(gfx === "low" ? 3 : gfx === "high" ? 0 : COARSE ? Math.max(1, Math.min(3, store.get("zr_q", 1) | 0)) : 0); gfxLabel(); }
+const GFX_LVL = { ultra: 0, high: 1, medium: 2, low: 3 };
+function applyGfx() { ceilQ = 0; setQuality(gfx in GFX_LVL ? GFX_LVL[gfx] : COARSE ? Math.max(1, Math.min(3, store.get("zr_q", 1) | 0)) : 1); gfxLabel(); }
 $("gfxButton").addEventListener("click", () => {
   gfx = GFX[(GFX.indexOf(gfx) + 1) % GFX.length]; store.set("zr_gfx", gfx); applyGfx();
   toast("🎨 " + t("gfx") + ": " + t("gfx." + gfx));
