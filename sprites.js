@@ -31,7 +31,10 @@ window.Sprites =
         enabled: true,
         file: "", // all frames are separate pictures here
         anim: {
-          run: ["assets/characters/hero_run1.png", "assets/characters/hero_run2.png"], // two strides, blended by motion
+          run: [
+            "assets/characters/hero_run1.png",
+            "assets/characters/hero_run2.png",
+          ], // two strides, blended by motion
           jump: ["assets/characters/hero_run2.png"],
           fall: ["assets/characters/hero_run2.png"],
           land: ["assets/characters/hero_run1.png"],
@@ -84,7 +87,14 @@ window.Sprites =
       },
     };
 
-    const FALLBACK = { jump: "run", fall: "jump", land: "run", duck: "run", hit: "fall", snarl: "run" };
+    const FALLBACK = {
+      jump: "run",
+      fall: "jump",
+      land: "run",
+      duck: "run",
+      hit: "fall",
+      snarl: "run",
+    };
     const imgCache = {},
       status = {},
       built = {};
@@ -98,8 +108,14 @@ window.Sprites =
         i.onerror = () => res(null);
         i.src = (window.SPRITE_DATA && window.SPRITE_DATA[url]) || url; // pictures embedded by characters-data.js, else the file itself
       }));
-    const variantOf = (c, variant) => (c.file && typeof c.file === "object" ? (c.file[variant] ? variant : "default") : "default");
-    const fileOf = (c, v) => (typeof c.file === "object" ? c.file[v] || c.file.default : c.file);
+    const variantOf = (c, variant) =>
+      c.file && typeof c.file === "object"
+        ? c.file[variant]
+          ? variant
+          : "default"
+        : "default";
+    const fileOf = (c, v) =>
+      typeof c.file === "object" ? c.file[v] || c.file.default : c.file;
     const urlsOf = (c, v) => {
       const u = new Set();
       const f = fileOf(c, v);
@@ -112,7 +128,9 @@ window.Sprites =
       return [...u];
     };
     function needsGrid(c) {
-      return Object.values(c.anim || {}).some((a) => a.some((s) => typeof s === "number"));
+      return Object.values(c.anim || {}).some((a) =>
+        a.some((s) => typeof s === "number"),
+      );
     }
 
     function start(kind, v) {
@@ -124,13 +142,26 @@ window.Sprites =
       Promise.all(urls.map(loadImg)).then((list) => {
         const st = status[key];
         urls.forEach((u, i) => (st.imgs[u] = list[i]));
-        const ok = urls.every((u) => st.imgs[u]) && c.anim && c.anim.run && c.anim.run.length;
+        const ok =
+          urls.every((u) => st.imgs[u]) &&
+          c.anim &&
+          c.anim.run &&
+          c.anim.run.length;
         st.state = ok ? "ok" : "fail";
-        if (!ok && window.console) console.warn("[Sprites] " + kind + ": images not found or config incomplete — using the built-in character");
+        if (!ok && window.console)
+          console.warn(
+            "[Sprites] " +
+              kind +
+              ": images not found or config incomplete — using the built-in character",
+          );
       });
     }
 
-    const pickFrames = (arr, n) => Array.from({ length: n }, (_, i) => arr[Math.floor((i * arr.length) / n) % arr.length]);
+    const pickFrames = (arr, n) =>
+      Array.from(
+        { length: n },
+        (_, i) => arr[Math.floor((i * arr.length) / n) % arr.length],
+      );
     function anim(c, name) {
       let a = c.anim[name],
         g = name,
@@ -150,7 +181,16 @@ window.Sprites =
           return { r: [i, 0, 0, i.width, i.height], key: spec };
         }
         const cols = c.cols || Math.max(1, Math.floor(grid.width / c.frameW));
-        return { r: [grid, (spec % cols) * c.frameW, Math.floor(spec / cols) * c.frameH, c.frameW, c.frameH], key: fileOf(c, v) };
+        return {
+          r: [
+            grid,
+            (spec % cols) * c.frameW,
+            Math.floor(spec / cols) * c.frameH,
+            c.frameW,
+            c.frameH,
+          ],
+          key: fileOf(c, v),
+        };
       };
       const specs = [],
         meta = [];
@@ -165,7 +205,11 @@ window.Sprites =
       const dims = items.map(({ r, key }) => {
         const inf = (c.info && c.info[key]) || {};
         const h = inf.h || c.height;
-        return { h, w: h * (r[3] / r[4]), ax: inf.ax === undefined ? 0.5 : inf.ax };
+        return {
+          h,
+          w: h * (r[3] / r[4]),
+          ax: inf.ax === undefined ? 0.5 : inf.ax,
+        };
       });
       const Hmax = Math.max(...dims.map((d) => d.h)),
         Wmax = Math.max(...dims.map((d) => d.w));
@@ -200,7 +244,11 @@ window.Sprites =
           g.translate(cx, ay - Math.abs(Math.sin(ph)) * (m.bounce || 0) * sc);
           g.rotate((m.tilt || 0) + Math.sin(ph) * (m.sway || 0));
           g.transform(1, 0, Math.sin(ph + 1.2) * (m.skew || 0), 1, 0, 0);
-          if (m.stretch) g.scale(1 + m.stretch * Math.sin(ph * 2), 1 - m.stretch * 0.6 * Math.sin(ph * 2));
+          if (m.stretch)
+            g.scale(
+              1 + m.stretch * Math.sin(ph * 2),
+              1 - m.stretch * 0.6 * Math.sin(ph * 2),
+            );
           g.translate(-cx, -ay);
         }
         // downscale in steps of at most 2× so big source art stays sharp instead of aliasing
@@ -227,7 +275,14 @@ window.Sprites =
         g.drawImage(src, sx, sy, sw, sh, dx, dy, dw, dh);
         return cv;
       });
-      return { w: W, h: HT, fx: W / 2, fy: PT + Hmax - (c.foot || 0), f, image: true };
+      return {
+        w: W,
+        h: HT,
+        fx: W / 2,
+        fy: PT + Hmax - (c.foot || 0),
+        f,
+        image: true,
+      };
     }
 
     const ORDER = {
@@ -267,7 +322,10 @@ window.Sprites =
       Object.keys(CONFIG).forEach((k) => {
         const c = CONFIG[k];
         if (!c.enabled) return;
-        const vs = c.file && typeof c.file === "object" ? Object.keys(c.file) : ["default"];
+        const vs =
+          c.file && typeof c.file === "object"
+            ? Object.keys(c.file)
+            : ["default"];
         vs.forEach((v) => start(k, v));
       });
     }
@@ -275,11 +333,16 @@ window.Sprites =
     function configure(o) {
       Object.keys(o).forEach((k) => {
         CONFIG[k] = Object.assign(CONFIG[k] || {}, o[k]);
-        Object.keys(status).forEach((s) => s.startsWith(k + ":") && delete status[s]);
-        Object.keys(built).forEach((s) => s.startsWith(k + ":") && delete built[s]);
+        Object.keys(status).forEach(
+          (s) => s.startsWith(k + ":") && delete status[s],
+        );
+        Object.keys(built).forEach(
+          (s) => s.startsWith(k + ":") && delete built[s],
+        );
       });
       preload();
     }
-    const info = () => Object.fromEntries(Object.keys(status).map((k) => [k, status[k].state]));
+    const info = () =>
+      Object.fromEntries(Object.keys(status).map((k) => [k, status[k].state]));
     return { get, preload, configure, info, CONFIG };
   })();
