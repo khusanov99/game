@@ -133,7 +133,7 @@ function facadeTex(th, idx) {
   const [kind, len, h] = DEFS[th][idx],
     f = Facades.make(th, kind, len, h, PPU, true);
   return (FT[k] = {
-    tex: texFrom(f.cv, { cap: 1024 }),
+    tex: texFrom(f.cv, { cap: COARSE ? 512 : 1024 }),
     kind,
     len: len * FS,
     h: h * FS,

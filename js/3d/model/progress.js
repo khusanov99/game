@@ -113,7 +113,7 @@ function reset() {
   gap = 11.5;
   camX = 0;
   objs = [];
-  sparks = [];
+  while (sparks.length) SPARK_POOL.push(sparks.pop());
   floaties = [];
   nextSpawn = 55;
   coinHud = 0;

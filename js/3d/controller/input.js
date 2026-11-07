@@ -77,6 +77,22 @@ achBtn.type = "button";
 achBtn.style.cssText =
   "display:none;background:rgba(255,216,79,.1);color:#ffd84f;border:1px solid rgba(255,216,79,.35);font-size:12px;padding:12px";
 $("go").after(achBtn);
+const gfxBtn = document.createElement("button");
+gfxBtn.id = "gfxb";
+gfxBtn.type = "button";
+gfxBtn.style.cssText =
+  "display:none;background:rgba(83,247,255,.08);color:#7fe6ff;border:1px solid rgba(83,247,255,.3);font-size:12px;padding:12px";
+$("go").after(gfxBtn);
+const GFXN = {
+  uz: ["AVTO", "YUQORI", "O'RTA", "PAST"],
+  en: ["AUTO", "HIGH", "MEDIUM", "LOW"],
+  ja: ["自動", "高", "中", "低"],
+};
+function gfxLabel() {
+  const n = (GFXN[LG] || GFXN.en)[GFX_ORDER.indexOf(gfx)];
+  gfxBtn.textContent =
+    (LG === "uz" ? "GRAFIKA: " : LG === "ja" ? "画質: " : "GRAPHICS: ") + n;
+}
 let ovMode = "menu";
 const ovOpen = () => !$("ov").classList.contains("hidden");
 function setPause(on) {

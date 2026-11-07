@@ -5,6 +5,20 @@ const cv = $("c"),
   hudc = $("hud"),
   hx = hudc.getContext("2d");
 const COARSE = matchMedia("(pointer:coarse)").matches;
+/* device class: drives the pixel budget, the starting quality tier and the texture caps */
+const DEV = (() => {
+  const ua = navigator.userAgent || "",
+    d = {
+      ios:
+        /iP(hone|ad|od)/.test(ua) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1),
+      android: /Android/i.test(ua),
+      mem: navigator.deviceMemory || 4,
+      cores: navigator.hardwareConcurrency || 4,
+    };
+  d.low = (d.android && (d.mem <= 3 || d.cores <= 4)) || d.mem <= 2;
+  return d;
+})();
 const store = {
   get(k, d) {
     try {

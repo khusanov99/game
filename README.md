@@ -168,3 +168,12 @@ Done (2D main game, tested in headless Chromium only):
 ## v8b — 3D models baked into the 2D game
 
 The 2D game keeps its gameplay, camera and controls, but its hero and chasers are now renders of the real 3D models: `tools/bake.py` renders `js/3d/view/hero.js` and `chaser.js` from the side (3/4 turned toward the camera) with the 3D engine and writes `assets/baked/*.png` (hero in 4 skins, box-bot guard, ball-bot dog). `rig.js` loads them and falls back to the procedural figures until they arrive (or if a file is missing). Re-run `python3 tools/bake.py` after changing a model. Obstacles, coins and scenery in the 2D game are still the original 2D art.
+
+## City Run 3D — performance notes
+
+- **FPS monitor:** open `city3d.html?fps=1` (or press F3). Shows fps, frame times, quality tier, resolution, draw calls, device class and GPU name.
+- **Graphics setting:** menu / pause → "GRAPHICS: AUTO / HIGH / MEDIUM / LOW" (saved). AUTO picks a start tier by device (desktop, iPhone/iPad, Android, low-end Android) and adapts the render resolution; the governor measures against the screen's own refresh rate, so a 30 Hz power-saver screen is not treated as "slow", and it gives quality back when the device keeps up.
+- **Pixel budget per device:** desktop 2.6 MP, iPhone/iPad 1.5 MP, Android 0.95 MP, low-end Android 0.6 MP. Texture size is capped at 512 px on touch / low-end devices.
+- **Pooling:** the matrix pool (700) and the spark pool; obstacle list is compacted in place.
+- **Not done:** GPU texture compression (ASTC/ETC2/S3TC). All textures are generated at runtime from canvas, so there is nothing to pre-compress; mip-maps, anisotropy and size caps are used instead.
+- Only tested in headless Chromium (software GPU). Not verified on real iPhone/Android.

@@ -9,8 +9,9 @@ const potUp = (n, cap) => {
 function texFrom(canvas, o) {
   o = o || {};
   let src = canvas;
-  const w = potUp(canvas.width, o.cap || 1024),
-    h = potUp(canvas.height, o.cap || 1024);
+  const cap = Math.min(o.cap || 1024, DEV.low ? 512 : 1024),
+    w = potUp(canvas.width, cap),
+    h = potUp(canvas.height, cap);
   if (w !== canvas.width || h !== canvas.height) {
     src = document.createElement("canvas");
     src.width = w;

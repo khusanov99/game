@@ -20,8 +20,42 @@ function syncUi() {
     dashBtn.classList.toggle("rdy", rdy);
   }
 }
+/* ---- graphics: user setting + dynamic-resolution governor ---- */
+const GFXV = { high: 1, med: 0.72, low: 0.55 },
+  GFX_ORDER = ["auto", "high", "med", "low"];
+let gfx = store.get("zr3_gfx", "auto");
+if (gfx !== "auto" && !GFXV[gfx]) gfx = "auto";
+/* starting resolution from what the browser tells us about the device */
+function deviceTier() {
+  let r = "";
+  try {
+    const e = gl.getExtension("WEBGL_debug_renderer_info");
+    r = e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : "";
+  } catch (x) {}
+  let t = DEV.cores <= 4 || DEV.mem <= 3 ? 1 : 0;
+  if (DEV.ios && DEV.mem >= 4) t = 0;
+  if (DEV.low) t = 2;
+  if (/mali-4|adreno \(tm\) [23]\d\d|powervr sgx/i.test(r)) t = 2;
+  if (/swiftshader|llvmpipe|software/i.test(r)) t = 3;
+  return [1, 0.8, 0.62, 0.5][t];
+}
+let tier0 = 1;
+function applyGfx() {
+  gGrace = 90;
+  tier0 = deviceTier();
+  setRes(GFXV[gfx] || tier0);
+}
+function cycleGfx() {
+  gfx = GFX_ORDER[(GFX_ORDER.indexOf(gfx) + 1) % GFX_ORDER.length];
+  store.set("zr3_gfx", gfx);
+  applyGfx();
+}
 let gAcc = 0,
   gN = 0,
+  gGrace = 90, // frames ignored after start / a change: shader compile and chunk builds must not look like a slow phone
+  fMin = 1e9,
+  fWin = 0,
+  hzMs = 16.7, // the screen's own frame interval (30 Hz power-saver = 33 ms is NOT "slow")
   now = 0,
   lastChg = 0,
   lastDown = 0;
@@ -41,26 +75,39 @@ function frame(ts) {
   lastT = ts;
   if (dt > 0.1) dt = 0.1;
   const ms = dt * 1000;
-  if (state === "play" && !paused) {
-    // dynamic-resolution governor: keeps the frame rate up on any phone
-    gAcc += ms;
-    gN++;
+  if (typeof perfTick === "function") perfTick(ms);
+  if (ms > 4 && ms < fMin) fMin = ms;
+  if (++fWin >= 300) {
+    hzMs = clamp(fMin, 6, 34);
+    fMin = 1e9;
+    fWin = 0;
+  }
+  if (state === "play" && !paused && gfx === "auto") {
+    if (gGrace > 0) gGrace--;
+    else {
+      gAcc += Math.min(ms, 50); // one random hitch must not count
+      gN++;
+    }
     if (gN >= 20) {
-      const avg = gAcc / gN;
+      const avg = gAcc / gN,
+        slowT = Math.max(22, hzMs * 1.3);
       gAcc = 0;
       gN = 0;
       now = performance.now();
-      if (avg > 22 && resScale > 0.45 && now - lastChg > 900) {
-        setRes(Math.max(0.45, resScale * (avg > 34 ? 0.78 : 0.9)));
+      if (avg > slowT && resScale > 0.5 && now - lastChg > 900) {
+        setRes(Math.max(0.5, resScale * (avg > slowT * 1.5 ? 0.78 : 0.9)));
+        gGrace = 20;
         lastChg = now;
         lastDown = now;
       } else if (
-        avg < 14 &&
+        avg < hzMs * 1.15 &&
+        resScale < tier0 + 0.2 &&
         resScale < 1 &&
-        now - lastDown > 5000 &&
+        now - lastDown > 6000 &&
         now - lastChg > 1500
       ) {
-        setRes(Math.min(1, resScale * 1.06));
+        setRes(Math.min(1, resScale * 1.06)); // device keeps up with its own refresh rate: give quality back
+        gGrace = 20;
         lastChg = now;
       }
     }

@@ -10,6 +10,7 @@ $("go").parentNode.insertBefore(rvBtn, $("go"));
 function showOv(title, sub, row, btn, canRevive) {
   rsBtn.style.display = "none";
   achBtn.style.display = "none";
+  gfxBtn.style.display = "none";
   $("oTitle").textContent = title;
   $("oSub").innerHTML = sub;
   $("oRow").innerHTML = row;
@@ -34,6 +35,8 @@ function menu() {
     T("play"),
     false,
   );
+  gfxBtn.style.display = "block";
+  gfxLabel();
   achBtn.style.display = "block";
   achBtn.textContent =
     T("achBtn") +
@@ -67,6 +70,8 @@ function showPause() {
   );
   rsBtn.style.display = "block";
   rsBtn.textContent = T("restart");
+  gfxBtn.style.display = "block";
+  gfxLabel();
 }
 function start() {
   actx();
@@ -154,3 +159,7 @@ rsBtn.addEventListener("click", () => {
   start();
 });
 achBtn.addEventListener("click", achOv);
+gfxBtn.addEventListener("click", () => {
+  cycleGfx();
+  gfxLabel();
+});

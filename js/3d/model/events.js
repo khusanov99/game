@@ -14,18 +14,20 @@ function floatText(text, c) {
   floaties.push({ text, c, l: 1.4 });
   if (floaties.length > 4) floaties.shift();
 }
+const SPARK_POOL = []; // recycled spark objects
 function burst(x, y, z, n, c, sp) {
-  for (let i = 0; i < n && sparks.length < 90; i++)
-    sparks.push({
-      x,
-      y,
-      z,
-      vx: rnd(-sp, sp),
-      vy: rnd(0, sp * 1.4),
-      vz: rnd(-sp * 0.5, sp * 0.5),
-      l: rnd(0.4, 0.8),
-      c,
-    });
+  for (let i = 0; i < n && sparks.length < 90; i++) {
+    const s = SPARK_POOL.pop() || {};
+    s.x = x;
+    s.y = y;
+    s.z = z;
+    s.vx = rnd(-sp, sp);
+    s.vy = rnd(0, sp * 1.4);
+    s.vz = rnd(-sp * 0.5, sp * 0.5);
+    s.l = rnd(0.4, 0.8);
+    s.c = c;
+    sparks.push(s);
+  }
 }
 function smash(o) {
   if (o.dead) return;

@@ -303,9 +303,13 @@ function update(dt) {
           closeCall();
       }
     }
-    objs = objs.filter(
-      (o) => !o.got && !o.dead && o.z + (o.len || 0) > pz - 15,
-    );
+    /* in-place compaction (no new array every frame) */
+    let w = 0;
+    for (let i = 0; i < objs.length; i++) {
+      const o = objs[i];
+      if (!o.got && !o.dead && o.z + (o.len || 0) > pz - 15) objs[w++] = o;
+    }
+    objs.length = w;
   } else if (state === "over") {
     bustT += dt;
     px += (LX[lane] - px) * Math.min(1, dt * 10);
@@ -327,7 +331,12 @@ function update(dt) {
     s.y += s.vy * dt;
     s.z += s.vz * dt;
     s.vy -= 9 * dt;
-    if (s.l <= 0) sparks.splice(i, 1);
+    if (s.l <= 0) {
+      /* swap-remove + recycle: no splice shifting, no garbage */
+      sparks[i] = sparks[sparks.length - 1];
+      sparks.pop();
+      SPARK_POOL.push(s);
+    }
   }
   for (let i = floaties.length - 1; i >= 0; i--) {
     floaties[i].l -= dt;

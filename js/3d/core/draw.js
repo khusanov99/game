@@ -76,7 +76,15 @@ let W = 360,
   FAR = 230,
   resScale = 1;
 const FARS = [230, 200, 170, 140];
-const PIX = () => (COARSE ? 800000 : 2600000) * budgetK;
+/* pixel budget per device class: desktop > iPhone/iPad > Android > low-end Android */
+const PIX = () =>
+  (COARSE
+    ? DEV.ios
+      ? 1500000
+      : DEV.low
+        ? 600000
+        : 950000
+    : 2600000) * budgetK;
 function resize() {
   const cw = Math.max(240, innerWidth),
     ch = Math.max(240, innerHeight);

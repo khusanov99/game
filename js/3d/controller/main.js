@@ -2,20 +2,7 @@
 "use strict";
 addEventListener("resize", resize);
 addEventListener("orientationchange", () => setTimeout(resize, 200));
-(() => {
-  // starting tier from what the browser tells us about the device
-  let r = "";
-  try {
-    const e = gl.getExtension("WEBGL_debug_renderer_info");
-    r = e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : "";
-  } catch (x) {}
-  const cores = navigator.hardwareConcurrency || 4,
-    mem = navigator.deviceMemory || 4;
-  let t = cores <= 4 || mem <= 3 ? 1 : 0;
-  if (/mali-4|adreno \(tm\) [23]\d\d|powervr sgx/i.test(r)) t = 2;
-  if (/swiftshader|llvmpipe|software/i.test(r)) t = 3;
-  setRes([1, 0.8, 0.62, 0.5][t]);
-})();
+applyGfx(); // starting tier: the saved graphics setting, or the device class
 resize();
 reset();
 coinTexs();
