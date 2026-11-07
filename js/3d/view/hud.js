@@ -174,6 +174,7 @@ function drawHUD(vp) {
         d = Math.max(0, Math.round(CR.drop.z - pz));
       txt =
         (CR.story ? "⭐ " : "🎁 ") +
+        (CU[CR.cust] ? CU[CR.cust].e + " " : "") +
         T("cDest") +
         " " +
         d +

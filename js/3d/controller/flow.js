@@ -13,6 +13,7 @@ function showOv(title, sub, row, btn, canRevive) {
   gfxBtn.style.display = "none";
   cityBtn.style.display = "none";
   jrBtn.style.display = "none";
+  cuBtn.style.display = "none";
   $("oTitle").textContent = title;
   $("oSub").innerHTML = sub;
   $("oRow").innerHTML = row;
@@ -41,6 +42,8 @@ function menu() {
   gfxBtn.style.display = "block";
   gfxLabel();
   jrBtn.style.display = "block";
+  cuBtn.style.display = "block";
+  cuBtn.textContent = T("cuBtn") + "  " + cu.c.reduce((a, b) => a + b, 0) + "/" + CU.length * CU_AT.length;
   jrBtn.textContent = T("jrBtn") + "  " + jrCount() + "/" + QUEST.length;
   cityBtn.style.display = "block";
   cityBtn.textContent = T("cityBtn") + "  " + cityCount() + "/" + CITY.length;
@@ -82,6 +85,20 @@ function jrOv() {
     return `<div style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;font:600 11px Inter,sans-serif;padding:6px 0;color:${ok ? "#c8cdf0" : "#6b7299"}"><span><b>${b > 0 ? "✔ " : ok ? "📍 " : "🔒 "}${cityName(i)}</b><br><span style="font-weight:500;color:#8c93b8">${ok ? questName(i) : T("jrLocked")}</span>${b > 0 ? `<br><span style="color:#ffd84f">${starStr(b)}</span>` : ""}</span>${ok ? `<button type="button" data-j="${i}" style="width:auto;padding:8px 12px;font-size:11px;background:linear-gradient(90deg,#7fe6ff,#5b8cff);color:#04122a">${T("jrGo")}</button>` : ""}</div>`;
   }).join("");
   showOv(T("jrTitle"), T("jrHint"), rows, T("back2"), false);
+}
+function cuOv() {
+  ovMode = "cu";
+  const rows = CU.map((c, i) => {
+    const t = cu.t[i],
+      n = cu.c[i],
+      nx = CU_AT[n],
+      hearts = "♥".repeat(Math.min(t, 15)),
+      chs = c.ch
+        .map((_, j) => (j < n ? `<div style="margin-top:4px;color:#e6e9ff">“${cuText(i, j)}”</div>` : `<div style="margin-top:4px;color:#6b7299">🔒 ${CU_AT[j]} ♥</div>`))
+        .join("");
+    return `<div style="width:100%;text-align:left;font:600 11px Inter,sans-serif;padding:7px 0;color:#c8cdf0"><div style="display:flex;justify-content:space-between"><b>${c.e} ${cuName(i)}</b><span style="color:#ffa8d4">${t}${nx ? " / " + nx : ""} ♥</span></div>${chs}</div>`;
+  }).join("");
+  showOv(T("cuTitle"), T("cuHint"), rows, T("back2"), false);
 }
 function achOv() {
   ovMode = "ach";
@@ -187,7 +204,7 @@ rvBtn.addEventListener("click", () => {
 });
 $("go").addEventListener("click", () => {
   if (ovMode === "pause") setPause(false);
-  else if (ovMode === "ach" || ovMode === "city" || ovMode === "jr") menu();
+  else if (ovMode === "ach" || ovMode === "city" || ovMode === "jr" || ovMode === "cu") menu();
   else start();
 });
 rsBtn.addEventListener("click", () => {
@@ -200,6 +217,7 @@ rsBtn.addEventListener("click", () => {
 achBtn.addEventListener("click", achOv);
 cityBtn.addEventListener("click", cityOv);
 jrBtn.addEventListener("click", jrOv);
+cuBtn.addEventListener("click", cuOv);
 $("oRow").addEventListener("click", (e) => {
   const b = e.target.closest && e.target.closest("[data-j]");
   if (!b || ovMode !== "jr") return;

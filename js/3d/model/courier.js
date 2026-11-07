@@ -62,6 +62,54 @@ let jr = store.get("zr3d_jr", null);
 if (!jr || !Array.isArray(jr.best) || jr.best.length !== QUEST.length) jr = { best: QUEST.map(() => 0), done: 0 };
 const jrUnlocked = (i) => i === 0 || jr.best[i - 1] > 0,
   jrCount = () => jr.best.filter((x) => x > 0).length;
+/* ---------- recurring customers: trust grows with good ratings, each unlocks a 3-chapter mini story ---------- */
+const CU = [
+  { e: "👵", n: { uz: "Zulfiya xola", en: "Granny Zulfiya", ja: "ズルフィヤおばあさん" }, ch: [
+    { uz: "Rahmat, bolam. Qo'llarim qaltirab, eshikkacha bora olmayman.", en: "Thank you, dear. My hands shake too much to walk to the door.", ja: "ありがとう。手が震えて玄関まで行けないのよ。" },
+    { uz: "Senga o'zim pishirgan non qoldirdim. Doim shoshasan, bir o'tir.", en: "I saved you some bread I baked. You're always rushing, sit a while.", ja: "焼いたパンを取っておいたよ。いつも急いでるね、少し座りなさい。" },
+    { uz: "Sen nevaramdek bo'lib qolding. Mana eski ro'molim, omad keltiradi.", en: "You've become like a grandchild to me. Take my old scarf, it brings luck.", ja: "あなたは孫のようだよ。この古いスカーフは幸運を呼ぶよ。" } ] },
+  { e: "🧒", n: { uz: "Aziz", en: "Aziz", ja: "アジズ" }, ch: [
+    { uz: "Aka, sen haqiqiy kuryermisan? Men ham katta bo'lib kuryer bo'laman!", en: "Are you a real courier? I'll be one when I grow up!", ja: "本物の配達員？僕も大きくなったらなる！" },
+    { uz: "Rasm chizdim: sen tez yugurayapsan. Devorimga osib qo'ydim.", en: "I drew you running fast. I hung it on my wall.", ja: "速く走る君を描いたよ。壁に貼ったんだ。" },
+    { uz: "Bugun maktabda hammaga seni aytdim. Sen mening qahramonimsan!", en: "I told everyone at school about you. You're my hero!", ja: "今日学校でみんなに君のことを話した。君はヒーローだ！" } ] },
+  { e: "🧔", n: { uz: "Karim aka", en: "Mr. Karim", ja: "カリムさん" }, ch: [
+    { uz: "Yana vaqtida keldingmi? Mijoz ishonchi — eng katta boylik.", en: "On time again? A customer's trust is the biggest wealth.", ja: "また時間通りだね。客の信頼が一番の財産だ。" },
+    { uz: "Do'konimga yana bir kuryer kerak, lekin faqat ishonchli odam. Sen ishonchlisan.", en: "I need another courier, but only a reliable one. You are.", ja: "もう一人配達員が欲しいが、信頼できる人だけ。君ならいい。" },
+    { uz: "Do'konimning yarmini senga ishonib topshiraman. Endi sherikmiz!", en: "I'd trust you with half my shop. We're partners now!", ja: "店の半分を任せよう。今日から相棒だ！" } ] },
+  { e: "👩‍🏫", n: { uz: "Malika opa", en: "Teacher Malika", ja: "マリカ先生" }, ch: [
+    { uz: "Kitoblarim og'ir, rahmat. Bolalar seni kutib turishdi.", en: "My books are heavy, thank you. The kids were waiting for you.", ja: "本が重くてね、ありがとう。子どもたちが待ってたわ。" },
+    { uz: "Sinfga kirib salom ber. Bolalar kuryer qanday ishlashini bilishni xohlaydi.", en: "Come say hi to the class. They want to know how couriers work.", ja: "教室に来て挨拶して。みんな配達員の仕事を知りたいの。" },
+    { uz: "Maktab devoriga ismingni yozaman: 'Shaharning eng ishonchli kuryeri'.", en: "I'll write your name on the school wall: 'The city's most trusted courier'.", ja: "学校の壁に君の名前を書くわ。「街で一番信頼できる配達員」と。" } ] },
+];
+const CU_AT = [3, 8, 15],
+  STORY_CU = [1, 3, 2, 0, 3, 2];
+let cu = store.get("zr3d_cu", null);
+if (!cu || !Array.isArray(cu.t) || cu.t.length !== CU.length) cu = { t: CU.map(() => 0), c: CU.map(() => 0) };
+const cuName = (i) => CU[i].n[LG] || CU[i].n.en,
+  cuText = (i, j) => CU[i].ch[j][LG] || CU[i].ch[j].en;
+let lastCu = -1;
+function pickCust(story) {
+  if (story) return STORY_CU[ST.th] ?? 0;
+  let c;
+  do c = (Math.random() * CU.length) | 0;
+  while (c === lastCu);
+  return c;
+}
+function cuTrust(c, rt) {
+  const add = rt >= 5 ? 2 : rt === 4 ? 1 : 0;
+  if (!add) return;
+  cu.t[c] += add;
+  const j = cu.c[c];
+  if (j < CU_AT.length && cu.t[c] >= CU_AT[j]) {
+    cu.c[c] = j + 1;
+    const g = 100 * (j + 1);
+    coinsGot += g;
+    LT.coins += g;
+    bonus += g * 10;
+    storyCard = { t: 7, title: CU[c].e + " " + cuName(c) + "  ·  " + (j + 1) + "/" + CU_AT.length + "  +" + g, sub: cuText(c, j) };
+  }
+  store.set("zr3d_cu", cu);
+}
 let ST = { k: -1, state: "none" },
   storyCard = { t: 0, title: "", sub: "" };
 const starStr = (r) => "★".repeat(r) + "☆".repeat(5 - r);
@@ -85,6 +133,7 @@ function courTouch(o) {
     CR.pkg = null;
     CR.hits = 0;
     CR.story = story;
+    CR.cust = lastCu = pickCust(story);
     CR.tMax = CR.tLeft = (dist / Math.max(speed, SPEED0)) * 1.15 + 4;
     CR.drop = { k: "drop", x: LX[l], z: pz + dist, len: 3, story };
     objs.push(CR.drop);
@@ -136,6 +185,7 @@ function courTouch(o) {
     }
     store.set("zr3d_jr", jr);
   }
+  if (CR.cust >= 0) cuTrust(CR.cust, rt);
   CR.story = false;
   CR.st = "find";
   CR.drop = null;
