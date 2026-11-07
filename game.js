@@ -75,7 +75,7 @@ const GL3 = (() => {
     U = null,
     vbuf = null,
     ibuf = null;
-  const MAXV = 52000,
+  const MAXV = 30000,
     VB = new Float32Array(MAXV * 10),
     IB = new Uint16Array(MAXV * 3);
   let nv = 0,
@@ -296,7 +296,9 @@ const GL3 = (() => {
     return p;
   })();
   const TAPER = CYL(14, 1.35);
-  let LOD = 1;
+  let LOD = 1,
+    EK = 1,
+    DET = 1;
   const col = {};
   const C = (h) =>
     col[h] ||
@@ -314,6 +316,7 @@ const GL3 = (() => {
   /* put one primitive instance, transformed on the CPU: M * (S*v + (0,dy,0)); c = [r,g,b]; e = emissive 0..1 */
   function put(p, M, sx, sy, sz, dy, c, e, c2) {
     if (nv + p.n > MAXV || ni + p.i.length > MAXV * 3) return;
+    if (e < 0.95) e *= EK;
     const m0 = M[0],
       m1 = M[1],
       m2 = M[2],
@@ -367,6 +370,57 @@ const GL3 = (() => {
   const cyl = (M, r, h, c, e, rb) =>
     put(LOD ? CYL1 : CYL0, M, r, h, r, 0, c, e || 0);
   const cone = (M, r, h, c, e) => put(CONE, M, r, h, r, 0, c, e || 0);
+  /* ---- static piece cache: every landmark / building is built ONCE into its own GPU buffer and then only drawn with a
+     position offset, so the per-frame CPU cost does not depend on how detailed the city is (this is what keeps phones smooth) ---- */
+  const SBUF = new Map(),
+    SQ = [];
+  let built = 0,
+    lastDET = -1;
+  function piece(key, fn, x, z) {
+    key += ":" + DET;
+    let b = SBUF.get(key);
+    if (!b) {
+      if (built >= 2) return; // spread the one-time builds over frames (pieces are built well before they scroll into view)
+      built++;
+      const nv0 = nv,
+        ni0 = ni,
+        l = LOD;
+      LOD = DET;
+      EK = 0.3;
+      try {
+        fn(0, z);
+      } finally {
+        LOD = l;
+        EK = 1;
+      }
+      b = { n: ni - ni0, vb: null, ib: null };
+      if (b.n) {
+        b.vb = gl.createBuffer();
+        b.ib = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, b.vb);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          VB.slice(nv0 * 10, nv * 10),
+          gl.STATIC_DRAW,
+        );
+        const ix = IB.slice(ni0, ni);
+        for (let k = 0; k < ix.length; k++) ix[k] -= nv0;
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b.ib);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, ix, gl.STATIC_DRAW);
+      }
+      nv = nv0;
+      ni = ni0;
+      SBUF.set(key, b);
+    }
+    if (b.n) SQ.push(b, x);
+  }
+  function dropPieces() {
+    for (const b of SBUF.values()) {
+      if (b.vb) gl.deleteBuffer(b.vb);
+      if (b.ib) gl.deleteBuffer(b.ib);
+    }
+    SBUF.clear();
+  }
   /* a flat quad in NDC (sky, stars) */
   function ndcQuad(x0, y0, x1, y1, ca, cb, e) {
     if (nv + 4 > MAXV) return;
@@ -424,15 +478,15 @@ const GL3 = (() => {
     IB[ni++] = b0 + 20;
     IB[ni++] = b0 + 1;
   }
-  const VS = `attribute vec3 aP;attribute vec3 aN;attribute vec4 aC;uniform mat4 uVP;uniform float uNDC;varying vec3 vN;varying vec4 vC;varying float vD;
-void main(){vN=aN;vC=aC;vec4 p=uVP*vec4(aP,1.0);vD=p.w;gl_Position=uNDC>0.5?vec4(aP.xy,0.999,1.0):p;}`;
+  const VS = `attribute vec3 aP;attribute vec3 aN;attribute vec4 aC;uniform mat4 uVP;uniform vec3 uOff;uniform float uNDC;varying vec3 vN;varying vec4 vC;varying float vD;
+void main(){vN=aN;vC=aC;vec4 p=uVP*vec4(aP+uOff,1.0);vD=p.w;gl_Position=uNDC>0.5?vec4(aP.xy,0.999,1.0):p;}`;
   const FS = `precision mediump float;varying vec3 vN;varying vec4 vC;varying float vD;uniform vec3 uSun;uniform vec3 uSunC;uniform vec3 uAmb;uniform vec3 uFog;uniform vec2 uFogR;uniform float uAlpha;
 void main(){vec3 n=normalize(vN);float d=max(dot(n,uSun),0.0);
 vec3 lit=vC.rgb*(uAmb+uSunC*d);
 float rim=pow(1.0-clamp(-n.z,0.0,1.0),3.0)*0.2*step(0.0,n.y+0.6);
 float sp=pow(max(dot(n,normalize(uSun+vec3(0.0,0.0,-1.0))),0.0),28.0)*0.32;
 vec3 c=mix(lit+vec3(rim*0.9,rim*0.95,rim)+vec3(sp),vC.rgb,vC.a);
-float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uFog,f*0.92),uAlpha);}`;
+float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uFog,f*0.6),uAlpha);}`;
   function sh(t, s) {
     const o = gl.createShader(t);
     gl.shaderSource(o, s);
@@ -467,6 +521,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       U = {};
       for (const n of [
         "uVP",
+        "uOff",
         "uNDC",
         "uSun",
         "uSunC",
@@ -776,22 +831,50 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     gold: [1, 0.78, 0.3],
     white: [0.93, 0.93, 0.9],
     mud: [0.74, 0.55, 0.34],
-    warm: [1, 0.78, 0.45],
+    warm: [0.13, 0.19, 0.3], // dark window glass / openings (daylight)
     glass: [0.3, 0.55, 0.9],
     dark: [0.04, 0.05, 0.09],
     green: [0.1, 0.4, 0.2],
     red: [0.8, 0.14, 0.12],
   };
-  const NIGHT_SKY = {
-    tash: { top: [0.02, 0.04, 0.14], bot: [0.12, 0.16, 0.38] },
-    sam: { top: [0.03, 0.04, 0.15], bot: [0.17, 0.12, 0.36] },
-    bux: { top: [0.02, 0.05, 0.13], bot: [0.22, 0.16, 0.26] },
-    khi: { top: [0.03, 0.03, 0.11], bot: [0.3, 0.17, 0.2] },
+  const TASH_PASTEL = [
+    [0.9, 0.84, 0.7],
+    [0.82, 0.86, 0.9],
+    [0.92, 0.88, 0.8],
+  ];
+  const DAY_SKY = {
+    tash: { top: [0.2, 0.46, 0.88], bot: [0.76, 0.88, 0.97] },
+    sam: { top: [0.16, 0.44, 0.9], bot: [0.88, 0.9, 0.93] },
+    bux: { top: [0.24, 0.48, 0.86], bot: [0.95, 0.89, 0.76] },
+    khi: { top: [0.3, 0.52, 0.86], bot: [0.97, 0.9, 0.74] },
   };
-  const LIT = 0.5; // floodlit stone glow
+  const GROUND = {
+    tash: {
+      road: [0.3, 0.31, 0.34],
+      side: [0.7, 0.7, 0.68],
+      plain: [0.34, 0.52, 0.28],
+    },
+    sam: {
+      road: [0.34, 0.33, 0.33],
+      side: [0.82, 0.74, 0.6],
+      plain: [0.66, 0.58, 0.42],
+    },
+    bux: {
+      road: [0.4, 0.35, 0.3],
+      side: [0.8, 0.68, 0.5],
+      plain: [0.74, 0.6, 0.42],
+    },
+    khi: {
+      road: [0.56, 0.47, 0.35],
+      side: [0.74, 0.62, 0.44],
+      plain: [0.8, 0.68, 0.48],
+    },
+  };
+  const LIT = 0.12; // faint warm bounce on sunlit stone
   const lit = (c, k) => mulc(c, k === undefined ? 1 : k);
   /* ---- shared building blocks ---- */
   function windowsGrid(x, z, w, h, y0, cx, cy, sd, c, e) {
+    if (!LOD) return;
     const cols = Math.max(2, Math.floor(w / cx)),
       rows = Math.max(1, Math.floor(h / cy));
     for (let r = 0; r < rows; r++)
@@ -903,6 +986,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     if (cap) cone(T(x, h + (lantern || 0) + 4, z), r * 1.2, r * 3, cap, 0.8);
   }
   const trees = (x, z, n) => {
+    if (!LOD) n = Math.ceil(n / 2);
     for (let i = 0; i < n; i++) {
       const tx = x + i * 26;
       cyl(T(tx, 26, z), 2, 26, [0.25, 0.16, 0.08], 0.2);
@@ -1017,12 +1101,11 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     box(T(x, 0, z), 240, 104, 62, 52, [0.52, 0.5, 0.48], 0.4);
     box(T(x + 70, 104, z), 100, 36, 50, 18, [0.52, 0.5, 0.48], 0.4);
     windowsGrid(x, z - 31, 236, 100, 4, 14, 18, 3, PAL.warm, 0.95);
-    box(T(x, 104, z - 31), 240, 3, 1, 0, PAL.warm, 1);
   };
   const aptBlock = (x, z, sd) => {
     const w = 80 + hash(sd, 1) * 40,
       h = 80 + hash(sd, 2) * 70;
-    box(T(x, 0, z), w, h, 44, h / 2, [0.34, 0.34, 0.42], 0.32);
+    box(T(x, 0, z), w, h, 44, h / 2, TASH_PASTEL[sd % 3], 0.2);
     windowsGrid(x, z - 22, w, h - 10, 4, 14, 16, sd, PAL.warm, 1);
   };
   /* ---------- SAMARKAND ---------- */
@@ -1179,7 +1262,6 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       [0.03, 0.04, 0.09],
       0.12,
     );
-    box(T(x, 4, z - 26), 100, 4, 6, 0, PAL.warm, 1);
   };
   const samanid = (x, z) => {
     box(T(x, 0, z), 76, 64, 76, 32, lit(PAL.brick, 1), 0.5);
@@ -1212,7 +1294,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     box(T(x, 0, z + 50), 220, 56, 40, 28, lit(PAL.sand, 0.95), 0.45);
     portal(x, z + 28, 72, 78, lit(PAL.sand, 1), PAL.turq, 0.5);
     for (let k = -4; k <= 4; k++)
-      sph(T(x + k * 24, 22, z - 78), 3, 3, 3, PAL.warm, 1);
+      sph(T(x + k * 24, 22, z - 78), 3, 3, 3, [0.95, 0.95, 0.9], 0.9);
   };
   /* ---------- KHIVA ---------- */
   const kalta = (x, z) => {
@@ -1286,7 +1368,6 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       );
       cyl(T(x + s * (w / 2), 94, z), 22, 8, lit(PAL.mud, 1.1), 0.45);
     }
-    box(T(x, 4, z - 12), w * 0.6, 3, 3, 0, PAL.warm, 1);
   };
   const khivaWallLow = (x, z, w) => {
     box(T(x, 0, z), w, 30, 18, 15, lit(PAL.mud, 0.9), 0.4);
@@ -1300,7 +1381,6 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         lit(PAL.mud, 1.05),
         0.4,
       );
-    box(T(x, 3, z - 9.5), w * 0.7, 2, 2, 0, PAL.warm, 1);
   };
   const khivaGate = (x, z) => {
     box(T(x, 0, z), 150, 92, 30, 46, lit(PAL.mud, 0.95), 0.42);
@@ -1319,7 +1399,6 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       put(TAPER, T(x + s * 62, 112, z), 24, 112, 24, 0, lit(PAL.mud, 1), 0.45);
       cyl(T(x + s * 62, 120, z), 26, 8, lit(PAL.mud, 1.1), 0.45);
     }
-    box(T(x, 3, z - 20), 90, 3, 4, 0, PAL.warm, 1);
   };
   const kunya = (x, z) => {
     box(T(x, 0, z), 170, 70, 52, 35, lit(PAL.mud, 0.95), 0.42);
@@ -1372,7 +1451,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       P((x, z) => khivaWall(x, z, 260), 260),
     ],
   };
-  /* far skyline per city */
+  /* far skyline per city (each building is a cached piece) */
   function farLayer(id, z, s, D, vis, side, bx) {
     const sp = id === "tash" ? 330 : 260,
       per = Math.ceil((((vis * (D + z)) / D) * 1.3) / sp) * sp,
@@ -1382,48 +1461,47 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       const x = mod(i * sp - sh + per / 2, per) - per / 2;
       if (side === 1 && x < bx) continue;
       if (side === 2 && x >= bx) continue;
-      const r = hash(i, 11),
-        c = [0.12, 0.14, 0.3];
-      if (id === "tash") {
-        box(T(x, 0, z), 70 + r * 50, 200 + r * 260, 60, 100 + r * 130, c, 0.2);
-        windowsGrid(
-          x,
-          z - 30,
-          70 + r * 50,
-          200 + r * 260,
-          8,
-          16,
-          22,
-          i,
-          PAL.warm,
-          0.9,
-        );
-      } else if (r > 0.45) {
-        box(
-          T(x, 0, z),
-          90,
-          60 + r * 40,
-          50,
-          30 + r * 20,
-          [0.2, 0.17, 0.3],
-          0.2,
-        );
-        dome(x, 60 + r * 40, z, 22, [0.16, 0.5, 0.7], 0.45, false, 0);
-      } else {
-        box(
-          T(x, 0, z),
-          130,
-          50 + r * 30,
-          50,
-          25 + r * 15,
-          [0.22, 0.17, 0.26],
-          0.2,
-        );
-        cyl(T(x + 30, 130, z), 5, 80, [0.22, 0.17, 0.28], 0.2);
-      }
+      if (Math.abs(x) > (vis * (D + z)) / D / 2 + 300) continue;
+      piece(
+        "f" + id + i,
+        (x0, z0) => {
+          const r = hash(i, 11);
+          if (id === "tash") {
+            const w = 70 + r * 50,
+              h = 190 + r * 240;
+            box(T(x0, 0, z0), w, h, 60, h / 2, [0.55, 0.66, 0.82], 0.2);
+            windowsGrid(x0, z0 - 30, w, h, 8, 16, 22, i, PAL.glass, 0.9);
+            if (r > 0.5) cone(T(x0, h, z0), w * 0.3, 30, [0.7, 0.8, 0.95], 0.4);
+          } else if (r > 0.45) {
+            box(
+              T(x0, 0, z0),
+              90,
+              60 + r * 40,
+              50,
+              30 + r * 20,
+              id === "khi" ? [0.76, 0.62, 0.44] : [0.78, 0.66, 0.5],
+              0.2,
+            );
+            dome(x0, 60 + r * 40, z0, 22, [0.16, 0.6, 0.78], 0.3, false, 0);
+          } else {
+            box(
+              T(x0, 0, z0),
+              130,
+              50 + r * 30,
+              50,
+              25 + r * 15,
+              id === "khi" ? [0.74, 0.6, 0.42] : [0.8, 0.66, 0.46],
+              0.2,
+            );
+            cyl(T(x0 + 30, 130, z0), 5, 80, [0.76, 0.62, 0.44], 0.2);
+          }
+        },
+        x,
+        z,
+      );
     }
   }
-  /* mid strip: sequence repeated to cover the view, with a moving "city boundary" for the Tashkent→Samarkand→... hand-over */
+  /* mid strip: authored landmarks, repeated to cover the view, with the moving "city boundary" for the hand-over between cities */
   function strip(id, z, s, D, vis, side, bx) {
     const seq = SEQ[id] || SEQ.tash;
     let tot = 0;
@@ -1432,18 +1510,20 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       per = tot * reps,
       sh = s * ((D + z) / D),
       half = (vis * (D + z)) / D / 2 + 340;
-    let off = 0;
+    let off = 0,
+      ci = 0;
     for (let r = 0; r < reps; r++)
       for (const p of seq) {
-        const x = mod(off + p.w / 2 - sh + per / 2, per) - per / 2;
+        const x = mod(off + p.w / 2 - sh + per / 2, per) - per / 2,
+          k = ci++;
         off += p.w;
         if (Math.abs(x) > half) continue;
         if (side === 1 && x < bx) continue;
         if (side === 2 && x >= bx) continue;
-        p.f(x, z);
+        piece("s" + id + k, p.f, x, z);
       }
   }
-  /* near street layer: low houses / the Itchan Kala wall / trees */
+  /* near street layer: low houses / low Itchan Kala wall / trees (cached pieces) */
   function nearLayer(id, z, s, D, vis, side, bx) {
     const sp = id === "khi" ? 260 : 150,
       per = Math.ceil((((vis * (D + z)) / D) * 1.3) / sp) * sp,
@@ -1453,21 +1533,23 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       const x = mod(i * sp - sh + per / 2, per) - per / 2;
       if (side === 1 && x < bx) continue;
       if (side === 2 && x >= bx) continue;
-      if (id === "khi") {
-        if (hash(i, 9) > 0.35) khivaWallLow(x, z, 230);
-      } else if (id === "tash") {
-        box(
-          T(x, 0, z),
-          70,
-          44 + hash(i, 4) * 30,
-          34,
-          30,
-          [0.24, 0.25, 0.34],
-          0.3,
-        );
-        windowsGrid(x, z - 17, 66, 60, 6, 14, 16, i, PAL.warm, 1);
-      } else if (hash(i, 6) > 0.4) trees(x - 30, z, 3);
-      else lowHouses(x - 30, z, 1, id === "sam" ? PAL.sand : PAL.mud, 1);
+      if (Math.abs(x) > (vis * (D + z)) / D / 2 + 200) continue;
+      piece(
+        "n" + id + i,
+        (x0, z0) => {
+          if (id === "khi") {
+            if (hash(i, 9) > 0.35) khivaWallLow(x0, z0, 230);
+          } else if (id === "tash") {
+            const c = TASH_PASTEL[i % 3];
+            box(T(x0, 0, z0), 70, 44 + hash(i, 4) * 30, 34, 30, c, 0.2);
+            windowsGrid(x0, z0 - 17, 66, 60, 6, 14, 16, i, PAL.warm, 0.9);
+            trees(x0 + 50, z0 - 20, 2);
+          } else if (hash(i, 6) > 0.4) trees(x0 - 30, z0, 3);
+          else lowHouses(x0 - 30, z0, 1, id === "sam" ? PAL.sand : PAL.mud, 1);
+        },
+        x,
+        z,
+      );
     }
   }
 
@@ -1480,9 +1562,15 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         (typeof zoom === "number" && zoom > 1.002 && FX.cam && !CFG.reduce
           ? zoom
           : 1);
-    const D = H / (2 * Math.tan((18 * PI) / 360)),
-      night = 1;
-    LOD = Q.level < 2 ? 1 : 0;
+    const D = H / (2 * Math.tan((18 * PI) / 360));
+    LOD = Q.level >= 3 ? 0 : 1; // characters keep their detail; scenery detail is DET
+    DET = COARSE || Q.level >= 2 ? 0 : 1;
+    if (DET !== lastDET) {
+      dropPieces();
+      lastDET = DET;
+    }
+    SQ.length = 0;
+    built = 0;
     mp = 0;
     nv = 0;
     ni = 0;
@@ -1501,38 +1589,22 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     }
     if (API.forceCity || (prevCity && (!lm || lm.x < -520))) prevCity = null;
     const kT = prevCity ? clampN((W + 420 - lm.x) / (W + 900), 0, 1) : 1,
-      NA = NIGHT_SKY[prevCity || curCity] || NIGHT_SKY.tash,
-      NB = NIGHT_SKY[curCity] || NIGHT_SKY.tash,
+      NA = DAY_SKY[prevCity || curCity] || DAY_SKY.tash,
+      NB = DAY_SKY[curCity] || DAY_SKY.tash,
       top = mixc(NA.top, NB.top, kT),
       bot = mixc(NA.bot, NB.bot, kT);
-    /* sky (NDC pass): night gradient, stars, moon */
+    /* sky (NDC pass): daylight gradient + sun */
     const gy = 1 - (2 * groundY) / H;
     ndcQuad(-1, gy, 1, 1, bot, top, 1);
     ndcQuad(-1, -1, 1, gy, bot, bot, 1);
-    if (LOD)
-      for (let i = 0; i < 80; i++) {
-        const sx0 = hash(i, 21) * 2 - 1,
-          sy0 = 1 - hash(i, 22) * (gy < 0 ? 1.2 : 1 - gy) * 1.7,
-          tw = 0.55 + 0.45 * Math.sin(frame * 0.05 + i);
-        if (sy0 < gy + 0.08) continue;
-        ndcQuad(
-          sx0,
-          sy0,
-          sx0 + (2 * (1 + hash(i, 23))) / W,
-          sy0 - (2 * (1 + hash(i, 23))) / H,
-          [0.8, 0.92, 1],
-          [0.8, 0.92, 1],
-          tw,
-        );
-      }
     const b = cur.body || [0.84, 0.22, 26, "#ffffff"],
-      bc = [0.96, 0.97, 1],
+      bc = [1, 0.96, 0.78],
       bx = W * b[0],
       by = Math.min(b[1] * H, groundY - 30),
-      br = Math.max(16, b[2] * 0.8) * Math.max(1, UI * 0.8);
+      br = Math.max(18, b[2] * 0.8) * Math.max(1, UI * 0.8);
     for (const [k, a] of [
-      [2.6, 0.12],
-      [1.6, 0.28],
+      [2.8, 0.14],
+      [1.7, 0.3],
       [1, 1],
     ])
       ndcDisc(
@@ -1563,11 +1635,15 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       nearLayer(id, 190, sGnd * 0.6, D, W, side, bnd(190));
     }
     /* ground: road, lane dashes, sidewalk, lamps, far plain */
-    const road = mixc(bot, [0.04, 0.045, 0.08], 0.7),
-      side = mixc(road, [0.5, 0.52, 0.6], 0.4);
+    const GA = GROUND[prevCity || curCity] || GROUND.tash,
+      GB = GROUND[curCity] || GROUND.tash,
+      road = mixc(GA.road, GB.road, kT),
+      side = mixc(GA.side, GB.side, kT),
+      plain = mixc(GA.plain, GB.plain, kT);
     box(T(0, 0, -10), 9000, 20, 170, -10, road, 0.04);
     box(T(0, 0, 85), 9000, 6, 70, -3 + 6, side, 0.05);
-    box(T(0, 0, 1300), 9000, 4, 2500, -2, mixc(side, bot, 0.5), 0);
+    box(T(0, 0, 1300), 9000, 4, 2500, -2, mixc(plain, bot, 0.25), 0);
+    box(T(0, 0.3, 48), 9000, 1.2, 4, 0, mixc(side, [0.5, 0.5, 0.5], 0.4), 0); // kerb
     for (let i = -14; i < 14; i++) {
       const x = mod(i * 96 - sGnd + 48, 96 * 28) - 96 * 14;
       box(T(x, 0.6, -34), 50, 1, 5, 0, [0.95, 0.95, 0.9], 0.5);
@@ -1575,13 +1651,18 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     for (let i = 0; i < 9; i++) {
       const x = mod(i * 260 - sGnd * 0.98 + 130, 260 * 9) - 260 * 4.5;
       cyl(T(x, 120, 110), 2, 120, K.grey, 0.3);
+      sph(T(x, 126, 108), 7, 4, 7, [0.95, 0.95, 0.9], 0.9);
+    }
+    for (let i = 0; i < 5; i++) {
+      const cxp =
+        mod(i * 900 - frame * 0.25 * (0.6 + hash(i, 31)), 4500) - 2250;
       sph(
-        T(x, 126, 108),
-        7,
-        4,
-        7,
-        night ? [1, 0.85, 0.5] : [0.95, 0.95, 0.9],
-        1,
+        T(cxp, 330 + hash(i, 32) * 180, 1700),
+        150 + hash(i, 33) * 90,
+        24,
+        40,
+        [1, 1, 1],
+        0.9,
       );
     }
     /* obstacles */
@@ -1784,13 +1865,13 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         lean = -(0.03 + Math.sin(Math.min(1, ph * 1.15) * PI) * 0.2);
       }
       const gr = J(T(gx + 6 - W / 2, 0, 0), 0, 0, 0, 0, PI / 2 + 0.35, 0),
-        gs = SC(gr, 56);
+        gs = SC(gr, 56 * (CPS / 1.5));
       drawBoxBot(gs, frame * 0.42 * 0.8, t, lean);
       if (lives < maxLives || caught) {
         const hop = caught ? Math.abs(Math.sin(bustT / 110)) * 14 : 0;
         const dr = SC(
           J(T(gx + 48 - W / 2, hop, 0), 0, 0, 0, 0, PI / 2 + 0.35, 0),
-          44,
+          44 * (CPS / 1.5),
         );
         drawBallBot(dr, frame * 0.5, t, close);
       }
@@ -1804,7 +1885,10 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         Y = groundY - (p.y + p.h),
         X = p.x + p.w / 2 - W / 2;
       if (!(invul > 0 && Math.floor(frame / 3) % 2)) {
-        const root = SC(J(T(X, Y, 0), 0, 0, 0, 0, PI / 2 + 0.38, 0), 50);
+        const root = SC(
+          J(T(X, Y, 0), 0, 0, 0, 0, PI / 2 + 0.38, 0),
+          50 * (PS / 1.55),
+        );
         drawHero(root, {
           ph: (runPhase / 8) * TAU,
           air,
@@ -1863,19 +1947,36 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 40, 0);
     gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 40, 12);
     gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
-    const dim = night ? 0.62 : 1;
+    const dim = 1;
     gl.uniformMatrix4fv(U.uVP, false, VP);
     gl.uniform3f(U.uSun, 0.32, 0.72, -0.62);
-    gl.uniform3f(U.uSunC, 0.78 * dim, 0.72 * dim, 0.62 * dim);
-    gl.uniform3f(U.uAmb, 0.58 * dim, 0.6 * dim, 0.72 * dim);
+    gl.uniform3f(U.uSunC, 0.82 * dim, 0.76 * dim, 0.62 * dim);
+    gl.uniform3f(U.uAmb, 0.56 * dim, 0.6 * dim, 0.7 * dim);
     gl.uniform3f(U.uFog, bot[0], bot[1], bot[2]);
-    gl.uniform2f(U.uFogR, D + 150, D + 1700);
+    gl.uniform2f(U.uFogR, D + 350, D + 3000);
     gl.uniform1f(U.uAlpha, 1);
+    gl.uniform3f(U.uOff, 0, 0, 0);
     gl.disable(gl.DEPTH_TEST);
     gl.uniform1f(U.uNDC, 1);
     gl.drawElements(gl.TRIANGLES, skyI, gl.UNSIGNED_SHORT, 0);
     gl.enable(gl.DEPTH_TEST);
     gl.uniform1f(U.uNDC, 0);
+    for (let i = 0; i < SQ.length; i += 2) {
+      const pb = SQ[i];
+      gl.bindBuffer(gl.ARRAY_BUFFER, pb.vb);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pb.ib);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 40, 0);
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 40, 12);
+      gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
+      gl.uniform3f(U.uOff, SQ[i + 1], 0, 0);
+      gl.drawElements(gl.TRIANGLES, pb.n, gl.UNSIGNED_SHORT, 0);
+    }
+    gl.uniform3f(U.uOff, 0, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbuf);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibuf);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 40, 0);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 40, 12);
+    gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
     gl.drawElements(gl.TRIANGLES, worldI - skyI, gl.UNSIGNED_SHORT, skyI * 2);
     if (ni > worldI) {
       gl.enable(gl.BLEND);
@@ -5333,7 +5434,23 @@ function resetGame() {
   buildWorld();
   updateHUD();
 }
+/* keep the whole play area on screen (no zooming or fullscreen needed): scroll it into view if part of it is cut off */
+function ensureVisible() {
+  try {
+    const r = wrap.getBoundingClientRect(),
+      vh = window.innerHeight;
+    if (r.top < 0 || r.bottom > vh)
+      window.scrollTo({
+        top: Math.max(
+          0,
+          window.scrollY + r.top - Math.max(6, (vh - r.height) / 2),
+        ),
+        behavior: "smooth",
+      });
+  } catch (e) {}
+}
 function startGame() {
+  ensureVisible();
   if (state === "play") return;
   if (state === "over" || state === "ready" || state === "won") resetGame();
   resetInputs();
