@@ -190,6 +190,14 @@ function unlockAudio() {
       silentEl.play().catch(() => (silentEl = null));
     } catch (e) {}
   }
+  if (!voiceEl) {
+    try {
+      /* the same <audio> element that was unlocked by a touch plays the announcements later (iOS only allows that) */
+      voiceEl = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=");
+      const pr = voiceEl.play();
+      if (pr && pr.then) pr.then(() => voiceEl.pause()).catch(() => {});
+    } catch (e) {}
+  }
   if (!speechOk) {
     try {
       const u = new SpeechSynthesisUtterance(" ");
@@ -222,27 +230,63 @@ function pickVoice() {
   }
   return null;
 }
-/* station chime ("ding-dong") plus a spoken announcement when this device has a suitable voice */
-function stationChime(name) {
+/* Announcement texts: written out in normal case (ALL CAPS makes speech engines spell the letters one by one) */
+const STNSAY = {
+  uz: ["Mustaqillik Maydoni", "Kosmonavtlar", "Alisher Navoiy", "Paxtakor", "Mirzo Ulug'bek", "Buyuk Ipak Yo'li", "Amir Temur Xiyoboni", "Ming O'rik", "Yunus Rajabiy", "Chorsu"],
+  en: ["Mustaqillik Maydoni", "Kosmonavtlar", "Alisher Navoiy", "Paxtakor", "Mirzo Ulugbek", "Buyuk Ipak Yo'li", "Amir Temur Khiyoboni", "Ming O'rik", "Yunus Rajabiy", "Chorsu"],
+  ja: ["ムスタキッリク広場", "コスモナフトラル", "アリシェル・ナヴォイ", "パフタコル", "ミルゾ・ウルグベク", "ブユク・イパク・ヨリ", "アミール・ティムール大通り", "ミン・ウリク", "ユヌス・ラジャビー", "チョルスー"],
+};
+const STNLINE = { uz: (n) => "Navbatdagi bekat: " + n, en: (n) => "Next station: " + n, ja: (n) => "次は、" + n + "です" };
+let voiceEl = null;
+const STNAUD = {}; // "lang+index" -> "ok" | "no": is there a recorded file for it?
+/* Real recorded announcements (audio/stn/<lang>/<index>.mp3, see tools/make_station_voice.py) win; otherwise the device's speech engine reads the line */
+function speakStation(idx) {
+  const lg = STNSAY[LG] ? LG : "en",
+    txt = STNLINE[lg](STNSAY[lg][idx]),
+    k = lg + idx;
+  const synth = () => {
+    try {
+      const ss = window.speechSynthesis,
+        v = pickVoice();
+      if (!ss || !v) return;
+      const u = new SpeechSynthesisUtterance(txt);
+      u.voice = v;
+      u.lang = v.lang;
+      u.volume = 1;
+      ss.cancel();
+      ss.speak(u);
+    } catch (e) {}
+  };
+  if (STNAUD[k] === "no" || !voiceEl) return synth();
+  let fell = false;
+  const fall = () => {
+    if (fell) return;
+    fell = true;
+    STNAUD[k] = "no";
+    synth();
+  };
+  voiceEl.onerror = fall;
+  voiceEl.src = "audio/stn/" + lg + "/" + idx + ".mp3";
+  voiceEl.volume = 1;
+  const pr = voiceEl.play();
+  if (pr && pr.then)
+    pr.then(
+      () => (STNAUD[k] = "ok"),
+      () => STNAUD[k] !== "ok" && fall(),
+    );
+}
+/* station chime ("ding-dong"), then the announcement */
+function stationChime(name, idx) {
   if (muted) return;
   const a = actx();
   if (a) {
     bell(880, a.currentTime, 0.9, 0.16);
     bell(660, a.currentTime + 0.42, 1.2, 0.16);
   }
-  try {
-    const ss = window.speechSynthesis,
-      v = pickVoice();
-    if (ss && v && name !== lastSpeak) {
-      lastSpeak = name;
-      const u = new SpeechSynthesisUtterance(LG === "ja" ? "次は、" + name + "です" : LG === "uz" ? "Navbatdagi bekat: " + name : "Next station: " + name);
-      u.voice = v;
-      u.lang = v.lang;
-      u.volume = 1;
-      ss.cancel();
-      setTimeout(() => ss.speak(u), 1300);
-    }
-  } catch (e) {}
+  if (idx >= 0 && idx !== lastSpeak) {
+    lastSpeak = idx;
+    setTimeout(() => speakStation(idx), 1300);
+  }
 }
 function musicTick() {
   const inMetro = state === "play" && !paused && metroAmt(pz) > 0.5 && secAt(pz) === 1;

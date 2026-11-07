@@ -177,3 +177,9 @@ The 2D game keeps its gameplay, camera and controls, but its hero and chasers ar
 - **Pooling:** the matrix pool (700) and the spark pool; obstacle list is compacted in place.
 - **Not done:** GPU texture compression (ASTC/ETC2/S3TC). All textures are generated at runtime from canvas, so there is nothing to pre-compress; mip-maps, anisotropy and size caps are used instead.
 - Only tested in headless Chromium (software GPU). Not verified on real iPhone/Android.
+
+## Metro station announcements
+
+The game plays `audio/stn/<lang>/<station index 0-9>.mp3` when a station is reached (`uz`, `en`, `ja`). Generate natural neural voices with
+`pip install edge-tts && python3 tools/make_station_voice.py` (needs internet), or drop in your own recordings with the same names.
+Where a file is missing, the device's speech engine reads the line instead.
