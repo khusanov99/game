@@ -104,6 +104,7 @@ function drawHunters(T, u) {
   if (k <= 0.001) return;
   const z = pz - lerp(34, 6.5, k),
     ph = T * 9;
-  drawChaser(Tp(-1.9, 0, z), ph + 1.5, T);
-  drawWolf(Tp(1.6, 0, z - 1.2), ph * 0.8, T);
+  drawBox(Tp(-1.9, 0, z), ph + 1.5, T);
+  drawBall(Tp(1.6, 0, z - 1.2), ph * 0.8, T);
+  drawDrone(Tp(0, 0.5, z - 2.4), ph, T);
 }

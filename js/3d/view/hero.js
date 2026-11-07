@@ -1,53 +1,61 @@
-/* view/hero.js — Hero "ZUMA", a small duck-shaped robot, and its scooter: geometry, poses and animation. */
+/* view/hero.js — Hero "ZUMA", a small white-and-blue duck robot, and its scooter: geometry, poses and animation. */
 "use strict";
-/* ---------- HERO: "ZUMA" — a duck-bot ----------
-   About 1.6 units tall (a chibi: big head, round body, short legs). Smooth metallic yellow shell, a dark glossy face screen with
-   expressive LED eyes (round / blink / happy ^ ^ / X when hit), a small orange bill that opens when dashing, stub wings that flap,
-   an Uzbek touch: a ribbed turquoise doppi cap with a gold finial, an ikat belt and an 8-pointed-star chest core.
-   Roughly 60 cached primitives per frame, all batched. Poses: run waddle, air tuck, belly slide, hit, dash, scooter, idle / wave. */
+/* ---------- HERO: "ZUMA" — duck-bot ----------
+   Glossy white shell with blue armour, a big black visor face with glowing cyan LED eyes (smile arcs by default, blink, round, X when hit),
+   an orange bill, round headphone discs with glowing rings, a white head crest, a crown emblem on the chest and on a flowing blue cape,
+   white mitten hands, black joint rings and blue sneakers. About 1.55 units tall (chibi: big head, small body, short legs).
+   ~70 cached primitives per frame, all batched. Poses: run, air tuck, belly slide, hit, dash, scooter, idle / wave. */
 const HK = new WeakMap(),
   GOLD = [1, 0.8, 0.28],
-  TURQ = [0.1, 0.74, 0.82],
-  INDIGO = [0.2, 0.3, 0.78],
   PI = Math.PI;
-const DUCK_SKINS = {
-  default: { b: [1, 0.82, 0.22], t: TURQ },
-  rose: { b: [1, 0.5, 0.74], t: [1, 0.8, 0.3] },
-  mint: { b: [0.42, 0.95, 0.72], t: [0.4, 0.55, 1] },
-  gold: { b: [1, 0.7, 0.16], t: [0.35, 0.2, 0.12] },
+const DUCK_ACCENT = {
+  default: [0.14, 0.4, 1],
+  rose: [1, 0.3, 0.62],
+  mint: [0.08, 0.72, 0.5],
+  gold: [1, 0.6, 0.08],
 };
 function heroMats(look) {
   let K = HK.get(look);
   if (K) return K;
   const key =
       Object.keys(Rig.LOOKS).find((k) => Rig.LOOKS[k] === look) || "default",
-    D = DUCK_SKINS[key] || DUCK_SKINS.default,
-    G = hex(look.glow),
-    A = hex(look.acc);
+    A = DUCK_ACCENT[key] || DUCK_ACCENT.default,
+    G = hex(look.glow);
   K = {
-    body: mat(D.b, { spec: 1, emis: 0.66 }),
-    bodyD: mat(mulc(D.b, 0.8), { spec: 0.9, emis: 0.55 }),
-    belly: mat([0.95, 0.9, 0.78], { spec: 0.4, emis: 0.22 }),
-    trim: mat(D.t, { spec: 1, emis: 0.8 }),
-    gold: mat(GOLD, { spec: 1, emis: 0.62 }),
-    beak: mat([1, 0.55, 0.1], { spec: 0.8, emis: 0.55 }),
-    beakD: mat([0.9, 0.36, 0.06], { spec: 0.6, emis: 0.45 }),
-    leg: mat([1, 0.5, 0.1], { spec: 0.6, emis: 0.7 }),
-    face: mat([0.04, 0.05, 0.11], { spec: 1, emis: 0.12 }),
-    eye: { tint: mixa(G, [1, 1, 1], 0.25), emis: 1 },
-    cheek: { tint: [1, 0.4, 0.6], emis: 0.9 },
-    white: { tint: [1, 1, 1], emis: 1 },
-    ikat: mat([0.3, 0.42, 0.95], { spec: 0.6, emis: 0.7 }),
-    acc: { tint: A, emis: 0.9 },
-    accB: { tint: mixa(A, GOLD, 0.5), emis: 0.9 },
+    body: mat([0.96, 0.98, 1], { spec: 1, emis: 0.62 }),
+    bodyD: mat([0.78, 0.84, 0.95], { spec: 0.9, emis: 0.5 }),
+    blue: mat(A, { spec: 1, emis: 0.8 }),
+    blueD: mat(mulc(A, 0.7), { spec: 0.9, emis: 0.6 }),
+    trim: mat(A, { spec: 1, emis: 0.8 }),
+    accB: { tint: mulc(A, 0.8), emis: 0.9 },
+    dark: mat([0.05, 0.06, 0.1], { spec: 0.9, emis: 0.18 }),
+    face: mat([0.02, 0.03, 0.07], { spec: 1, emis: 0.1 }),
+    gold: mat(GOLD, { spec: 1, emis: 0.75 }),
+    beak: mat([1, 0.58, 0.08], { spec: 0.8, emis: 0.62 }),
+    beakD: mat([0.92, 0.4, 0.05], { spec: 0.6, emis: 0.5 }),
+    eye: { tint: mixa(G, [1, 1, 1], 0.2), emis: 1 },
     glow: { tint: G, emis: 1 },
+    white: { tint: [1, 1, 1], emis: 1 },
+    cheek: { tint: [1, 0.45, 0.65], emis: 0.9 },
+    acc: { tint: A, emis: 0.9 },
     deck: mat([0.14, 0.17, 0.3], { spec: 0.9, emis: 0.14 }),
     tyre: mat([0.05, 0.05, 0.07], { spec: 0.2 }),
   };
   HK.set(look, K);
   return K;
 }
-/* the scooter, scaled for a 1.6-unit rider: deck + fork + bar + two spinning wheels (emissive spokes make the spin readable) */
+/* a small crown glyph (chest + cape): base bar and three points */
+function crown(M, mt, s) {
+  pd(boxM(0.2 * s, 0.045 * s, 0.02), M, null, mt);
+  for (let i = -1; i <= 1; i++)
+    pd(
+      coneM(0.035 * s, 0.1 * s),
+      joint(M, i * 0.07 * s, 0.02 * s, 0, 0),
+      null,
+      mt,
+    );
+}
+/* the scooter, scaled for a 1.55-unit rider: deck + fork + bar + two spinning wheels (emissive spokes make the spin readable) */
 function drawScooter(base, K, wph, t) {
   const S0 = joint(base, 0, 0, -0.05, 0);
   pd(boxM(0.3, 0.06, 1.15, 0.1), S0, null, K.deck);
@@ -57,11 +65,11 @@ function drawScooter(base, K, wph, t) {
       boxM(0.16, 0.012, 0.08, 0.14),
       joint(S0, 0, 0, i * 0.19, 0),
       null,
-      i % 2 ? K.acc : K.gold,
+      i % 2 ? K.acc : K.white,
     );
   const fk = joint(S0, 0, 0.1, 0.6, -0.25);
-  pd(boxM(0.05, 0.78, 0.05, 0.39), fk, null, K.gold);
-  pd(boxM(0.5, 0.05, 0.05, 0.78), fk, null, K.gold);
+  pd(boxM(0.05, 0.78, 0.05, 0.39), fk, null, K.body);
+  pd(boxM(0.5, 0.05, 0.05, 0.78), fk, null, K.body);
   for (const s of [-1, 1])
     pd(
       cylM(0.035, 0.035, 0.1),
@@ -116,10 +124,10 @@ function drawHero(root, look, st) {
       0,
       air ? 0.08 : 0.14,
       0,
-      run ? sw * 0.09 : 0,
-    ); // waddle: roll with every step
-  const hip = joint(R, 0, 0.36 - crouch, 0, 0);
-  // legs: short stubs with webbed feet
+      run ? sw * 0.08 : 0,
+    );
+  const hip = joint(R, 0, 0.3 - crouch, 0, 0);
+  // legs: short white stubs, black knee rings, blue sneakers with white soles
   for (const s of [-1, 1]) {
     const sg = s > 0 ? sw : -sw,
       cg = s > 0 ? cw : -cw;
@@ -151,213 +159,190 @@ function drawHero(root, look, st) {
       h1 = -sg * 0.85;
       k1 = 0.15 + 0.85 * Math.max(0, cg) + st.land * 0.4;
     }
-    const th = joint(hip, s * 0.15, 0, 0, h1);
-    pd(cylM(0.075, 0.06, 0.2), th, null, K.leg);
-    const kn = joint(th, 0, -0.2, 0, k1);
-    pd(sphM(0.06), kn, null, K.gold);
-    pd(cylM(0.06, 0.055, 0.17), kn, null, K.leg);
-    const ft = joint(kn, 0, -0.17, 0, -(h1 + k1) * 0.5 + (air ? 0.3 : 0));
-    pd(boxM(0.2, 0.05, 0.22), joint(ft, 0, -0.02, 0.07, 0), null, K.beak);
-    for (let i = -1; i <= 1; i++)
-      pd(
-        boxM(0.06, 0.04, 0.1),
-        joint(ft, i * 0.07, -0.02, 0.2, 0, i * 0.3, 0),
-        null,
-        K.beakD,
-      );
+    const th = joint(hip, s * 0.13, 0, 0, h1);
+    pd(cylM(0.07, 0.06, 0.16), th, null, K.body);
+    const kn = joint(th, 0, -0.16, 0, k1);
+    pd(sphM(0.065), kn, null, K.dark);
+    pd(cylM(0.06, 0.055, 0.12), kn, null, K.body);
+    const ft = joint(kn, 0, -0.12, 0, -(h1 + k1) * 0.5 + (air ? 0.3 : 0));
+    pd(boxM(0.2, 0.1, 0.28), joint(ft, 0, -0.02, 0.07, 0), null, K.blue);
+    pd(sphM(0.1, 0.75, 1.0), joint(ft, 0, -0.02, 0.17, 0), null, K.body);
+    pd(boxM(0.22, 0.035, 0.31), joint(ft, 0, -0.08, 0.07, 0), null, K.body);
+    pd(boxM(0.2, 0.016, 0.2), joint(ft, 0, -0.092, 0.07, 0), null, K.glow);
   }
-  // body: round shell, cream belly with an ikat band and the 8-pointed star core
-  const tor = joint(hip, 0, 0.26, 0, sc ? 0.2 : 0, 0, run ? -sw * 0.05 : 0);
-  pd(sphM(0.36, 0.95, 1.0), tor, null, K.body);
-  pd(sphM(0.28, 0.85, 0.5), joint(tor, 0, -0.04, 0.2, 0), null, K.belly);
-  pd(boxM(0.5, 0.05, 0.1, 0), joint(tor, 0, -0.1, 0.17, 0.0), null, K.ikat);
-  pd(boxM(0.5, 0.012, 0.1, 0), joint(tor, 0, -0.07, 0.175, 0), null, K.gold);
-  const pulse = 0.5 + 0.5 * Math.sin(t * 5),
-    cs = joint(tor, 0, 0.06, 0.29, 0);
-  pd(boxM(0.14, 0.14, 0.02), cs, null, K.gold);
-  pd(boxM(0.14, 0.14, 0.02), joint(cs, 0, 0, 0, 0, 0, PI / 4), null, K.gold);
-  pd(boxM(0.07, 0.07, 0.03), cs, null, pulse > 0.5 ? K.glow : K.white);
-  // tail feathers + a tiny jet pack
-  for (let i = -1; i <= 1; i++)
-    pd(
-      boxM(0.08, 0.22, 0.025, 0.11),
-      joint(
-        tor,
-        i * 0.09,
-        -0.08,
-        -0.33,
-        -0.95 + (idle ? 0 : Math.sin(t * 6 + i) * 0.06) - (air ? 0.2 : 0),
-        0,
-        i * 0.4,
-      ),
-      null,
-      i ? K.trim : K.gold,
-    );
-  const jp = joint(tor, 0, 0.08, -0.31, 0);
-  pd(boxM(0.24, 0.22, 0.1), jp, null, K.trim);
-  pd(boxM(0.14, 0.04, 0.03, 0), joint(jp, 0, 0.04, -0.06, 0), null, K.glow);
+  // body: small white egg, blue vest with a glowing crown, black waist ring
+  const tor = joint(hip, 0, 0.24, 0, sc ? 0.2 : 0, 0, run ? -sw * 0.05 : 0);
+  pd(sphM(0.3, 1.0, 0.95), tor, null, K.body);
+  pd(cylM(0.255, 0.255, 0.05), joint(tor, 0, -0.17, 0, 0), null, K.dark);
+  pd(boxM(0.34, 0.26, 0.05), joint(tor, 0, 0.02, 0.255, -0.08), null, K.blue);
+  pd(boxM(0.34, 0.03, 0.055), joint(tor, 0, 0.14, 0.26, -0.08), null, K.white);
+  const pulse = 0.5 + 0.5 * Math.sin(t * 4);
+  crown(joint(tor, 0, 0.0, 0.29, -0.08), pulse > 0.5 ? K.glow : K.white, 1);
+  // jet nozzles (flames only while boosting) + cape
   if (st.boost)
-    for (const sx of [-0.06, 0.06])
+    for (const sx of [-0.08, 0.08])
       pd(
-        coneM(0.06, 0.34 + Math.random() * 0.18),
-        joint(jp, sx, -0.12, -0.04, PI),
+        coneM(0.06, 0.32 + Math.random() * 0.16),
+        joint(tor, sx, -0.12, -0.27, PI),
         null,
         FLAME,
       );
-  // head: big round shell, dark face screen, LED eyes, bill, ribbed turquoise doppi
+  let cj = joint(tor, 0, 0.2, -0.22, 0);
+  const fl = 0.3 + sp * 0.8;
+  pd(boxM(0.34, 0.03, 0.03), cj, null, K.white);
+  for (let i = 0; i < 4; i++) {
+    const w = Math.sin(t * 9 - i * 0.95) * 0.1 * fl;
+    cj = joint(
+      cj,
+      0,
+      i ? -0.14 : -0.02,
+      0,
+      0.1 + fl * 0.22 + (air ? 0.2 : 0) + w,
+      w * 0.6 - (st.tilt || 0) * 0.3,
+      0,
+    );
+    pd(
+      boxM(0.38 - i * 0.04, 0.15, 0.025, -0.07),
+      cj,
+      null,
+      i % 2 ? K.blueD : K.blue,
+    );
+  }
+  crown(joint(tor, 0, 0.0, -0.3, PI), K.white, 0.9);
+  // head: big white shell, black visor, LED eyes, headphone discs, crest, bill
   const hd = joint(
     tor,
     0,
-    0.5,
+    0.46,
     0.02,
     st.hit ? 0.25 : ds ? -0.18 : st.slide && !sc ? -1.0 : 0.04,
     st.yaw || 0,
   );
-  pd(sphM(0.35, 0.92, 0.96), joint(hd, 0, 0, 0, 0), null, K.body);
-  pd(sphM(0.27, 0.78, 0.5), joint(hd, 0, 0.02, 0.2, 0), null, K.face);
+  pd(sphM(0.38, 0.9, 0.95), hd, null, K.body);
+  pd(sphM(0.31, 0.74, 0.5), joint(hd, 0, 0.0, 0.2, 0), null, K.face);
+  pd(boxM(0.36, 0.028, 0.03), joint(hd, 0, 0.2, 0.3, -0.35), null, K.blue); // blue brow arc over the visor
+  pd(sphM(0.02, 1, 1), joint(hd, 0, 0.24, 0.27, 0), null, K.blue);
   const blink = t % 3.3 < 0.12,
     mood = st.hit
       ? 2
       : blink
         ? 1
-        : ds ||
-            st.land > 0.4 ||
-            (idle && st.wave > 0.3) ||
-            (air && !sc && wk > 0.6)
-          ? 3
-          : 0;
+        : st.land > 0.4 || (air && !sc && wk > 0.9)
+          ? 4
+          : 0; // 0 smile arcs, 1 blink, 2 X, 4 wide
   for (const s of [-1, 1]) {
-    const ex = joint(hd, s * 0.1, 0.07, 0.335, 0);
+    const ex = joint(hd, s * 0.11, 0.03, 0.355, 0);
     if (mood === 0) {
-      pd(sphM(0.055, 1.35, 0.3), ex, null, K.eye);
-      pd(sphM(0.014), joint(ex, 0.02, 0.03, 0.015, 0), null, K.white);
-    } else if (mood === 1) pd(boxM(0.1, 0.022, 0.02), ex, null, K.eye);
+      pd(
+        boxM(0.075, 0.03, 0.02),
+        joint(ex, -0.032, 0.0, 0, 0, 0, 0.62),
+        null,
+        K.eye,
+      );
+      pd(
+        boxM(0.075, 0.03, 0.02),
+        joint(ex, 0.032, 0.0, 0, 0, 0, -0.62),
+        null,
+        K.eye,
+      );
+      pd(boxM(0.04, 0.026, 0.02), joint(ex, 0, 0.026, 0, 0), null, K.eye);
+    } else if (mood === 1) pd(boxM(0.11, 0.022, 0.02), ex, null, K.eye);
     else if (mood === 2) {
       pd(boxM(0.12, 0.028, 0.02), joint(ex, 0, 0, 0, 0, 0, 0.8), null, K.eye);
       pd(boxM(0.12, 0.028, 0.02), joint(ex, 0, 0, 0, 0, 0, -0.8), null, K.eye);
     } else {
-      pd(
-        boxM(0.07, 0.03, 0.02),
-        joint(ex, -0.03, 0, 0, 0, 0, 0.6),
-        null,
-        K.eye,
-      );
-      pd(
-        boxM(0.07, 0.03, 0.02),
-        joint(ex, 0.03, 0, 0, 0, 0, -0.6),
-        null,
-        K.eye,
-      );
+      pd(sphM(0.055, 1.35, 0.3), ex, null, K.eye);
+      pd(sphM(0.014), joint(ex, 0.02, 0.03, 0.015, 0), null, K.white);
     }
-    pd(sphM(0.032, 0.8, 0.3), joint(hd, s * 0.2, -0.05, 0.3, 0), null, K.cheek); // blush LEDs
-    pd(
-      cylM(0.06, 0.06, 0.04),
-      joint(hd, s * 0.335, 0.0, 0, 0, 0, (PI / 2) * s),
-      null,
-      K.gold,
-    );
-    pd(
-      cylM(0.032, 0.032, 0.05),
-      joint(hd, s * 0.342, 0.0, 0, 0, 0, (PI / 2) * s),
-      null,
-      K.glow,
-    ); // ear LED discs
+    pd(sphM(0.03, 0.8, 0.3), joint(hd, s * 0.2, -0.08, 0.32, 0), null, K.cheek); // blush LEDs
+    const ear = joint(hd, s * 0.385, -0.01, 0, 0, 0, (PI / 2) * s); // headphone discs with glowing rings
+    pd(cylM(0.15, 0.15, 0.07), ear, null, K.body);
+    pd(cylM(0.17, 0.17, 0.025), joint(ear, 0, 0.0, 0, 0), null, K.blue);
+    pd(cylM(0.105, 0.105, 0.085), ear, null, K.glow);
+    pd(cylM(0.07, 0.07, 0.09), ear, null, K.dark);
   }
-  const mouth = st.hit ? 0.55 : ds ? 0.35 : air && wk > 0.6 ? 0.2 : 0;
-  pd(sphM(0.13, 0.4, 1.15), joint(hd, 0, -0.07, 0.38, 0), null, K.beak); // upper bill
+  const mouth = st.hit ? 0.55 : ds ? 0.35 : air && wk > 0.9 ? 0.2 : 0;
+  pd(sphM(0.15, 0.38, 1.12), joint(hd, 0, -0.13, 0.4, 0), null, K.beak); // upper bill
   pd(
-    sphM(0.1, 0.3, 0.95),
-    joint(hd, 0, -0.12 - mouth * 0.05, 0.36, mouth),
+    sphM(0.11, 0.28, 0.95),
+    joint(hd, 0, -0.18 - mouth * 0.05, 0.38, mouth),
     null,
     K.beakD,
   ); // lower bill
-  pd(sphM(0.28, 0.5, 0.95), joint(hd, 0, 0.3, -0.02, 0), null, K.trim); // doppi dome
-  pd(cylM(0.285, 0.285, 0.05), joint(hd, 0, 0.3, -0.02, 0), null, K.ikat);
-  for (let i = -2; i <= 2; i++) {
-    const a = i * 0.36;
+  for (const [x, rx, rz, h] of [
+    [0.04, -0.5, 0.25, 0.32],
+    [-0.04, -0.75, -0.25, 0.26],
+  ])
     pd(
-      boxM(0.05, 0.05, 0.025),
-      joint(
-        hd,
-        Math.sin(a) * 0.285,
-        0.275,
-        -0.02 + Math.cos(a) * 0.285,
-        0,
-        a,
-        PI / 4,
-      ),
+      boxM(0.1, h, 0.03, h / 2),
+      joint(hd, x, 0.32, 0.06, rx, 0, rz),
       null,
-      i % 2 ? K.acc : K.white,
-    );
-  }
-  for (let i = 0; i < 4; i++)
-    pd(
-      boxM(0.025, 0.2, 0.025, 0.08),
-      joint(joint(hd, 0, 0.33, -0.02, 0, (i * PI) / 2, 0), 0, 0, 0.13, -0.7),
-      null,
-      K.gold,
-    ); // dome ribs
-  pd(coneM(0.035, 0.14), joint(hd, 0, 0.5, -0.02, 0), null, K.gold);
+      K.body,
+    ); // head crest feathers
   pd(
-    sphM(0.035),
-    joint(hd, 0, 0.66, -0.02, 0),
+    boxM(0.04, 0.12, 0.02, 0.06),
+    joint(hd, 0.04, 0.36, 0.08, -0.5, 0, 0.25),
     null,
-    pulse > 0.5 ? K.glow : K.white,
+    K.blue,
   );
-  // ikat scarf: segments that lag behind one another
-  let sj = joint(tor, 0.08, 0.34, -0.08, 0);
-  const fl = 0.35 + sp * 0.9;
-  for (let i = 0; i < 5; i++) {
-    const w = Math.sin(t * 9 - i * 0.95) * 0.2 * fl;
-    sj = joint(
-      sj,
-      0,
-      0,
-      -0.2,
-      (air ? 0.2 : 0.05) + w * 0.6,
-      w * 0.5 - (st.tilt || 0) * 0.4,
-      0,
-    );
-    pd(boxM(0.1 - i * 0.012, 0.03, 0.24), sj, null, i % 2 ? K.accB : K.acc);
-  }
-  // wings (the arms): swing when running, spread and flap in the air and when dashing, reach for the bar on the scooter, wave when idle
-  const spread = 0.28 + wk * 0.85 + (wk > 0.5 ? Math.sin(t * 18) * 0.14 : 0);
+  // arms: white, black elbow rings, mitten hands with blue cuffs; they swing, spread in the air, reach for the bar, wave when idle
+  const spread = 0.16 + wk * 0.6 + (wk > 0.5 ? Math.sin(t * 18) * 0.1 : 0);
   for (const s of [-1, 1]) {
     const a = idle
-      ? s > 0 && st.wave
-        ? -2.55 - Math.sin(t * 7) * 0.22 * st.wave
-        : s * 0.1 + Math.sin(t * 2 + s) * 0.05
-      : sc
-        ? -1.35
-        : st.hit
-          ? -2.6 + s * 0.3
-          : st.slide
-            ? 1.2
-            : air
+        ? s > 0 && st.wave
+          ? -2.55 - Math.sin(t * 7) * 0.22 * st.wave
+          : s * 0.1 + Math.sin(t * 2 + s) * 0.05
+        : sc
+          ? -1.35
+          : st.hit
+            ? -2.6 + s * 0.3
+            : st.slide
+              ? 1.2
+              : air
+                ? -2.0 + s * 0.2
+                : ds
+                  ? 1.1
+                  : (s > 0 ? sw : -sw) * 0.85,
+      sh = joint(
+        tor,
+        s * 0.3,
+        0.12,
+        0,
+        a,
+        0,
+        s *
+          (idle
+            ? 0.14 + (s > 0 ? (st.wave || 0) * 0.95 : 0)
+            : sc
+              ? 0.1
+              : st.hit
+                ? 0.9
+                : ds
+                  ? 0.1
+                  : spread),
+      );
+    pd(sphM(0.07), sh, null, K.dark);
+    pd(cylM(0.065, 0.055, 0.16), sh, null, K.body);
+    const el = joint(
+      sh,
+      0,
+      -0.16,
+      0,
+      idle
+        ? s > 0 && st.wave
+          ? -0.7 - Math.sin(t * 7 + 1) * 0.3 * st.wave
+          : -0.3
+        : sc
+          ? -0.2
+          : air
+            ? -0.5
+            : ds
               ? -0.5
-              : ds
-                ? 1.1
-                : (s > 0 ? sw : -sw) * 0.8;
-    const sh = joint(
-      tor,
-      s * 0.34,
-      0.06,
-      0,
-      a,
-      0,
-      s *
-        (idle
-          ? 0.14 + (s > 0 ? (st.wave || 0) * 0.95 : 0)
-          : sc
-            ? 0.12
-            : st.hit
-              ? 0.9
-              : ds
-                ? 0.1
-                : spread),
+              : -0.9 - (s > 0 ? Math.max(0, -sw) : Math.max(0, sw)) * 0.4,
     );
-    pd(sphM(0.11, 1.55, 0.5), joint(sh, 0, -0.15, 0, 0), null, K.bodyD);
-    pd(sphM(0.07, 1.2, 0.4), joint(sh, 0, -0.3, 0, 0), null, K.trim);
-    pd(sphM(0.06), sh, null, K.gold);
+    pd(sphM(0.058), el, null, K.dark);
+    pd(cylM(0.055, 0.05, 0.13), el, null, K.body);
+    pd(cylM(0.062, 0.062, 0.035), joint(el, 0, -0.1, 0, 0), null, K.blue);
+    pd(sphM(0.088), joint(el, 0, -0.17, 0, 0), null, K.body);
   }
 }

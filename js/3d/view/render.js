@@ -186,8 +186,9 @@ function render() {
   const hz = pz - gap,
     tNow = performance.now() / 1000;
   if (!show && gap < 10.5) {
-    drawChaser(Tp(px * 0.7, 0, hz), runPh + 1.5, tNow);
-    drawWolf(Tp(px * 0.7 - 1.5, 0, hz - 0.2), runPh + 0.7, tNow);
+    drawBox(Tp(px * 0.7, 0, hz), runPh + 1.5, tNow);
+    drawBall(Tp(px * 0.7 - 1.5, 0, hz - 0.2), runPh + 0.7, tNow);
+    drawDrone(Tp(px * 0.7 + 1.5, 0, hz - 0.3), runPh, tNow);
   }
   if (heli) {
     const hxp = heli.x * 0.4,
