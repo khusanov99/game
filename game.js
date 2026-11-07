@@ -10,7 +10,7 @@ const canvas = $("game"),
   shell = $("shell"),
   ctx = canvas.getContext("2d", {
     alpha: !/[?&]2d=1/.test(location.search),
-    desynchronized: true,
+    desynchronized: false, // a low-latency (desynchronized) overlay ignores alpha on Windows/Chrome and paints the 2D layer opaque black over the 3D canvas
   });
 
 if (!ctx.roundRect) {
