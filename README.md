@@ -161,3 +161,8 @@ Done (2D main game, tested in headless Chromium only):
 - Where: 3D in `js/3d/view/hero.js` and `js/3d/view/chaser.js`; 2D side view and back view in `rig.js` (same API and frame indices as before, so `game.js` / `city.js` are unchanged). The old painted fallbacks in `chars.js` / `sprites.js` are only used if `Rig` fails to load and still show the previous look.
 - Performance: the 3D hero is ~60 batched primitives (down from ~150); the busiest 3D frame measured ~8.8k of 16k character vertices. 2D robots are still pre-rendered once into small canvases.
 - Still only checked in headless Chromium; not on a real phone. The main-game chaser sprite was verified in the sprite sheet but I did not capture it in a live chase frame.
+
+## v8 — concept-art cast
+
+- 3D: the hero is now a glossy white/blue duck-bot (black visor with cyan smile LEDs, headphone discs, crest, orange bill, crown chest emblem, blue cape, blue sneakers; accent colour follows the chosen skin). Chasers are a wheeled box-bot, a rolling ball-bot and a winged drone (white shells, red angry LED eyes). Procedural geometry, not artist-made.
+- 2D (`rig.js`): palettes retinted to match (white/blue hero, white/red chasers). The 2D chasers keep the earlier hawk/wolf silhouettes; only the 3D game has the box/ball/drone shapes. Tested in headless Chromium only.

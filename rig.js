@@ -156,45 +156,45 @@ const Rig = (() => {
   const LOOKS = {
     // arm = main armour · plate = light plates · dark = joints · glow = eyes/core/soles · acc = accent
     default: {
-      arm: "#1fa9ff",
-      plate: "#eef3ff",
-      dark: "#1a2140",
-      glow: "#53f7ff",
-      acc: "#ff4fd8",
-      body: "#ffd23a",
-      trim: "#19c6d6",
+      arm: "#1f6bff",
+      plate: "#f4f8ff",
+      dark: "#10142b",
+      glow: "#35e6ff",
+      acc: "#1f6bff",
+      body: "#f6f9ff",
+      trim: "#1f6bff",
     },
     rose: {
       arm: "#ff4fa8",
-      plate: "#fff0f6",
+      plate: "#fff4f8",
       dark: "#2f1d3e",
       glow: "#ffd84f",
-      acc: "#ff8a5c",
-      body: "#ff86bb",
-      trim: "#ffcc4d",
+      acc: "#ff4fa8",
+      body: "#fff6fa",
+      trim: "#ff4fa8",
     },
     mint: {
-      arm: "#2fd9a0",
-      plate: "#eafff7",
+      arm: "#17c28c",
+      plate: "#f2fffa",
       dark: "#173a38",
       glow: "#a78bfa",
-      acc: "#53f7ff",
-      body: "#6df2b4",
-      trim: "#6b8cff",
+      acc: "#17c28c",
+      body: "#f4fffb",
+      trim: "#17c28c",
     },
     gold: {
-      arm: "#ffc23a",
-      plate: "#fff6dc",
+      arm: "#ff9d1a",
+      plate: "#fffaf0",
       dark: "#33220e",
       glow: "#ff7a59",
-      acc: "#8a4a12",
-      body: "#ffb52e",
-      trim: "#6a4320",
+      acc: "#ff9d1a",
+      body: "#fffaf0",
+      trim: "#ff9d1a",
     },
   };
   const GUARD = {
-    arm: "#2b438a",
-    plate: "#dfe6f5",
+    arm: "#d92b3c",
+    plate: "#f4f6ff",
     dark: "#10152c",
     glow: "#ff3b4d",
     acc: "#ffd84f",
@@ -264,20 +264,20 @@ const Rig = (() => {
   const PAL = (S) =>
     S.guard
       ? {
-          body: "#2b3152",
+          body: "#f1f4ff",
           belly: "#d3172e",
           trim: "#d3172e",
           beak: "#e9a23b",
           beakD: "#b87420",
-          leg: "#4a4f6a",
+          leg: "#8a93ad",
         }
       : {
           body: S.body || "#ffd23a",
-          belly: "#fff1c8",
+          belly: "#e6eeff",
           trim: S.trim || "#19c6d6",
           beak: "#ff8a1c",
           beakD: "#e56a08",
-          leg: "#ff8a1c",
+          leg: S.trim || "#1f6bff",
         };
   const star8 = (c, x, y, r, col) => {
     c.fillStyle = col;
@@ -878,10 +878,10 @@ const Rig = (() => {
       acc: "#ff9a2e",
     },
     PUP = {
-      fur: "#6b7596",
+      fur: "#f1f4ff",
       dark: "#1a1e30",
       glow: "#ff3b4d",
-      bronze: "#f0a844",
+      bronze: "#e0293a",
     };
   const dFoot = (u, front) => {
     // [x, lift] relative to the shoulder / hip joint
