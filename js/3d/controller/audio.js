@@ -163,7 +163,8 @@ function trainWhoosh() {
 /* phones: unlock audio and speech on the first touch, use the media channel (iOS silent switch), keep the context alive */
 let VOICES = [],
   speechOk = false,
-  silentEl = null;
+  silentEl = null,
+  unlockN = 0;
 function loadVoices() {
   try {
     VOICES = window.speechSynthesis.getVoices() || [];
@@ -181,7 +182,7 @@ function unlockAudio() {
   try {
     if (AC && AC.state !== "running") AC.resume();
   } catch (e) {}
-  if (!silentEl) {
+  if (!silentEl && DEV.ios) {
     try {
       /* a silent looping <audio> moves older iOS Safari to the playback channel, which ignores the ring/silent switch */
       silentEl = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=");
@@ -206,9 +207,12 @@ function unlockAudio() {
       speechOk = true;
     } catch (e) {}
   }
-  loadVoices();
+  /* the unlock work is needed once; later touches only get the cheap resume above, then the listeners go away */
+  if (AC && AC.state === "running" && ++unlockN >= 2)
+    for (const ev of UNLOCK_EV) removeEventListener(ev, unlockAudio);
 }
-for (const ev of ["pointerdown", "touchend", "keydown"]) addEventListener(ev, unlockAudio, { passive: true });
+const UNLOCK_EV = ["pointerdown", "touchend", "keydown"];
+for (const ev of UNLOCK_EV) addEventListener(ev, unlockAudio, { passive: true });
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden)
     try {
