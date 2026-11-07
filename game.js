@@ -2497,7 +2497,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
   return API;
 })();
 const PIXEL_BUDGET = COARSE
-  ? [900000, 650000, 420000, 260000]
+  ? [900000, 700000, 520000, 360000]
   : [1500000, 1100000, 800000, 500000]; // canvas pixels per quality level
 function setQuality(l) {
   l = Math.max(l, FLOOR);
@@ -3185,6 +3185,7 @@ let spawnPx = 0,
   fadeT = 0,
   prevA = null,
   acc = 0,
+  slowW = 0,
   rafAvg = 16.7,
   skipDraw = false;
 let shoutO = { text: "", t: 0, max: 1, c: "#fff" },
@@ -4992,8 +4993,6 @@ function x11Draw() {
     ctx.globalAlpha = Math.min(1, bm.t / 120);
     ctx.strokeStyle = "#9ff";
     ctx.lineWidth = 5;
-    ctx.shadowColor = "#53f7ff";
-    ctx.shadowBlur = 14;
     ctx.beginPath();
     ctx.moveTo(bm.x1, bm.y1);
     ctx.lineTo(bm.x2, bm.y2);
@@ -6999,7 +6998,7 @@ function startGame() {
   state = "play";
   lastT = 0;
   fpsAcc = 0;
-  fpsN = -15;
+  fpsN = -90; // ~1.5 s of grace: shader compile / first-frame stalls must not look like a "slow phone"
   if (COARSE && !fsOn) setFs(true);
   if (lvl)
     banner = {
@@ -7868,7 +7867,7 @@ function loop(t) {
     const cap =
       FPSCAP > 0
         ? FPSCAP
-        : (COARSE || CFG.thermal) && thermalT > (COARSE ? 60000 : 180000)
+        : CFG.thermal && thermalT > 180000
           ? 30
           : CFG.battery
             ? 30
@@ -7889,13 +7888,21 @@ function loop(t) {
     if (fpsN >= 20) {
       // judge every 20 frames
       const avg = fpsAcc / fpsN;
-      if (CFG.adaptive !== false && avg > 21 && Q.level < 3) {
+      if (avg > 22) slowW++;
+      else slowW = 0;
+      if (
+        CFG.adaptive !== false &&
+        avg > 22 &&
+        (slowW >= 2 || avg > 34) &&
+        Q.level < 3
+      ) {
+        slowW = 0;
         const from = Q.level;
         setQuality(Math.min(3, Q.level + (avg > 34 ? 2 : 1))); // very slow → skip a level
         ceilQ = Math.max(ceilQ, from + 1);
         goodWin = 0;
         lastDown = t; // never climb back to a level that just failed
-        if (COARSE) store.set("zr_q", Q.level); // next launch starts at the level this phone can handle
+        if (COARSE) store.set("zr_q2", Math.min(2, Q.level)); // next launch starts at the level this phone can handle (never the lowest)
       } else if (
         CFG.adaptive !== false &&
         avg < (rafAvg < 11.5 ? 11 : 18) &&
@@ -7906,7 +7913,7 @@ function loop(t) {
           setQuality(Q.level - 1);
           goodWin = 0;
           lastDown = t - 8000;
-          if (COARSE) store.set("zr_q", Q.level);
+          if (COARSE) store.set("zr_q2", Math.min(2, Q.level));
         } // ~3.5 s of clear headroom
       } else goodWin = 0;
       fpsAcc = 0;
@@ -8353,7 +8360,7 @@ function applyGfx() {
       : COARSE
         ? Math.max(
             1,
-            Math.min(3, CFG.autoopt === false ? 1 : store.get("zr_q", 1) | 0),
+            Math.min(3, CFG.autoopt === false ? 1 : store.get("zr_q2", 1) | 0),
           )
         : 1,
   );
