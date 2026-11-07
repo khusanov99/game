@@ -2492,6 +2492,23 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       if (++errN >= 3) bail();
     }
   };
+  API.recover = function () {
+    /* iOS Safari / some Androids drop the WebGL context when the page is backgrounded and do not always fire
+       "restored": build a fresh canvas + context instead of staying on the 2D fallback for good */
+    if (API.on || API.dead) return;
+    try {
+      SBUF.clear();
+      const old = cv3;
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      if (init()) {
+        API.size(API.gw, API.gh);
+        API.on = true;
+        if (typeof resize === "function") resize();
+      }
+    } catch (e) {
+      API.on = false;
+    }
+  };
   API.stats = () => ({ nv, ni, max: MAXV });
   if (init()) API.on = true;
   return API;
@@ -7888,18 +7905,19 @@ function loop(t) {
     if (fpsN >= 20) {
       // judge every 20 frames
       const avg = fpsAcc / fpsN;
-      if (avg > 22) slowW++;
+      const slowT = hz < 45 ? 40 : 22; // iPhone Low Power Mode / Android battery saver cap the screen at 30 Hz: that is not a slow phone
+      if (avg > slowT) slowW++;
       else slowW = 0;
       if (
         CFG.adaptive !== false &&
         gfx === "auto" && // a preset the player picked by hand (Ultra / High / ...) is never lowered behind their back
-        avg > 22 &&
-        (slowW >= 2 || avg > 34) &&
+        avg > slowT &&
+        (slowW >= 2 || avg > slowT + 12) &&
         Q.level < 3
       ) {
         slowW = 0;
         const from = Q.level;
-        setQuality(Math.min(3, Q.level + (avg > 34 ? 2 : 1))); // very slow → skip a level
+        setQuality(Math.min(3, Q.level + (avg > slowT + 12 ? 2 : 1))); // very slow → skip a level
         ceilQ = Math.max(ceilQ, from + 1);
         goodWin = 0;
         lastDown = t; // never climb back to a level that just failed
@@ -8252,8 +8270,12 @@ document.addEventListener("visibilitychange", () => {
     else invul = Math.max(invul, 1500);
     if (CFG.bgsave !== false && ac && ac.state === "running")
       ac.suspend().catch(() => {});
-  } else if (ac && ac.state === "suspended" && !muted)
-    ac.resume().catch(() => {});
+  } else {
+    if (ac && ac.state === "suspended" && !muted) ac.resume().catch(() => {});
+    setTimeout(() => {
+      if (!GL3.on && !GL3.dead && GL3.recover) GL3.recover();
+    }, 700);
+  }
 });
 window.addEventListener("pagehide", () => {
   saveMeta();
@@ -8290,6 +8312,18 @@ async function toggleFs() {
     cur = document.fullscreenElement || document.webkitFullscreenElement;
   try {
     if (on) {
+      if (
+        !req &&
+        /iPhone|iPod/i.test(navigator.userAgent) &&
+        !navigator.standalone
+      )
+        toast(
+          T3(
+            "iPhone: Share → Add to Home Screen for true full screen",
+            "iPhone: to'liq ekran uchun Ulashish → Bosh ekranga qo'shish",
+            "iPhone：共有 → ホーム画面に追加で全画面",
+          ),
+        );
       if (req) await req.call(el, { navigationUI: "hide" });
       if (COARSE && screen.orientation && screen.orientation.lock) {
         try {
