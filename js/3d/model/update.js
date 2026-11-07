@@ -25,6 +25,7 @@ function landed(v) {
 }
 const DASHC = ["#53f7ff", "#ffe27a", "#ff4fd8"];
 let lastMetro = 0,
+  lastStn = -1,
   forkMul = 1,
   lastFork = false,
   forkWarned = false;
@@ -118,11 +119,16 @@ function update(dt) {
     }
     {
       const sc = secAt(pz + 4);
+      const stn = sc === 1 ? stationOf(Math.floor((pz + 4) / CH)) : -1;
+      if (stn !== lastStn) {
+        if (stn >= 0 && pz > 50) floatText("🚇 " + STN[stn].n, "#9fd8ff");
+        lastStn = stn;
+      }
       if (sc !== lastMetro) {
         const prev = lastMetro;
         lastMetro = sc;
         if (pz > 50 && sc) {
-          floatText(SEC_NAME[sc], "#7fe6ff");
+          if (sc !== 1) floatText(SEC_NAME[sc], "#7fe6ff");
           sfx.zumary();
         } else if (pz > 50 && prev) {
           bonus += 100;

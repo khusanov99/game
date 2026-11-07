@@ -289,6 +289,7 @@ function render() {
       tilt,
     });
   if (!show) drawItemFx(root, tNow);
+  if (!flick && !(slideT > 0 || over || stumbleT > 0.25 || dash > 0 || scoot > 0 || fa)) drawBagLabel(root);
   flushChars();
   gl.enable(gl.BLEND);
   gl.depthMask(false);

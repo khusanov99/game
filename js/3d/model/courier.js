@@ -166,7 +166,7 @@ function courTouch(o) {
   o.got = true;
   if (o.k === "pkg") {
     const story = !!o.story,
-      dist = story ? clamp(ST.z1 - 110 - pz, 300, 620) : 430 + rnd(0, 170),
+      dist = story ? clamp(ST.z1 - 40 - pz, 450, 800) : 750 + rnd(0, 300),
       l = (Math.random() * 3) | 0;
     CR.st = "carry";
     CR.pkg = null;
@@ -237,7 +237,7 @@ function courTouch(o) {
   CR.story = false;
   CR.st = "find";
   CR.drop = null;
-  CR.at = pz + 190;
+  CR.at = pz + 300;
 }
 function courUpdate(dt) {
   storyUpdate();
@@ -255,7 +255,7 @@ function courUpdate(dt) {
         floatText(T("qFail"), "#ff6b84");
       } else floatText(T("cMissPkg"), "#ff9a9a");
       CR.pkg = null;
-      CR.at = pz + 200;
+      CR.at = pz + 300;
     }
   } else {
     CR.tLeft -= dt;
@@ -267,7 +267,7 @@ function courUpdate(dt) {
       CR.story = false;
       CR.drop = null;
       CR.st = "find";
-      CR.at = pz + 200;
+      CR.at = pz + 300;
       CR.streak = 0;
     }
   }

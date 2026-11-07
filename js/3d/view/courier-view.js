@@ -103,6 +103,36 @@ function scaleM(M, k) {
   for (const i of [0, 1, 2, 4, 5, 6, 8, 9, 10]) o[i] *= k;
   return o;
 }
+/* "ZUMARY DELIVERY" printed on the back of the courier bag, in the current language */
+const BAGTXT = { uz: ["ZUMARY", "YETKAZIB BERISH"], en: ["ZUMARY", "DELIVERY"], ja: ["ZUMARY", "デリバリー"] };
+let BAGL = null;
+function bagLabel() {
+  if (BAGL && BAGL.lg === LG) return BAGL;
+  const c = mkc(256, 192),
+    g = c.getContext("2d"),
+    t = BAGTXT[LG] || BAGTXT.en;
+  g.fillStyle = "#ff8a1f";
+  g.fillRect(0, 0, 256, 192);
+  g.strokeStyle = "#fff";
+  g.lineWidth = 8;
+  g.strokeRect(6, 6, 244, 180);
+  g.fillStyle = "#fff";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.font = "900 50px system-ui,sans-serif";
+  g.fillText(t[0], 128, 66);
+  let fs = 44;
+  g.font = `800 ${fs}px 'Hiragino Sans',system-ui,sans-serif`;
+  while (g.measureText(t[1]).width > 220 && fs > 16) {
+    fs -= 2;
+    g.font = `800 ${fs}px 'Hiragino Sans',system-ui,sans-serif`;
+  }
+  g.fillStyle = "#0b1b3a";
+  g.fillText(t[1], 128, 134);
+  const b = new B();
+  b.quad([[0.17, 0.12, 0], [-0.17, 0.12, 0], [-0.17, -0.12, 0], [0.17, -0.12, 0]], [0, 0, -1], [[0, 0], [1, 0], [1, 1], [0, 1]], [1, 1, 1]);
+  return (BAGL = { lg: LG, m: b.mesh(), tex: texFrom(c) });
+}
 const ITEM_OPT = { emis: 0.42, spec: 0.45, rim: 0.4 };
 let BAGPOP = 0,
   lastRN = 0;
@@ -124,6 +154,10 @@ function courAnimTick(rdt) {
     burst(a.x, 2.2, a.z, 28, "#ffd84f", 7);
   }
   if (a.t > 2.4) CR.anim = null;
+}
+function drawBagLabel(root) {
+  const L = bagLabel();
+  draw(L.m, joint(root, 0, 0.64, -0.545, 0.1), L.tex, { emis: 0.7 });
 }
 function drawItemFx(root, ca) {
   const a = CR.anim;

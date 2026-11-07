@@ -1,7 +1,7 @@
 /* model/metro.js — Special sections, one per 700 m city block, at a different spot every run (chunk-aligned, 300 m):
    1 Tashkent Metro tunnel · 2 Bukhara covered bazaar (tim) · 3 Khiva wall-top run · 4 Fergana canals & cotton fields */
 "use strict";
-const SEC_OF_THEME = [1, 0, 2, 3, 4, 0],
+const SEC_OF_THEME = [1, 0, 2, 3, 4, 1],
   SEC_NAME = ["", "METRO", "BOZOR TIMI", "ICHAN QAL'A", "PAXTA MAYDONI"],
   SEC_CH = 5;
 function secStart(k) {
@@ -14,6 +14,11 @@ function secChunk(ci) {
     s = secStart(k);
   if (ci < s || ci >= s + SEC_CH) return 0;
   return SEC_OF_THEME[themeAt(k * THEME_LEN + 1)] || 0;
+}
+/* which of the ten real Tashkent stations this chunk is: Tashkent hosts the first five, Neon Tashkent the other five */
+function stationOf(ci) {
+  const k = Math.floor((ci * CH + CH / 2) / THEME_LEN);
+  return (themeAt(k * THEME_LEN + 1) === 5 ? 5 : 0) + clamp(ci - secStart(k), 0, SEC_CH - 1);
 }
 const secAt = (z) => secChunk(Math.floor(z / CH)),
   metroAt = (z) => secAt(z) === 1,

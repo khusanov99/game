@@ -210,14 +210,17 @@ function secBuild(t) {
 }
 function drawSection(ch) {
   const t = ch.sec,
-    S = SECM[t] || (t >= 10 ? (SECM[t] = plazaBuild(t - 10)) : secBuild(t)),
+    st = t === 1 ? stationOf(ch.ci) : -1,
+    S = t === 1 ? stationBuild(st) : SECM[t] || (t >= 10 ? (SECM[t] = plazaBuild(t - 10)) : secBuild(t)),
     M = Tp(0, 0, ch.zA);
+  if (t === 1 && !SECM[1]) secBuild(1);
   for (const p of S.parts) draw(p.m, M, null, p.mat);
+  if (S.signs) for (const sg of S.signs) draw(sg.m, Tp(sg.at[0], sg.at[1], ch.zA + sg.at[2]), sg.tex, { emis: 0.9 });
   if (t >= 10) return; // landmark plaza: no portals
   for (const z of [ch.zA, ch.zB]) {
     if (secChunk(ch.ci + (z === ch.zA ? -1 : 1)) === t) continue;
     const P = Tp(0, 0, z);
-    for (const p of S.portal)
+    for (const p of (t === 1 ? SECM[1] : S).portal)
       draw(p.m, p.at ? Tp(p.at[0], p.at[1], z + p.at[2]) : P, p.tex || null, p.mat || { emis: 0.9 });
   }
 }

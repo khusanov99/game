@@ -187,7 +187,6 @@ function drawHero(root, look, st) {
       B0 = joint(tor, 0, -0.02, -0.4, 0.05);
     pd(boxM(0.42 * bk, 0.44 * bk, 0.26 * bk), B0, null, K.bagA);
     pd(boxM(0.45 * bk, 0.07, 0.29 * bk), joint(B0, 0, 0.23 * bk, 0, 0), null, K.bagB);
-    pd(boxM(0.2, 0.13, 0.02), joint(B0, 0, 0.02, -0.14 * bk, 0), null, K.glow);
     pd(boxM(0.34, 0.03, 0.02), joint(B0, 0, -0.14, -0.135 * bk, 0), null, K.white);
     for (const sx of [-0.12, 0.12]) pd(boxM(0.05, 0.38, 0.02), joint(tor, sx, 0.03, 0.288, -0.08), null, K.bagB);
   }
