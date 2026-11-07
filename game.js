@@ -57,6 +57,8 @@ let RS = 1,
   FPSCAP = 0; // render scale, quality floor, swipe distance, fps cap (0 = auto, -1 = device maximum)
 const Q = { level: 0, shadow: !COARSE, flat: false, dpr: 2, maxP: 140 };
 
+const INTRO = { on: false, t: 0, last: 0, spd: 1, pose: null }; // opening animation (see introStart)
+
 /* =====================================================
    3D RENDERER — the whole world (city, road, obstacles, coins, chasers and the hero) is drawn as real 3D models
    by a tiny WebGL batcher that lives in this file. Gameplay, controls and hitboxes are untouched: the game still runs on its
@@ -2002,9 +2004,25 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         duckk = p.h < 40,
         hit = state === "over" || state === "revive",
         air = !p.grounded,
-        Y = groundY - (p.y + p.h),
-        X = p.x + p.w / 2 - W / 2;
-      if (!(invul > 0 && Math.floor(frame / 3) % 2)) {
+        ip = INTRO.on && INTRO.pose ? INTRO.pose() : null,
+        Y = ip ? groundY - (p.y + p.h) + ip.y : groundY - (p.y + p.h),
+        X = ip ? ip.x : p.x + p.w / 2 - W / 2;
+      if (ip) {
+        const hs = 50 * (PS / 1.55),
+          cy = 0.55 * hs,
+          m1 = J(T(X, Y + cy, 0), 0, 0, 0, 0, 0, ip.ang),
+          m2 = J(m1, 0, -cy, 0, 0, PI / 2 + 0.38 + ip.spin, 0);
+        drawHero(SC(m2, hs), {
+          ph: ip.ph,
+          air: ip.air,
+          slide: false,
+          hit: false,
+          boost: ip.boost,
+          land: ip.land,
+          t,
+          sp: 0.8,
+        });
+      } else if (!(invul > 0 && Math.floor(frame / 3) % 2)) {
         const root = SC(
           J(T(X, Y, 0), 0, 0, 0, 0, PI / 2 + 0.38, 0),
           50 * (PS / 1.55),
@@ -5585,7 +5603,175 @@ function drawCinema() {
   speedLines();
 }
 
+/* ============ OPENING ANIMATION ============
+   Before the menu: the 3D robot runs in, does a front salto, a high back-flip, a turbo dash and a spinning jump,
+   then the title appears. Any tap / key skips it. Everything is drawn by the same 3D renderer (hero pose override). */
+const easeIO = (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+const INTRO_LEN = 6.6;
+function introPose() {
+  const t = INTRO.t,
+    hx = player.x + player.w / 2 - W / 2,
+    P = {
+      x: hx,
+      y: 0,
+      ang: 0,
+      spin: 0,
+      air: false,
+      boost: false,
+      land: 0,
+      ph: t * 13,
+    };
+  if (t < 1.1) {
+    const u = t / 1.1,
+      e = 1 - (1 - u) * (1 - u);
+    P.x = -W / 2 - 70 + (hx + W / 2 + 70) * e;
+  } else if (t < 1.95) {
+    const u = (t - 1.1) / 0.85;
+    P.y = 95 * 4 * u * (1 - u);
+    P.ang = -TAU_ * easeIO(u);
+    P.air = true;
+  } else if (t < 2.25) P.land = 0.6;
+  else if (t < 3.25) {
+    const u = t - 2.25;
+    P.y = 150 * 4 * u * (1 - u);
+    P.ang = TAU_ * easeIO(u);
+    P.air = true;
+  } else if (t < 3.5) P.land = 0.6;
+  else if (t < 4.5) {
+    const u = (t - 3.5) / 1.0;
+    P.boost = true;
+    P.x = hx + 70 * Math.sin(Math.PI * u);
+  } else if (t < 5.5) {
+    const u = t - 4.5;
+    P.y = 90 * 4 * u * (1 - u);
+    P.spin = TAU_ * easeIO(u);
+    P.air = true;
+  } else if (t < 5.8) P.land = 0.5;
+  return P;
+}
+const TAU_ = Math.PI * 2;
+function introFx(from, to) {
+  const hx = player.x + player.w / 2,
+    ev = (a) => from < a && to >= a;
+  const land = (c) => {
+    burst(hx, groundY, c, 14);
+    ring(hx, groundY - 4, c, 46);
+    zoom = 1.05;
+    shake = 4;
+    beep(180, 0.08, "square", 0.05, -80);
+  };
+  const jump = (c) => {
+    burst(hx, groundY, "#e8eef7", 8);
+    ring(hx, groundY - 4, c, 30);
+    beep(520, 0.1, "triangle", 0.05, 380);
+  };
+  if (ev(1.1)) jump("#53f7ff");
+  if (ev(1.95)) land("#53f7ff");
+  if (ev(2.25)) jump("#ff4fd8");
+  if (ev(3.25)) land("#ff4fd8");
+  if (ev(3.5)) {
+    flash = { c: "#53f7ff", a: 0.25 };
+    beep(300, 0.4, "sawtooth", 0.04, 900);
+  }
+  if (ev(4.5)) {
+    jump("#ffd84f");
+    burst(hx, groundY - 20, "#ffd84f", 18);
+  }
+  if (ev(5.5)) land("#ffd84f");
+  if (ev(4.6))
+    [660, 880, 1100, 1320].forEach((f, i) =>
+      setTimeout(() => beep(f, 0.12, "triangle", 0.05), i * 90),
+    );
+  if (INTRO.t > 3.5 && INTRO.t < 4.5) {
+    if (Math.random() < 0.7) burst(hx - 30, groundY - 12, "#53f7ff", 2);
+  }
+}
+function introTick() {
+  if (!INTRO.on) return;
+  const now = performance.now(),
+    dt = Math.min(0.05, (now - INTRO.last) / 1000);
+  INTRO.last = now;
+  const from = INTRO.t;
+  INTRO.t += dt;
+  INTRO.spd = INTRO.t > 3.5 && INTRO.t < 4.5 ? 5 : 1;
+  introFx(from, INTRO.t);
+  if (INTRO.t >= INTRO_LEN) introEnd();
+}
+function introEnd() {
+  if (!INTRO.on) return;
+  INTRO.on = false;
+  INTRO.spd = 1;
+  const ov = $("overlay");
+  if (ov) ov.classList.remove("hidden");
+}
+function introStart() {
+  if (!INTRO.pose) INTRO.pose = introPose;
+  INTRO.on = true;
+  INTRO.t = 0;
+  INTRO.last = performance.now();
+  const ov = $("overlay");
+  if (ov) ov.classList.add("hidden");
+  const skip = (e) => {
+    if (!INTRO.on) return;
+    e.stopPropagation();
+    if (e.cancelable) e.preventDefault();
+    introEnd();
+  };
+  wrap.addEventListener("pointerdown", skip, true);
+  window.addEventListener("keydown", skip, true);
+}
+function drawIntro() {
+  if (!INTRO.on) return;
+  const t = INTRO.t,
+    k = Math.min(1, t / 0.6, (INTRO_LEN - t) / 0.5),
+    bar = H * 0.1 * Math.max(0, k);
+  ctx.fillStyle = "#05071a";
+  ctx.fillRect(0, 0, W, bar);
+  ctx.fillRect(0, H - bar, W, bar);
+  const a =
+    Math.min(1, Math.max(0, (t - 4.5) / 0.6)) *
+    Math.min(1, (INTRO_LEN - t) / 0.5);
+  if (a > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const sc = 1 + (1 - a) * 0.15,
+      cx = W / 2,
+      cy = H * 0.34;
+    ctx.translate(cx, cy);
+    ctx.scale(sc, sc);
+    ctx.font = `900 ${Math.round(46 * UI)}px Orbitron, 'Hiragino Sans', 'Noto Sans JP', sans-serif`;
+    ctx.lineWidth = 6 * UI;
+    ctx.strokeStyle = "rgba(5,7,26,.85)";
+    ctx.strokeText("ZUMARY RUN", 0, 0);
+    ctx.fillStyle = "#53f7ff";
+    ctx.fillText("ZUMARY RUN", 0, 0);
+    ctx.font = `700 ${Math.round(12 * UI)}px Orbitron, sans-serif`;
+    ctx.lineWidth = 4 * UI;
+    ctx.strokeText("TASHKENT · SAMARKAND · BUKHARA · KHIVA", 0, 34 * UI);
+    ctx.fillStyle = "#ffd84f";
+    ctx.fillText("TASHKENT · SAMARKAND · BUKHARA · KHIVA", 0, 34 * UI);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 5);
+  ctx.fillStyle = "#fff";
+  ctx.font = `600 ${Math.round(10 * UI)}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText(
+    LANG === "uz"
+      ? "o'tkazib yuborish uchun bosing"
+      : LANG === "ja"
+        ? "タップでスキップ"
+        : "tap to skip",
+    W / 2,
+    H - bar - 12 * UI,
+  );
+  ctx.globalAlpha = 1;
+}
+
 function draw() {
+  introTick();
   ctx.save();
   let shx = 0,
     shy = 0;
@@ -5635,7 +5821,8 @@ function draw() {
     ctx.strokeRect(0, 0, W, H);
     ctx.globalAlpha = 1;
   }
-  drawHUD();
+  if (INTRO.on) drawIntro();
+  else drawHUD();
 }
 
 /* ============ OVERLAY / MENU ============ */
@@ -5746,7 +5933,7 @@ function showOverlay(icon, title, text, btn, o = {}) {
   $("shareButton").style.display = o.share ? "flex" : "none";
   $("menuButton").textContent = o.menuLabel || t("menuBtn");
   shopOpen = !!o.panel;
-  $("overlay").classList.remove("hidden");
+  if (!INTRO.on) $("overlay").classList.remove("hidden"); // stays hidden while the opening animation plays
   paintDiff();
 }
 function paintDiff() {
@@ -5881,6 +6068,7 @@ function ensureVisible() {
   } catch (e) {}
 }
 function startGame() {
+  introEnd();
   ensureVisible();
   if (state === "play") return;
   if (state === "over" || state === "ready" || state === "won") resetGame();
@@ -6646,7 +6834,10 @@ function stepOnce(dt) {
     updateParticles(dt);
     if (state === "ready" || state === "won") {
       frame += dt / 16.67;
-      scrollWorld(((state === "won" ? 3 : 1.2) * dt) / 16.67, dt / 16.67);
+      scrollWorld(
+        ((state === "won" ? 3 : 1.2 * INTRO.spd) * dt) / 16.67,
+        dt / 16.67,
+      );
     }
   }
 }
@@ -6746,7 +6937,7 @@ function loop(t) {
     // menus / pause / game-over: nothing fast moves, so redraw at ~30 fps (pause: ~4 fps)
     if (
       t - lastDraw <
-      (state === "pause" ? 250 : CFG.bgsave === false ? 32 : 60)
+      (state === "pause" ? 250 : INTRO.on ? 0 : CFG.bgsave === false ? 32 : 60)
     )
       return;
   } else {
@@ -7270,6 +7461,7 @@ document.body.classList.toggle("lefty", CFG.left);
 applyGfx();
 resetGame();
 showReady();
+introStart();
 requestAnimationFrame(loop);
 {
   const warm = [
