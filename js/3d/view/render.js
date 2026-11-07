@@ -242,6 +242,9 @@ function render() {
     over = state === "over",
     root = joint(Tp(px, py, pz), 0, 0, 0, 0, heroYaw, -tilt * 0.9),
     flick = invul > 0 && !over && Math.floor(performance.now() / 70) % 2;
+  const rdt = Math.min(0.05, Math.max(0, performance.now() / 1000 - lastRN));
+  lastRN = performance.now() / 1000;
+  courAnimTick(show ? 0 : rdt);
   const fa = flipT > 0 ? flipT * flipT * (3 - 2 * flipT) * TAU : 0;
   if (show) {
     const K0 = heroMats(look());
@@ -261,6 +264,7 @@ function render() {
       fx: 0,
       fy: 0,
       land: 0,
+      bag: { pop: 0 },
       wing: show.wing,
       t: showT,
       sp: 0.3,
@@ -278,11 +282,13 @@ function render() {
       fx: flipSpin ? 0 : fa,
       fy: flipSpin ? fa : 0,
       land: landT,
+      bag: { pop: BAGPOP },
       wing: wingK,
       t: tNow,
       sp: clamp((speed - 15) / 19, 0, 1) + (dash > 0 ? 0.6 : 0),
       tilt,
     });
+  if (!show) drawItemFx(root, tNow);
   flushChars();
   gl.enable(gl.BLEND);
   gl.depthMask(false);

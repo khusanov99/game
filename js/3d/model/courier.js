@@ -88,6 +88,8 @@ if (!cu || !Array.isArray(cu.t) || cu.t.length !== CU.length) cu = { t: CU.map((
 const cuName = (i) => CU[i].n[LG] || CU[i].n.en,
   cuText = (i, j) => CU[i].ch[j][LG] || CU[i].ch[j].en;
 let lastCu = -1;
+const ITEM_CU = [6, 0, 8, 7],
+  ITEM_EMO = ["🧸", "🏺", "🧵", "🗝️", "🧶", "🍬", "🫓", "📚", "🧺"];
 function pickCust(story) {
   if (story) return STORY_CU[ST.th] ?? 0;
   let c;
@@ -164,15 +166,17 @@ function courTouch(o) {
   o.got = true;
   if (o.k === "pkg") {
     const story = !!o.story,
-      dist = story ? clamp(ST.z1 - 130 - pz, 170, 520) : 230 + rnd(0, 90),
+      dist = story ? clamp(ST.z1 - 110 - pz, 300, 620) : 430 + rnd(0, 170),
       l = (Math.random() * 3) | 0;
     CR.st = "carry";
     CR.pkg = null;
     CR.hits = 0;
     CR.story = story;
-    CR.cust = lastCu = pickCust(story);
+    CR.cust = o.cust;
+    CR.item = o.item;
+    CR.anim = { k: "in", item: o.item, t: 0, x: o.x, y: o.y, z: o.z };
     CR.tMax = CR.tLeft = (dist / Math.max(speed, SPEED0)) * 1.15 + 4;
-    CR.drop = { k: "drop", x: LX[l], z: pz + dist, len: 3, story };
+    CR.drop = { k: "drop", x: LX[l], z: pz + dist, len: 3, story, item: o.item };
     objs.push(CR.drop);
     courClear();
     floatText(story ? T("qPick") : T("cPick"), story ? "#7fe6ff" : "#ffd84f");
@@ -229,17 +233,19 @@ function courTouch(o) {
     if (jr.done === 1 && jrCount() === QUEST.length && firstQ) extra.push("🏆 " + T("jrEnd"));
   }
   showTalk({ c: CR.cust, pages, rt, reward, add: tr.add, extra, must: story || tr.ch >= 0 });
+  CR.anim = { k: "out", item: o.item, t: 0, x: o.x, z: o.z };
   CR.story = false;
   CR.st = "find";
   CR.drop = null;
-  CR.at = pz + 110;
+  CR.at = pz + 190;
 }
 function courUpdate(dt) {
   storyUpdate();
   if (CR.st === "find") {
-    const wantStory = ST.state === "pending" && pz + 120 >= ST.z0 + 100;
+    const wantStory = ST.state === "pending" && pz + 120 >= ST.z0 + 40;
     if (!CR.pkg && (wantStory || pz + 120 >= CR.at)) {
-      CR.pkg = { k: "pkg", x: LX[(Math.random() * 3) | 0], z: Math.max(wantStory ? ST.z0 + 100 : CR.at, pz + 120), y: 1.1, len: 0, story: wantStory };
+      const cust = (lastCu = pickCust(wantStory));
+      CR.pkg = { k: "pkg", x: LX[(Math.random() * 3) | 0], z: Math.max(wantStory ? ST.z0 + 40 : CR.at, pz + 120), y: 1.1, len: 0, story: wantStory, cust, item: wantStory ? ST.th : ITEM_CU[cust] };
       if (wantStory) ST.state = "carry";
       objs.push(CR.pkg);
       courClear();
@@ -249,7 +255,7 @@ function courUpdate(dt) {
         floatText(T("qFail"), "#ff6b84");
       } else floatText(T("cMissPkg"), "#ff9a9a");
       CR.pkg = null;
-      CR.at = pz + 140;
+      CR.at = pz + 200;
     }
   } else {
     CR.tLeft -= dt;
@@ -261,7 +267,7 @@ function courUpdate(dt) {
       CR.story = false;
       CR.drop = null;
       CR.st = "find";
-      CR.at = pz + 130;
+      CR.at = pz + 200;
       CR.streak = 0;
     }
   }

@@ -173,7 +173,9 @@ function drawHUD(vp) {
         arrow = dxl > 1.1 ? "◀" : dxl < -1.1 ? "▶" : "▲",
         d = Math.max(0, Math.round(CR.drop.z - pz));
       txt =
-        (CR.story ? "⭐ " : "🎁 ") +
+        (CR.story ? "⭐ " : "") +
+        (ITEM_EMO[CR.item] || "🎁") +
+        " " +
         (CU[CR.cust] ? CU[CR.cust].e + " " : "") +
         T("cDest") +
         " " +

@@ -2,65 +2,171 @@
 "use strict";
 let PKGM = null,
   DROPM = null;
-/* wrapping paper: polka dots, tiny gold stars, a vertical gold ribbon with a highlight */
-function paperTex() {
-  const c = mkc(128, 128),
-    g = c.getContext("2d"),
-    gr = g.createLinearGradient(0, 0, 128, 128);
-  gr.addColorStop(0, "#e0284a");
-  gr.addColorStop(1, "#9c1030");
-  g.fillStyle = gr;
-  g.fillRect(0, 0, 128, 128);
-  g.fillStyle = "rgba(255,255,255,.88)";
-  for (let y = 0; y < 5; y++)
-    for (let x = 0; x < 5; x++) {
-      g.beginPath();
-      g.arc(14 + x * 26 + (y % 2) * 13, 12 + y * 26, 4.2, 0, 7);
-      g.fill();
+/* ---------- the real things being delivered (front faces -z, towards the camera) ---------- */
+const ITEMB = [
+  /* 0 teddy bear */ (b) => {
+    const br = [0.62, 0.4, 0.22],
+      lt = [0.88, 0.68, 0.45],
+      dk = [0.1, 0.06, 0.04],
+      rd = [0.9, 0.12, 0.22];
+    b.sph(0, 0.3, 0, 0.3, 0.28, 0.26, 7, 10, br);
+    b.sph(0, 0.3, -0.18, 0.18, 0.2, 0.09, 6, 8, lt);
+    b.sph(0, 0.72, 0, 0.25, 0.23, 0.22, 7, 10, br);
+    for (const sx of [-0.19, 0.19]) {
+      b.sph(sx, 0.9, 0, 0.1, 0.1, 0.06, 6, 8, br);
+      b.sph(sx, 0.9, -0.03, 0.055, 0.055, 0.03, 5, 6, lt);
+      b.sph(sx * 1.75, 0.36, -0.04, 0.1, 0.17, 0.1, 6, 8, br);
+      b.sph(sx * 0.68, 0.08, -0.1, 0.13, 0.1, 0.15, 6, 8, br);
+      b.sph(sx * 0.4, 0.77, -0.2, 0.032, 0.036, 0.02, 5, 6, dk);
     }
-  g.fillStyle = "#ffd24a";
-  for (let y = 0; y < 4; y++)
-    for (let x = 0; x < 4; x++) {
-      const px = 27 + x * 26 + (y % 2) * 13,
-        py = 25 + y * 26;
-      g.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const r = i % 2 ? 1.6 : 4,
-          a = (i / 10) * 6.283 - 1.57;
-        g.lineTo(px + Math.cos(a) * r, py + Math.sin(a) * r);
-      }
-      g.fill();
+    b.sph(0, 0.67, -0.2, 0.1, 0.08, 0.07, 6, 8, lt);
+    b.sph(0, 0.7, -0.26, 0.035, 0.03, 0.025, 5, 6, dk);
+    b.sph(0, 0.5, -0.17, 0.07, 0.05, 0.04, 5, 6, rd);
+    b.sph(-0.11, 0.5, -0.17, 0.08, 0.05, 0.04, 5, 6, rd);
+    b.sph(0.11, 0.5, -0.17, 0.08, 0.05, 0.04, 5, 6, rd);
+  },
+  /* 1 Samarkand ceramic vase */ (b) => {
+    b.lathe(0, 0, 0, [[0.16, 0], [0.28, 0.1], [0.37, 0.34], [0.3, 0.6], [0.16, 0.76], [0.13, 0.9], [0.23, 1.0]], 14, [0.1, 0.6, 0.76], [0.04, 0.32, 0.62]);
+    b.cyl(0, 0.3, 0, 0.375, 0.375, 0.05, 14, [1, 0.8, 0.28]);
+    b.cyl(0, 0.5, 0, 0.33, 0.33, 0.04, 14, [1, 0.8, 0.28]);
+    for (let i = 0; i < 6; i++) b.sph(Math.sin(i * 1.047) * 0.34, 0.41, -Math.cos(i * 1.047) * 0.34, 0.05, 0.05, 0.05, 4, 5, [0.96, 0.96, 1]);
+  },
+  /* 2 Bukhara silk rolls */ (b) => {
+    b.cyl(-0.2, 0, 0, 0.21, 0.21, 0.82, 10, [0.86, 0.1, 0.45], true, [0.98, 0.7, 0.18]);
+    b.cyl(0.22, 0, 0.04, 0.19, 0.19, 0.74, 10, [0.1, 0.62, 0.7], true, [0.96, 0.9, 0.5]);
+    b.box(-0.2, 0.5, -0.215, 0.3, 0.04, 0.02, [1, 0.85, 0.35]);
+    b.box(0, 0.02, -0.36, 0.7, 0.025, 0.3, [0.86, 0.1, 0.45]);
+  },
+  /* 3 Khiva old brass key */ (b) => {
+    const g = [0.95, 0.72, 0.22],
+      g2 = [0.7, 0.5, 0.12];
+    for (let i = 0; i < 12; i++) b.sph(Math.cos(i * 0.5236) * 0.19, 0.82 + Math.sin(i * 0.5236) * 0.19, 0, 0.055, 0.055, 0.05, 4, 5, g);
+    b.box(0, 0.4, 0, 0.08, 0.64, 0.07, g);
+    b.box(0, 0.62, 0, 0.16, 0.06, 0.1, g2);
+    b.box(0.1, 0.1, 0, 0.14, 0.07, 0.07, g);
+    b.box(0.08, 0.22, 0, 0.1, 0.07, 0.07, g);
+    b.box(0, 0.5, -0.06, 0.2, 0.15, 0.03, [0.8, 0.1, 0.18]);
+  },
+  /* 4 Fergana silk-mill thread spools */ (b) => {
+    const cols = [[0.9, 0.15, 0.25], [0.12, 0.6, 0.85], [0.98, 0.8, 0.2]];
+    [[-0.26, 0.05], [0.26, 0.05], [0, -0.22]].forEach(([x, z], i) => {
+      b.cyl(x, 0, z, 0.2, 0.2, 0.05, 10, [0.78, 0.6, 0.36]);
+      b.cyl(x, 0.05, z, 0.14, 0.14, 0.42, 10, cols[i]);
+      b.cyl(x, 0.47, z, 0.2, 0.2, 0.05, 10, [0.78, 0.6, 0.36]);
+    });
+    b.box(0, 0.54, 0.0, 0.34, 0.04, 0.26, [0.96, 0.45, 0.7]);
+  },
+  /* 5 night-cafe sweets */ (b) => {
+    b.box(0, 0.15, 0, 0.84, 0.3, 0.64, [0.96, 0.52, 0.7]);
+    b.box(0, 0.3, 0, 0.84, 0.03, 0.64, [1, 0.85, 0.35]);
+    const c = [[0.95, 0.35, 0.2], [0.5, 0.25, 0.1], [0.98, 0.78, 0.2], [0.4, 0.8, 0.4], [0.95, 0.35, 0.2], [0.5, 0.25, 0.1]];
+    for (let i = 0; i < 6; i++) {
+      const x = -0.25 + (i % 3) * 0.25,
+        z = i < 3 ? -0.14 : 0.14;
+      b.cyl(x, 0.3, z, 0.1, 0.12, 0.07, 8, [1, 0.9, 0.7]);
+      b.sph(x, 0.42, z, 0.11, 0.1, 0.11, 6, 8, c[i]);
     }
-  const rb = g.createLinearGradient(54, 0, 74, 0);
-  rb.addColorStop(0, "#c98f1c");
-  rb.addColorStop(0.35, "#ffe27a");
-  rb.addColorStop(0.65, "#ffd24a");
-  rb.addColorStop(1, "#c98f1c");
-  g.fillStyle = rb;
-  g.fillRect(54, 0, 20, 128);
-  return texFrom(c);
+  },
+  /* 6 flat round bread (non) on a cloth */ (b) => {
+    b.box(0, 0.015, 0, 1.0, 0.03, 1.0, [0.8, 0.15, 0.25]);
+    b.cyl(0, 0.03, 0, 0.5, 0.46, 0.14, 14, [0.86, 0.58, 0.22], true);
+    b.cyl(0, 0.17, 0, 0.34, 0.3, 0.025, 14, [0.74, 0.44, 0.14], true);
+    for (let i = 0; i < 12; i++) b.sph(Math.sin(i * 0.52) * 0.4, 0.17, Math.cos(i * 0.52) * 0.4, 0.03, 0.02, 0.03, 4, 5, [0.98, 0.92, 0.7]);
+  },
+  /* 7 school books */ (b) => {
+    [[0.09, 0.18, 0.82, [0.2, 0.4, 0.9]], [0.27, 0.16, 0.76, [0.88, 0.2, 0.25]], [0.44, 0.17, 0.79, [0.2, 0.7, 0.4]]].forEach(([y, h, w, c], i) => {
+      b.box(0.03 * (i - 1), y, 0, w, h, 0.56, c);
+      b.box(0.03 * (i - 1) + w / 2 - 0.005, y, 0, 0.015, h - 0.04, 0.52, [0.97, 0.94, 0.86]);
+      b.box(0.03 * (i - 1), y, -0.285, w - 0.04, h - 0.05, 0.015, [1, 0.85, 0.35]);
+    });
+  },
+  /* 8 grocery crate */ (b) => {
+    const w = [0.66, 0.44, 0.22];
+    b.box(0, 0.22, 0, 0.84, 0.44, 0.62, w);
+    for (const y of [0.12, 0.3]) b.box(0, y, -0.315, 0.86, 0.06, 0.02, [0.5, 0.32, 0.14]);
+    [[-0.22, -0.12, [0.82, 0.12, 0.2]], [0, -0.14, [0.9, 0.2, 0.15]], [0.22, -0.1, [0.82, 0.12, 0.2]], [-0.12, 0.14, [0.5, 0.8, 0.2]], [0.14, 0.14, [0.45, 0.78, 0.2]]].forEach(([x, z, c]) => b.sph(x, 0.55, z, 0.14, 0.13, 0.14, 6, 8, c));
+    b.sph(0.02, 0.7, 0.0, 0.08, 0.02, 0.04, 4, 6, [0.2, 0.6, 0.2]);
+  },
+];
+const ITEMM = [];
+const itemMesh = (i) => {
+  if (!ITEMM[i]) {
+    const b = new B();
+    ITEMB[i](b);
+    ITEMM[i] = b.mesh();
+  }
+  return ITEMM[i];
+};
+function scaleM(M, k) {
+  const o = nm();
+  o.set(M);
+  for (const i of [0, 1, 2, 4, 5, 6, 8, 9, 10]) o[i] *= k;
+  return o;
+}
+const ITEM_OPT = { emis: 0.42, spec: 0.45, rim: 0.4 };
+let BAGPOP = 0,
+  lastRN = 0;
+/* pick-up / hand-over animation: the item arcs into the courier bag (bag bounces, sparks), or out of it to the gate */
+function courAnimTick(rdt) {
+  BAGPOP = Math.max(0, BAGPOP - rdt * 2.4);
+  const a = CR.anim;
+  if (!a) return;
+  a.t += rdt;
+  if (a.k === "in" && a.t >= 0.6 && !a.hit) {
+    a.hit = 1;
+    BAGPOP = 1;
+    burst(px, py + 1, pz - 0.4, 18, "#7fe6ff", 4.5);
+    sfx.pow();
+  }
+  if (a.k === "out" && a.t >= 0.75 && !a.hit) {
+    a.hit = 1;
+    BAGPOP = 0.7;
+    burst(a.x, 2.2, a.z, 28, "#ffd84f", 7);
+  }
+  if (a.t > 2.4) CR.anim = null;
+}
+function drawItemFx(root, ca) {
+  const a = CR.anim;
+  const bag = joint(root, 0, 0.93, -0.4, 0);
+  if (CR.st === "carry" && !(a && a.k === "in" && a.t < 0.6) && CR.item >= 0) {
+    const w = Math.sin(ca * 3) * 0.04;
+    draw(itemMesh(CR.item), scaleM(joint(bag, 0, -0.2 + w, 0, 0, ca * 0.8, 0), 0.45), null, ITEM_OPT);
+  }
+  if (!a) return;
+  const k = a.k === "in" ? Math.min(1, a.t / 0.6) : Math.min(1, a.t / 0.75),
+    e = k * k * (3 - 2 * k);
+  let x, y, z, sc;
+  if (a.k === "in") {
+    x = a.x + (px - a.x) * e;
+    y = a.y + (py + 1.05 - a.y) * e + Math.sin(k * Math.PI) * 1.6;
+    z = a.z + (pz - 0.4 - a.z) * e;
+    sc = 1.15 - 0.65 * e;
+    if (k < 1) draw(itemMesh(a.item), scaleM(joint(Tp(x, y - 0.4, z), 0, a.t * 9, 0, 0), sc), null, ITEM_OPT);
+  } else if (a.t < 2.2) {
+    /* out: from the bag up onto the gate, then it rests there glowing */
+    const gx = a.x,
+      gz = a.z + 1.2;
+    x = px + (gx - px) * e;
+    y = py + 1.05 + (1.7 - py - 1.05) * e + Math.sin(k * Math.PI) * 1.2;
+    z = pz - 0.4 + (gz - pz + 0.4) * e;
+    sc = 0.5 + 0.8 * e;
+    draw(itemMesh(a.item), scaleM(joint(Tp(x, y, z), 0, a.t * 5, 0, 0), sc), null, ITEM_OPT);
+    if (k >= 1 && PKGM) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      gl.depthMask(false);
+      draw(PKGM.halo, Tp(gx, 1.9, gz - 0.2), HALOT, { emis: 1, alpha: Math.max(0, 0.9 - (a.t - 0.75) * 0.6), tint: [1, 0.9, 0.5] });
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
+  }
 }
 function courBuild() {
-  const b = new B(),
-    lid = new B(),
-    g = new B(),
-    gold = [1, 0.8, 0.28],
-    gold2 = [0.9, 0.66, 0.15];
-  b.box(0, 0.31, 0, 0.9, 0.62, 0.9, [1, 1, 1], { uv: { px: [0, 0, 1, 1], nx: [0, 0, 1, 1], pz: [0, 0, 1, 1], nz: [0, 0, 1, 1], py: [0, 0, 1, 1], ny: [0, 0, 1, 1] } });
-  lid.box(0, 0.73, 0, 0.99, 0.22, 0.99, [0.86, 0.12, 0.28]);
-  lid.box(0, 0.73, 0, 0.17, 0.235, 1.01, gold);
-  lid.box(0, 0.73, 0, 1.01, 0.235, 0.17, gold);
-  lid.box(0, 0.62, 0, 1.0, 0.04, 1.0, gold2);
-  lid.sph(0, 0.89, 0, 0.14, 0.12, 0.14, 6, 8, gold2); // bow knot
-  for (const [x, z] of [[0.24, 0], [-0.24, 0], [0, 0.24], [0, -0.24]]) {
-    lid.sph(x, 0.93, z, x ? 0.22 : 0.1, 0.13, z ? 0.22 : 0.1, 6, 8, gold);
-    lid.sph(x * 1.55, 0.9, z * 1.55, x ? 0.1 : 0.05, 0.08, z ? 0.1 : 0.05, 5, 6, gold2);
-  }
-  for (const sx of [-0.12, 0.12]) lid.box(sx, 0.64, -0.5, 0.1, 0.34, 0.03, gold2); // ribbon tails
+  const g = new B(),
+    q = new B();
   for (const a of [0, 1, 2, 3]) g.box(Math.cos(a * 1.571) * 0.8, 0.5 + (a % 2) * 0.35, Math.sin(a * 1.571) * 0.8, 0.09, 0.09, 0.09, [1, 0.95, 0.6]);
-  const q = new B();
   q.quad([[-1.3, 1.3, 0], [1.3, 1.3, 0], [1.3, -1.3, 0], [-1.3, -1.3, 0]], [0, 0, -1], QUADUV, [1, 0.85, 0.4]);
-  PKGM = { b: b.mesh(), lid: lid.mesh(), g: g.mesh(), halo: q.mesh(), tex: paperTex() };
+  PKGM = { g: g.mesh(), halo: q.mesh() };
   const d = new B(),
     dg = new B(),
     w = [0.9, 0.92, 0.95];
@@ -78,10 +184,8 @@ function drawCourierObj(o, ca) {
   if (!PKGM) courBuild();
   if (o.k === "pkg") {
     const bob = Math.sin(ca * 2 + o.z) * 0.14,
-      sc = 1 + Math.sin(ca * 4) * 0.04,
-      M = joint(Tp(o.x, o.y - 0.45 + bob, o.z), 0, 0, 0, 0, ca * 1.3, 0);
-    draw(PKGM.b, M, PKGM.tex, { emis: 0.4, spec: 0.35, tint: [sc, sc, sc] });
-    draw(PKGM.lid, M, null, { emis: 0.45, spec: 0.7 });
+      M = joint(Tp(o.x, o.y - 0.5 + bob, o.z), 0, 0, 0, 0, ca * 1.3, 0);
+    draw(itemMesh(o.item || 0), scaleM(M, 1.2), null, ITEM_OPT);
     draw(PKGM.g, joint(Tp(o.x, o.y - 0.45 + bob, o.z), 0, 0, 0, 0, -ca * 2.2, 0), null, { emis: 1 });
     /* soft golden glow around it, so it reads from far away */
     gl.enable(gl.BLEND);

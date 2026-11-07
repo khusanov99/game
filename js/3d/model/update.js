@@ -28,6 +28,22 @@ let lastMetro = 0,
   forkMul = 1,
   lastFork = false,
   forkWarned = false;
+function sparksTick(dt) {
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i];
+    s.l -= dt;
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.z += s.vz * dt;
+    s.vy -= 9 * dt;
+    if (s.l <= 0) {
+      /* swap-remove + recycle: no splice shifting, no garbage */
+      sparks[i] = sparks[sparks.length - 1];
+      sparks.pop();
+      SPARK_POOL.push(s);
+    }
+  }
+}
 function update(dt) {
   if (hitStop > 0) {
     hitStop -= dt;
@@ -339,20 +355,7 @@ function update(dt) {
     pz += 4 * dt;
   }
   if (coinHud > 0) coinHud -= dt;
-  for (let i = sparks.length - 1; i >= 0; i--) {
-    const s = sparks[i];
-    s.l -= dt;
-    s.x += s.vx * dt;
-    s.y += s.vy * dt;
-    s.z += s.vz * dt;
-    s.vy -= 9 * dt;
-    if (s.l <= 0) {
-      /* swap-remove + recycle: no splice shifting, no garbage */
-      sparks[i] = sparks[sparks.length - 1];
-      sparks.pop();
-      SPARK_POOL.push(s);
-    }
-  }
+  sparksTick(dt);
   for (let i = floaties.length - 1; i >= 0; i--) {
     floaties[i].l -= dt;
     if (floaties[i].l <= 0) floaties.splice(i, 1);
