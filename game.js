@@ -1698,26 +1698,70 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         Y = groundY - (o.y + o.h);
       if (X < -W - 200 || X > W) continue;
       if (o.t === "pit") {
+        /* open trench: dark shaft with a hot glow at the bottom, concrete curbs with chevrons, warning signs, lamps and cones */
+        const cx = o.x + o.w / 2 - W / 2,
+          x0 = o.x - W / 2,
+          x1 = o.x + o.w - W / 2;
+        box(T(cx, 0.8, -10), o.w, 1.4, 170, 0, [0.01, 0.01, 0.03], 0);
         box(
-          T(o.x + o.w / 2 - W / 2, 0.8, -10),
-          o.w,
-          1.4,
-          170,
+          T(cx, 0.55, -30),
+          o.w - 6,
+          0.5,
+          6,
           0,
-          [0.01, 0.01, 0.03],
-          0,
-        );
-        for (const sdx of [o.x - W / 2 - 3, o.x + o.w - W / 2 + 3])
-          for (let k = 0; k < 4; k++)
+          [1, 0.38, 0.08],
+          0.9 + 0.1 * blink,
+        ); // glow at the bottom
+        box(T(cx, 0.6, -2), o.w - 6, 0.5, 4, 0, [0.7, 0.18, 0.05], 0.8);
+        for (const gx of [x0 + 4, x1 - 4])
+          box(T(gx, 1.7, -20), 5, 0.5, 120, 0, [1, 0.45, 0.1], 0.9); // glowing rim
+        box(T(cx, 1.8, -62), o.w - 6, 0.5, 3, 0, [1, 0.5, 0.12], 0.85);
+        for (const sx of [x0 - 3, x1 + 3]) {
+          const ou = sx < cx ? -1 : 1;
+          box(T(sx, 3, -30), 8, 6, 30, 0, [0.72, 0.72, 0.74], 0.15); // concrete curb
+          for (let k = 0; k < 5; k++)
             box(
-              T(sdx, 1.5 + k * 6, -30),
-              6,
-              6,
-              8,
+              J(T(sx, 6.4, -30 + (k - 2) * 6), 0, 0, 0, 0, 0, 0),
+              8.4,
+              0.8,
               3,
+              0,
               k % 2 ? [1, 0.76, 0.1] : [0.09, 0.09, 0.12],
-              0.3,
+              0.35,
             );
+          // warning post with a blinking lamp + a red triangle sign
+          cyl(T(sx + ou * 2, 34, -38), 1.1, 34, K.grey, 0.2);
+          sph(
+            T(sx + ou * 2, 36, -38),
+            3.4,
+            3.4,
+            3.4,
+            blink ? [1, 0.7, 0.1] : [0.5, 0.3, 0.05],
+            1,
+          );
+          box(
+            J(T(sx + ou * 2, 26, -41.5), 0, 0, 0, 0, 0, PI / 4),
+            9,
+            9,
+            0.8,
+            0,
+            [0.92, 0.12, 0.1],
+            0.5,
+          );
+          box(
+            J(T(sx + ou * 2, 26, -42.1), 0, 0, 0, 0, 0, PI / 4),
+            5.6,
+            5.6,
+            0.5,
+            0,
+            [1, 1, 1],
+            0.6,
+          );
+          // a cone beside the curb
+          const cb = T(sx + ou * 9, 0, -36);
+          cone(cb, 4, 13, [1, 0.42, 0.08], 0.3);
+          cyl(J(cb, 0, 8, 0), 2.3, 2.4, [0.96, 0.96, 0.96], 0.5);
+        }
       } else if (o.t === "train" && o.v === "damas") {
         /* Chevrolet / Daewoo Damas Deluxe micro-van: grey nose with round headlights, black bumper with amber
            indicators, tall cabin with a sloping windscreen, three side windows, orange + black rear stripe */
@@ -1836,6 +1880,52 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
           0.2,
         );
         box(T(X - o.w / 2 + 6, Y + 14, -25), 6, 6, 2, 0, [1, 0.97, 0.69], 1);
+        /* metro details: yellow safety stripe, sliding doors, roof AC units, headlight bar, rain gutter, coupler */
+        box(T(X, Y + 11, -24.2), o.w, 2.2, 1, 0, [1, 0.8, 0.12], 0.45);
+        for (const dx of [-o.w * 0.12, o.w * 0.3]) {
+          box(
+            T(X + dx, Y + 22, -24),
+            12,
+            o.h - 26,
+            1.2,
+            0,
+            [0.82, 0.88, 0.96],
+            0.4,
+          );
+          box(
+            T(X + dx, Y + 22, -24.7),
+            0.9,
+            o.h - 26,
+            0.8,
+            0,
+            [0.12, 0.2, 0.4],
+            0.2,
+          );
+          box(
+            T(X + dx, Y + o.h - 14, -24.8),
+            9,
+            9,
+            0.8,
+            0,
+            [0.62, 0.82, 1],
+            0.7,
+          );
+        }
+        for (const dx of [-o.w * 0.25, o.w * 0.2]) {
+          box(T(X + dx, Y + o.h + 2, 0), 22, 4, 26, 0, [0.7, 0.74, 0.8], 0.2);
+          box(
+            T(X + dx, Y + o.h + 4.4, -4),
+            14,
+            1,
+            1.2,
+            0,
+            [0.3, 0.33, 0.4],
+            0.1,
+          );
+        }
+        box(T(X - o.w / 2 - 1, Y + 20, -14), 1.5, 5, 8, 0, [1, 0.97, 0.69], 1);
+        box(T(X - o.w / 2 - 1, Y + 20, 14), 1.5, 5, 8, 0, [1, 0.97, 0.69], 1);
+        box(T(X + o.w / 2 + 2, Y + 8, 0), 4, 3, 6, 0, K.dark, 0.1);
         for (const wx of [
           -o.w / 2 + 28,
           -o.w / 2 + 48,
@@ -1850,103 +1940,287 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
             0.1,
           );
       } else if (o.t === "block") {
-        const bd = T(X, Y, 0),
-          dp = Math.min(46, o.w + 8);
+        const dp = Math.min(46, o.w + 8),
+          at = (u, y, z) => T(X + u, Y + y, z),
+          w = o.w,
+          h = o.h;
         if (o.v === "crate") {
-          box(bd, o.w, o.h, dp, o.h / 2, [0.86, 0.56, 0.28], 0.12);
-          box(bd, o.w + 2, 4, dp + 2, 3, [0.45, 0.26, 0.1], 0.1);
-          box(bd, o.w + 2, 4, dp + 2, o.h - 3, [0.45, 0.26, 0.1], 0.1);
-          for (const q of [0.3, 0.7])
+          /* wooden shipping crate: slatted faces, dark frame + diagonal brace, steel corner brackets, red stencil label */
+          const lite = [0.9, 0.62, 0.31],
+            mid = [0.8, 0.53, 0.26],
+            dk = [0.4, 0.22, 0.09];
+          box(at(0, 0, 0), w, h, dp, h / 2, mid, 0.1);
+          const n = Math.max(3, Math.round(w / 9)),
+            sw = w / n;
+          for (let k = 0; k < n; k++)
             box(
-              T(X, Y, -dp / 2 - 0.8),
-              o.w + 1,
-              4,
-              1.5,
-              o.h * q,
-              [0.4, 0.22, 0.08],
+              at(-w / 2 + sw * (k + 0.5), 0, -dp / 2 - 0.9),
+              sw - 1.2,
+              h - 7,
+              1.8,
+              h / 2,
+              k % 2 ? lite : mid,
+              0.14,
+            );
+          for (const yy of [2.5, h - 2.5])
+            box(at(0, 0, -dp / 2 - 1.3), w + 1.5, 5, 2.6, yy, dk, 0.1);
+          for (const xx of [-w / 2 + 2.2, w / 2 - 2.2])
+            box(at(xx, 0, -dp / 2 - 1.3), 4.4, h, 2.6, h / 2, dk, 0.1);
+          box(
+            J(
+              at(0, h / 2, -dp / 2 - 2.4),
+              0,
+              0,
+              0,
+              0,
+              0,
+              Math.atan2(h - 8, w - 8),
+            ),
+            Math.hypot(w - 8, h - 8),
+            3.4,
+            1.4,
+            0,
+            dk,
+            0.1,
+          );
+          box(at(0, 0, 0), w + 2, 2.8, dp + 2, h + 1, [0.72, 0.46, 0.21], 0.1); // lid
+          for (const xx of [-w / 2 + 1, w / 2 - 1])
+            for (const yy of [1.5, h - 1.5])
+              box(
+                at(xx, 0, -dp / 2 - 2.4),
+                4.4,
+                4.4,
+                1.2,
+                yy,
+                [0.62, 0.66, 0.72],
+                0.35,
+              );
+          box(
+            at(w * 0.12, 0, -dp / 2 - 2.8),
+            Math.min(18, w * 0.5),
+            7.5,
+            0.8,
+            h * 0.6,
+            [0.88, 0.16, 0.12],
+            0.45,
+          );
+          box(
+            at(w * 0.12, 0, -dp / 2 - 3.2),
+            Math.min(14, w * 0.4),
+            4.2,
+            0.6,
+            h * 0.6,
+            [0.97, 0.97, 0.95],
+            0.6,
+          );
+        } else if (o.v === "cones") {
+          /* three traffic cones with reflective collars, square bases and a red/white tape between them */
+          const R = Math.min(8, w * 0.17),
+            offs = [-w * 0.3, w * 0.3, 0],
+            zz = [0, 0, 7];
+          offs.forEach((u, i) => {
+            const cb = at(u, 0, zz[i]),
+              ch = h * (i === 2 ? 0.86 : 0.95);
+            box(cb, R * 2.5, 2.6, R * 2.5, 1.3, [0.12, 0.12, 0.14], 0.1);
+            cone(J(cb, 0, 2.2, 0), R, ch - 2.2, [1, 0.42, 0.08], 0.32);
+            for (const q of [0.34, 0.62]) {
+              const ry = 2.2 + (ch - 2.2) * q,
+                rr = R * (1 - q) + 0.5;
+              cyl(J(cb, 0, ry + 1.5, 0), rr, 3, [0.97, 0.97, 0.95], 0.55);
+            }
+            sph(
+              J(cb, 0, ch, 0),
+              R * 0.22,
+              R * 0.22,
+              R * 0.22,
+              [0.15, 0.15, 0.17],
               0.1,
             );
-        } else if (o.v === "cones") {
-          for (const q of [-1, 1]) {
-            const cb = T(X + q * o.w * 0.22, Y, 0);
-            box(cb, o.w * 0.5, 3, o.w * 0.5, 1.5, K.dark, 0.1);
-            cone(cb, o.w * 0.2, o.h * 0.95, [1, 0.42, 0.08], 0.3);
-            cyl(
-              J(cb, 0, o.h * 0.55, 0),
-              o.w * 0.14,
-              5,
-              [0.95, 0.95, 0.95],
-              0.5,
-            );
-          }
-        } else {
-          box(bd, o.w, o.h, dp * 0.7, o.h / 2, [0.12, 0.12, 0.16], 0.1);
-          for (let k = 0; k * 14 < o.h; k++)
+          });
+          for (let k = 0; k < 6; k++)
             box(
-              J(bd, 0, 0, -dp * 0.36, 0, 0, 0),
-              o.w + 1,
-              7,
-              1.5,
-              4 + k * 14,
-              k % 2 ? [1, 0.76, 0.1] : [0.12, 0.12, 0.16],
-              0.4,
+              at(-w * 0.3 + (w * 0.6 * (k + 0.5)) / 6, 0, -1.4),
+              (w * 0.6) / 6 + 0.2,
+              2.4,
+              0.6,
+              h * 0.62,
+              k % 2 ? [0.95, 0.95, 0.95] : [0.9, 0.15, 0.12],
+              0.45,
             );
-          box(T(X, Y + o.h + 4, 0), 4, 6, 4, 0, K.dark, 0.1);
-        }
-        if (o.v !== "cones")
+        } else {
+          /* road-block: concrete Jersey base, striped warning board on two posts, flashing beacon on top */
+          const bh = h * 0.42;
+          box(
+            at(0, 0, 0),
+            w,
+            bh * 0.55,
+            dp * 0.9,
+            bh * 0.275,
+            [0.74, 0.74, 0.76],
+            0.12,
+          );
+          box(
+            at(0, 0, 0),
+            w * 0.86,
+            bh * 0.5,
+            dp * 0.55,
+            bh * 0.55 + bh * 0.25,
+            [0.78, 0.78, 0.8],
+            0.12,
+          );
+          box(
+            at(0, 0, -dp * 0.45 - 0.6),
+            w * 0.8,
+            2,
+            0.8,
+            bh * 0.35,
+            [1, 0.78, 0.12],
+            0.5,
+          ); // reflective strip
+          for (const xx of [-w * 0.36, w * 0.36])
+            box(
+              at(xx, 0, -2),
+              3,
+              h * 0.55,
+              3,
+              bh + h * 0.275,
+              [0.2, 0.2, 0.24],
+              0.15,
+            );
+          const by = bh + h * 0.12,
+            bhh = h * 0.34,
+            ns = 6;
+          box(
+            at(0, 0, -4.2),
+            w * 0.94,
+            bhh + 2,
+            2.4,
+            by + bhh / 2,
+            [0.12, 0.12, 0.15],
+            0.1,
+          );
+          for (let k = 0; k < ns; k++)
+            box(
+              J(
+                at(-w * 0.44 + (w * 0.88 * (k + 0.5)) / ns, by + bhh / 2, -5.6),
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.5,
+              ),
+              ((w * 0.88) / ns) * 0.62,
+              bhh * 1.15,
+              0.8,
+              0,
+              k % 2 ? [1, 0.55, 0.08] : [0.97, 0.97, 0.95],
+              0.45,
+            );
+          box(at(0, 0, -2), 3.4, 7, 3.4, h + 1.5, [0.2, 0.2, 0.24], 0.15);
           sph(
-            T(X + o.w * 0.2, Y + o.h + 6, 0),
-            3.5,
-            3.5,
-            3.5,
-            blink ? [1, 0.23, 0.23] : [0.48, 0.1, 0.1],
+            at(0, h + 6.5, -2),
+            4.2,
+            4.2,
+            4.2,
+            blink ? [1, 0.25, 0.2] : [0.5, 0.1, 0.1],
             1,
           );
+          sph(
+            at(0, h + 6.5, -2),
+            6.4,
+            6.4,
+            6.4,
+            blink ? [1, 0.45, 0.3] : [0.3, 0.08, 0.08],
+            blink ? 0.35 : 0.1,
+          );
+        }
       } else if (o.t === "drone") {
+        /* patrol quad-copter: armoured body, glowing red eye, four arms with spinning rotors, skids and an under-light */
         const hv = Math.sin(t * 4 + o.x * 0.01) * 2,
-          dr = T(X, Y + o.h / 2 + hv, 0);
-        sph(dr, o.w * 0.5, o.h * 0.5, 18, [0.24, 0.07, 0.15], 0.2);
-        box(J(dr, 0, 0, -16), o.w * 0.7, 7, 3, 0, [0.07, 0.02, 0.04], 0.1);
-        box(
-          T(X + Math.sin(frame * 0.2) * 9, Y + o.h / 2 + hv, -17.5),
-          6,
-          4,
-          2,
-          0,
-          [1, 0.23, 0.23],
+          dr = T(X, Y + o.h / 2 + hv, 0),
+          gm = [0.2, 0.21, 0.27],
+          gl = [0.3, 0.32, 0.4];
+        sph(dr, 10, 6.5, 10, gm, 0.22);
+        sph(J(dr, 0, 3, 0), 8, 4, 8, gl, 0.3);
+        box(J(dr, 0, -1, -8.6), 12, 5.4, 2, 0, [0.05, 0.02, 0.05], 0.1);
+        sph(
+          J(dr, Math.sin(frame * 0.2) * 3.4, -1, -9.6),
+          2.2,
+          2.2,
+          2.2,
+          [1, 0.2, 0.2],
           1,
         );
-        const rt = J(dr, 0, o.h * 0.5 + 4, 0, 0, t * 40);
-        box(rt, o.w * 0.9, 1.6, 5, 0, [0.9, 0.82, 0.78], 0.6);
-        box(
-          J(rt, 0, 0, 0, 0, PI / 2),
-          o.w * 0.9,
-          1.6,
-          5,
-          0,
-          [0.9, 0.82, 0.78],
-          0.6,
+        sph(
+          J(dr, Math.sin(frame * 0.2) * 3.4, -1, -9.6),
+          3.6,
+          3.6,
+          3.6,
+          [1, 0.35, 0.3],
+          0.2,
+        );
+        for (const sx of [-1, 1])
+          for (const sz of [-1, 1]) {
+            const rx = sx * 16,
+              rz = sz * 8.5,
+              ry = 5.5;
+            box(
+              J(dr, sx * 8, 3, sz * 4, 0, 0, sx * 0.1),
+              14,
+              2.2,
+              2.6,
+              0,
+              [0.14, 0.15, 0.19],
+              0.15,
+            ); // arm
+            cyl(J(dr, rx, ry - 1, rz), 2.6, 5, [0.1, 0.1, 0.13], 0.15); // motor
+            const rt = J(dr, rx, ry + 1.4, rz, 0, t * 60 * sx * sz);
+            box(rt, 17, 0.9, 2.6, 0, [0.88, 0.9, 0.95], 0.55);
+            box(
+              J(rt, 0, 0, 0, 0, PI / 2),
+              17,
+              0.9,
+              2.6,
+              0,
+              [0.88, 0.9, 0.95],
+              0.55,
+            );
+            cyl(J(dr, rx, ry + 1.1, rz), 8.8, 0.35, [0.7, 0.78, 0.9], 0.5); // rotor blur disc
+          }
+        for (const sx of [-6, 6])
+          box(J(dr, sx, -7, 0), 1.4, 5, 1.4, 0, K.grey, 0.2);
+        box(J(dr, 0, -9.4, 0), 18, 1.2, 1.4, 0, K.grey, 0.2);
+        cone(
+          J(dr, 0, -6, 0, PI),
+          6,
+          9,
+          blink ? [1, 0.25, 0.2] : [0.6, 0.12, 0.1],
+          0.75,
         );
         sph(
-          J(dr, -o.w * 0.4, 6, -14),
-          2.6,
-          2.6,
-          2.6,
+          J(dr, -7, 4.6, -8),
+          1.8,
+          1.8,
+          1.8,
           blink ? [1, 0.23, 0.23] : [0.48, 0.1, 0.1],
           1,
         );
       } else {
-        const bd = T(X, Y, 0);
-        box(bd, o.w, o.h, 34, o.h / 2, [1, 0.35, 0.24], 0.2);
-        box(
-          J(bd, 0, 0, -17.5),
-          o.w - 12,
-          o.h - 8,
-          1.5,
-          o.h / 2,
-          [1, 0.82, 0.54],
-          0.4,
-        );
+        /* plasma bolt: bright core, hot shell and a streaming tail */
+        const c0 = T(X, Y + o.h / 2, 0),
+          fl = Math.sin(frame * 0.7) * 0.8;
+        sph(c0, 6.5, 6.5, 6.5, [1, 0.95, 0.85], 1);
+        sph(c0, 9.5 + fl, 9.5 + fl, 9.5 + fl, [1, 0.28, 0.2], 0.9);
+        sph(c0, 12 + fl, 12 + fl, 12 + fl, [1, 0.5, 0.35], 0.3);
+        for (let k = 0; k < 3; k++)
+          cone(
+            J(c0, 8 + k * 4, (k - 1) * 3, 0, 0, 0, -PI / 2),
+            5 - k,
+            22 - k * 4,
+            k ? [1, 0.45, 0.2] : [1, 0.3, 0.2],
+            0.85,
+          );
       }
     }
     /* items: spinning coins and power-up gems */
