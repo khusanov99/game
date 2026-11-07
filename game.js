@@ -2504,7 +2504,7 @@ function setQuality(l) {
   Q.level = l;
   Q.shadow = gfx === "ultra" && !COARSE && FX.shadow; // real shadowBlur is very expensive: only when the player explicitly picks ULTRA on desktop
   Q.flat = l >= 2;
-  Q.dpr = [2, 1.5, 1, 0.75][Math.min(l, 3)];
+  Q.dpr = [2, 1.75, 1.25, 1][Math.min(l, 3)];
   Q.maxP = [140, 70, 40, 24][Math.min(l, 3)] >> (CFG.lowmem ? 1 : 0);
   skyKey = "";
   gndKey = "";
@@ -7892,6 +7892,7 @@ function loop(t) {
       else slowW = 0;
       if (
         CFG.adaptive !== false &&
+        gfx === "auto" && // a preset the player picked by hand (Ultra / High / ...) is never lowered behind their back
         avg > 22 &&
         (slowW >= 2 || avg > 34) &&
         Q.level < 3
