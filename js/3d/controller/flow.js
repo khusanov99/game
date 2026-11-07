@@ -11,6 +11,7 @@ function showOv(title, sub, row, btn, canRevive) {
   rsBtn.style.display = "none";
   achBtn.style.display = "none";
   gfxBtn.style.display = "none";
+  cityBtn.style.display = "none";
   $("oTitle").textContent = title;
   $("oSub").innerHTML = sub;
   $("oRow").innerHTML = row;
@@ -37,6 +38,8 @@ function menu() {
   );
   gfxBtn.style.display = "block";
   gfxLabel();
+  cityBtn.style.display = "block";
+  cityBtn.textContent = T("cityBtn") + "  " + cityCount() + "/" + CITY.length;
   achBtn.style.display = "block";
   achBtn.textContent =
     T("achBtn") +
@@ -45,6 +48,27 @@ function menu() {
     "/" +
     ACHS.length;
   $("ov").classList.toggle("show", state === "ready");
+}
+function cityOv() {
+  ovMode = "city";
+  const n = cityCount(),
+    rows = CITY.map((c, i) => {
+      const ok = cityBuilt[i],
+        can = wallet >= c.cost,
+        nm = c.n[LG] || c.n.en,
+        city = THEMES[i].name;
+      return `<div style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;font:600 11px Inter,sans-serif;padding:6px 0;color:${ok ? "#7ffcb0" : "#c8cdf0"}"><span><b>${ok ? "🏛 " : "🧱 "}${nm}</b><br><span style="font-weight:500;color:#8c93b8">${city}</span></span>${ok ? `<span>${T("cityDone")}</span>` : `<button type="button" data-b="${i}" style="width:auto;padding:8px 12px;font-size:11px;${can ? "" : "opacity:.45;"}background:linear-gradient(90deg,#ffd84f,#ff9a3c);color:#3a2200">${T("cityBuild")} · ${c.cost}</button>`}</div>`;
+    }).join("");
+  showOv(
+    T("cityTitle"),
+    T("cityHint") +
+      "<br><b style='color:#ffd84f'>" +
+      T("cityBonus").replace("{n}", n).replace("{p}", n * 5) +
+      "</b>",
+    `<div class="pill"><small>${T("coins")}</small><span class="coin"></span>${wallet}</div>` + rows,
+    T("back2"),
+    false,
+  );
 }
 function achOv() {
   ovMode = "ach";
@@ -113,7 +137,8 @@ function endGame() {
           (q) => `<br><b style="color:#7ffcb0">✔ ${T("missionDone")} +100</b>`,
         )
         .join("") +
-      (lvlMsg ? `<br><b style="color:#ffd84f">${lvlMsg}</b>` : "");
+      (lvlMsg ? `<br><b style="color:#ffd84f">${lvlMsg}</b>` : "") +
+      (CR.n ? `<br><b style="color:#7ffcb0">📦 ${T("cDelivSum")}: ${CR.n}  (+${CR.earned})</b>` : "");
     showOv(
       T("busted"),
       T("caught") +
@@ -148,7 +173,7 @@ rvBtn.addEventListener("click", () => {
 });
 $("go").addEventListener("click", () => {
   if (ovMode === "pause") setPause(false);
-  else if (ovMode === "ach") menu();
+  else if (ovMode === "ach" || ovMode === "city") menu();
   else start();
 });
 rsBtn.addEventListener("click", () => {
@@ -159,6 +184,15 @@ rsBtn.addEventListener("click", () => {
   start();
 });
 achBtn.addEventListener("click", achOv);
+cityBtn.addEventListener("click", cityOv);
+$("oRow").addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-b]");
+  if (!b || ovMode !== "city") return;
+  if (cityBuy(+b.dataset.b)) {
+    sfx.zumary();
+    cityOv();
+  } else sfx.hit();
+});
 gfxBtn.addEventListener("click", () => {
   cycleGfx();
   gfxLabel();

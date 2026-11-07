@@ -253,6 +253,14 @@ function* genChunk(ci) {
     zB = zA + CH,
     th = themeAt(zA + CH / 2),
     ch = { ci, zA, zB, b: {}, meshes: [] };
+  const pl = plazaOf(ci);
+  if (pl >= 0) {
+    /* rebuilt landmark plaza */
+    ch.sec = 10 + pl;
+    ch.b = null;
+    CUR[0] = CUR[1] = zB;
+    return ch;
+  }
   if (secChunk(ci)) {
     /* special section (metro / tim / wall / fields): drawn from shared meshes, no city to build */
     ch.sec = secChunk(ci);

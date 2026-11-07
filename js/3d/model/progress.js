@@ -14,6 +14,7 @@ const MPOOL = [
   ["ramp", [2, 4]],
   ["smash", [4, 8]],
   ["coinsRun", [120, 250]],
+  ["deliv", [2, 4]],
 ];
 function mulberry(a) {
   return () => {
@@ -116,6 +117,7 @@ function reset() {
   while (sparks.length) SPARK_POOL.push(sparks.pop());
   floaties = [];
   nextSpawn = 55;
+  courReset();
   coinHud = 0;
   bonus = 0;
   mult = 1;

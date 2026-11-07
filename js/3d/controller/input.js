@@ -83,6 +83,12 @@ gfxBtn.type = "button";
 gfxBtn.style.cssText =
   "display:none;background:rgba(83,247,255,.08);color:#7fe6ff;border:1px solid rgba(83,247,255,.3);font-size:12px;padding:12px";
 $("go").after(gfxBtn);
+const cityBtn = document.createElement("button");
+cityBtn.id = "cityb";
+cityBtn.type = "button";
+cityBtn.style.cssText =
+  "display:none;background:rgba(127,252,176,.08);color:#7ffcb0;border:1px solid rgba(127,252,176,.32);font-size:12px;padding:12px";
+$("go").after(cityBtn);
 const GFXN = {
   uz: ["AVTO", "YUQORI", "O'RTA", "PAST"],
   en: ["AUTO", "HIGH", "MEDIUM", "LOW"],

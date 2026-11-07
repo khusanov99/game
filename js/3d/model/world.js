@@ -184,6 +184,10 @@ function secSpawn(sec, z, L, o1, o2) {
   return 22;
 }
 function spawn() {
+  spawn0();
+  courClear();
+}
+function spawn0() {
   const z = nextSpawn,
     L = (Math.random() * 3) | 0,
     o1 = (L + 1 + ((Math.random() * 2) | 0)) % 3,

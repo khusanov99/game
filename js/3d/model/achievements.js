@@ -13,6 +13,7 @@ const LT = Object.assign(
       close: 0,
       letters: 0,
       smash: 0,
+      deliv: 0,
     },
     store.get("zr3d_lt", {}),
   ),

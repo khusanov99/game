@@ -181,7 +181,8 @@ function render() {
         emis: 0.1,
       });
       draw(TAIL, Tp(o.x, 0.4, o.z - 0.01), null, { emis: 1 });
-    } else if (k === "pow")
+    } else if (k === "pkg" || k === "drop") drawCourierObj(o, ca);
+    else if (k === "pow")
       draw(
         PICKQ,
         joint(

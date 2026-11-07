@@ -137,6 +137,49 @@ function drawHUD(vp) {
     hx.font = fnt(800, 11);
     hx.fillText("ZUMARY"[i], m + i * 21 * u + 9 * u, ly + 9.5 * u);
   }
+  if (state === "play") {
+    /* courier panel + police heat (top centre, under the pause button) */
+    const cx = W / 2,
+      cy = m + 44 * u;
+    hx.textAlign = "center";
+    hx.font = fnt(700, 10);
+    let txt, col;
+    if (CR.st === "carry" && CR.drop) {
+      const dxl = CR.drop.x - px,
+        arrow = dxl > 1.1 ? "◀" : dxl < -1.1 ? "▶" : "▲",
+        d = Math.max(0, Math.round(CR.drop.z - pz));
+      txt = "📦 " + T("cDest") + " " + d + " " + T("m") + "  " + arrow + "  ⏱ " + Math.max(0, CR.tLeft).toFixed(0) + "s";
+      col = CR.tLeft < 0 ? "#ff9a6b" : CR.tLeft < 5 ? "#ffd84f" : "#7ffcb0";
+    } else {
+      txt = "📦 " + T("cFind") + (CR.n ? "  ·  ✔ " + CR.n : "");
+      col = "#ffe9a8";
+    }
+    const tw = hx.measureText(txt).width + 22 * u;
+    hx.fillStyle = "rgba(0,0,0,.45)";
+    hx.beginPath();
+    hx.roundRect(cx - tw / 2, cy - 11 * u, tw, 22 * u, 11 * u);
+    hx.fill();
+    hx.fillStyle = col;
+    hx.fillText(txt, cx, cy + 1);
+    if (heat > 12) {
+      const bw = 120 * u,
+        by = cy + 18 * u,
+        k = clamp(heat / 100, 0, 1),
+        fl = heat > 70 && Math.floor(tNow / 160) % 2;
+      hx.fillStyle = "rgba(0,0,0,.5)";
+      hx.beginPath();
+      hx.roundRect(cx - bw / 2, by, bw, 6 * u, 3 * u);
+      hx.fill();
+      hx.fillStyle = fl ? "#3d7bff" : k > 0.6 ? "#ff4d5e" : "#ffb347";
+      hx.beginPath();
+      hx.roundRect(cx - bw / 2, by, bw * k, 6 * u, 3 * u);
+      hx.fill();
+      hx.font = fnt(600, 8);
+      hx.fillStyle = "rgba(255,255,255,.75)";
+      hx.fillText("🚔 " + T("cHeat"), cx, by + 15 * u);
+    }
+    hx.textAlign = "left";
+  }
   {
     const ey = ly + 26 * u,
       ew = 120 * u;

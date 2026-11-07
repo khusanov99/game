@@ -201,7 +201,8 @@ function update(dt) {
     }
     if (shakeT > 0) shakeT -= dt;
     if (stumbleT > 0) stumbleT -= dt;
-    gap = lerp(gap, hits > 0 ? 4.4 : 11, Math.min(1, dt * 1.6));
+    courUpdate(dt);
+    gap = lerp(gap, hits > 0 ? 4.4 : 11 - 5.5 * clamp((heat - 45) / 55, 0, 1), Math.min(1, dt * 1.6));
     while (nextSpawn < pz + 150) spawn();
     if (!heli && pz > nextHeli) {
       heli = { t: 0, dur: 11, ph: Math.random() * 6, x: 0 };
@@ -264,6 +265,15 @@ function update(dt) {
           if (k === "pow") givePow(o.t);
           else pickLetter(o);
         }
+        continue;
+      }
+      if (k === "pkg" || k === "drop") {
+        if (
+          Math.abs(o.z - pz) < 1.3 &&
+          Math.abs(o.x - px) < (k === "drop" ? 1.3 : 1.0) &&
+          (k === "drop" || (o.y > py - 0.4 && o.y < top + 0.5))
+        )
+          courTouch(o);
         continue;
       }
       if (k === "pad") {

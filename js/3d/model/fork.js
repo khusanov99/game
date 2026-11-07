@@ -8,7 +8,7 @@ function forkZone(z) {
   const base = Math.floor(z / FORK_CYC) * FORK_CYC,
     a = base + FORK_A,
     b = base + FORK_B;
-  for (let z = a - 130; z <= b + 20; z += 30) if (secAt(z)) return null;
+  for (let z = a - 130; z <= b + 20; z += 30) if (secAt(z) || plazaOf(Math.floor(z / CH)) >= 0) return null;
   if (a < 600) return null;
   return [a, b];
 }

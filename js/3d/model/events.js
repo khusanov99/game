@@ -72,6 +72,7 @@ function hurt(o) {
   trick = false;
   hits++;
   hitT = 8;
+  heat = Math.min(95, heat + 25);
   invul = 1.4;
   shakeT = 0.45;
   sfx.hit();
@@ -96,6 +97,13 @@ function pickCoin(o) {
     m = dbl > 0 ? 2 : 1;
   coinsGot += v * m;
   LT.coins += v * m;
+  heat = Math.max(0, heat - (o.gem ? 3 : 0.7));
+  coinFrac += v * m * (cityMul() - 1); // rebuilt city: permanent coin bonus
+  while (coinFrac >= 1) {
+    coinFrac--;
+    coinsGot++;
+    LT.coins++;
+  }
   const c0 = chain,
     m0 = mult;
   chain = chainT > 0 ? chain + 1 : 1;

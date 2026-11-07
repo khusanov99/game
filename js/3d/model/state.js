@@ -90,6 +90,7 @@ const newStats = () => ({
   flip: 0,
   dash: 0,
   scoot: 0,
+  deliv: 0,
 });
 let S = newStats(),
   B0 = newStats();

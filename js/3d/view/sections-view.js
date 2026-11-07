@@ -210,9 +210,10 @@ function secBuild(t) {
 }
 function drawSection(ch) {
   const t = ch.sec,
-    S = SECM[t] || secBuild(t),
+    S = SECM[t] || (t >= 10 ? (SECM[t] = plazaBuild(t - 10)) : secBuild(t)),
     M = Tp(0, 0, ch.zA);
   for (const p of S.parts) draw(p.m, M, null, p.mat);
+  if (t >= 10) return; // landmark plaza: no portals
   for (const z of [ch.zA, ch.zB]) {
     if (secChunk(ch.ci + (z === ch.zA ? -1 : 1)) === t) continue;
     const P = Tp(0, 0, z);
