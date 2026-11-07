@@ -75,7 +75,7 @@ const GL3 = (() => {
     U = null,
     vbuf = null,
     ibuf = null;
-  const MAXV = 36000,
+  const MAXV = 52000,
     VB = new Float32Array(MAXV * 10),
     IB = new Uint16Array(MAXV * 3);
   let nv = 0,
@@ -290,6 +290,12 @@ const GL3 = (() => {
     SPH0 = SPH(5, 8),
     CYL1 = CYL(14, 1),
     CYL0 = CYL(8, 1);
+  const SPHR = (() => {
+    const p = SPH(8, 16);
+    p.par = new Uint8Array(p.n).map((_, k) => (k % 17) & 1);
+    return p;
+  })();
+  const TAPER = CYL(14, 1.35);
   let LOD = 1;
   const col = {};
   const C = (h) =>
@@ -306,7 +312,7 @@ const GL3 = (() => {
   ];
   const mulc = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
   /* put one primitive instance, transformed on the CPU: M * (S*v + (0,dy,0)); c = [r,g,b]; e = emissive 0..1 */
-  function put(p, M, sx, sy, sz, dy, c, e) {
+  function put(p, M, sx, sy, sz, dy, c, e, c2) {
     if (nv + p.n > MAXV || ni + p.i.length > MAXV * 3) return;
     const m0 = M[0],
       m1 = M[1],
@@ -342,9 +348,10 @@ const GL3 = (() => {
       VB[o + 3] = wx * il;
       VB[o + 4] = wy * il;
       VB[o + 5] = wz * il;
-      VB[o + 6] = r;
-      VB[o + 7] = g;
-      VB[o + 8] = b;
+      const cc = c2 && p.par && p.par[k / 6] ? c2 : c;
+      VB[o + 6] = cc[0];
+      VB[o + 7] = cc[1];
+      VB[o + 8] = cc[2];
       VB[o + 9] = e;
       o += 10;
     }
@@ -734,11 +741,14 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     );
   }
   /* ================= WORLD ================= */
+  const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
   const hash = (i, s) => {
     const x = Math.sin(i * 127.1 + s * 311.7) * 43758.5453;
     return x - Math.floor(x);
   };
-  let sFar = 0,
+  let curCity = null,
+    prevCity = null,
+    sFar = 0,
     sMid = 0,
     sGnd = 0,
     lastF = 0,
@@ -752,114 +762,715 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     return d;
   };
   const mod = (a, p) => ((a % p) + p) % p;
-  function city(
-    layer,
-    z,
-    sp,
-    hMin,
-    hMax,
-    wMin,
-    wMax,
-    spacing,
-    base,
-    D,
-    vis,
-    acc,
-    night,
-  ) {
-    const per = Math.ceil((((vis * (D + z)) / D) * 1.25) / spacing) * spacing,
-      N = per / spacing,
-      s = sp * ((D + z) / D);
+  /* ================= THE FOUR CITIES (at night) =================
+     Tashkent → Samarkand → Bukhara → Khiva → Tashkent. Each city is a strip of authored landmark models (mid layer),
+     a low street layer in front and a skyline behind. Floodlit stone is simulated with warm emissive colours. */
+  const PAL = {
+    sand: [0.9, 0.72, 0.46],
+    sandD: [0.7, 0.52, 0.32],
+    brick: [0.78, 0.52, 0.3],
+    brickD: [0.58, 0.36, 0.2],
+    turq: [0.08, 0.74, 0.86],
+    blue: [0.1, 0.36, 0.9],
+    navy: [0.06, 0.16, 0.5],
+    gold: [1, 0.78, 0.3],
+    white: [0.93, 0.93, 0.9],
+    mud: [0.74, 0.55, 0.34],
+    warm: [1, 0.78, 0.45],
+    glass: [0.3, 0.55, 0.9],
+    dark: [0.04, 0.05, 0.09],
+    green: [0.1, 0.4, 0.2],
+    red: [0.8, 0.14, 0.12],
+  };
+  const NIGHT_SKY = {
+    tash: { top: [0.02, 0.04, 0.14], bot: [0.12, 0.16, 0.38] },
+    sam: { top: [0.03, 0.04, 0.15], bot: [0.17, 0.12, 0.36] },
+    bux: { top: [0.02, 0.05, 0.13], bot: [0.22, 0.16, 0.26] },
+    khi: { top: [0.03, 0.03, 0.11], bot: [0.3, 0.17, 0.2] },
+  };
+  const LIT = 0.5; // floodlit stone glow
+  const lit = (c, k) => mulc(c, k === undefined ? 1 : k);
+  /* ---- shared building blocks ---- */
+  function windowsGrid(x, z, w, h, y0, cx, cy, sd, c, e) {
+    const cols = Math.max(2, Math.floor(w / cx)),
+      rows = Math.max(1, Math.floor(h / cy));
+    for (let r = 0; r < rows; r++)
+      for (let q = 0; q < cols; q++) {
+        if (hash(q + r * 17 + sd, 3) < 0.28) continue;
+        box(
+          T(
+            x - w / 2 + (q + 0.5) * (w / cols),
+            y0 + (r + 0.5) * (h / rows),
+            z - 0.6,
+          ),
+          cx * 0.42,
+          cy * 0.5,
+          1,
+          0,
+          c,
+          e,
+        );
+      }
+  }
+  /* dome on a drum: base y; rib = alternating colour bands (melon dome) */
+  function dome(x, y, z, r, c, e, rib, drumH, c2) {
+    if (drumH) {
+      cyl(T(x, y + drumH, z), r * 0.86, drumH, lit(c, 0.9), e);
+      cyl(T(x, y + drumH + 2, z), r * 0.9, 3, c2 || lit(c, 0.6), e);
+      y += drumH;
+    }
+    put(
+      rib ? SPHR : LOD ? SPH1 : SPH0,
+      T(x, y, z),
+      r,
+      r * 1.12,
+      r,
+      0,
+      c,
+      e,
+      rib ? c2 || lit(c, 0.55) : undefined,
+    );
+    cyl(T(x, y + r * 1.12 + 7, z), 1.4, 9, PAL.gold, 1);
+    sph(T(x, y + r * 1.12 + 8, z), 3, 3, 3, PAL.gold, 1);
+  }
+  /* portal (pishtaq): tall slab with a deep arched niche, tiled frame and a parapet */
+  function portal(x, z, w, h, c, tile, e) {
+    box(T(x, 0, z), w, h, 22, h / 2, c, e);
+    box(
+      T(x, 0, z - 11.4),
+      w * 0.52,
+      h * 0.72,
+      2,
+      h * 0.36,
+      [0.03, 0.04, 0.09],
+      0.12,
+    );
+    put(
+      CYL0,
+      J(T(x, h * 0.72, z - 11.6), 0, 0, 0, PI / 2),
+      w * 0.26,
+      2,
+      w * 0.26,
+      0,
+      [0.03, 0.04, 0.09],
+      0.12,
+    );
+    for (const s of [-1, 1])
+      box(
+        T(x + s * w * 0.4, 0, z - 11.6),
+        w * 0.1,
+        h * 0.9,
+        1.4,
+        h * 0.45,
+        tile,
+        0.85,
+      );
+    box(T(x, h * 0.9, z - 11.6), w * 0.9, 5, 1.4, 0, tile, 0.85);
+    box(T(x, h * 0.96, z - 11.6), w * 0.95, 3, 1.4, 0, PAL.gold, 0.9);
+    for (let k = 0; k < 3; k++)
+      box(T(x, h * (0.12 + k * 0.16), z - 12), w * 0.3, 3, 1, 0, tile, 0.7);
+    box(T(x, h, z), w * 1.04, 4, 24, 0, lit(c, 1.15), e);
+  }
+  /* tapered tower with bands + lantern */
+  function minaret(x, z, r, h, c, band, bandE, lantern, cap) {
+    put(TAPER, T(x, h, z), r, h, r, 0, c, LIT);
+    const n = Math.max(3, Math.floor(h / 26));
+    for (let k = 1; k < n; k++)
+      put(
+        CYL0,
+        T(x, h - (k * h) / n + 3, z),
+        r * (1.28 - (k / n) * 0.3),
+        6,
+        r * (1.28 - (k / n) * 0.3),
+        0,
+        band,
+        bandE,
+      );
+    if (lantern) {
+      cyl(T(x, h + lantern, z), r * 1.35, lantern * 0.9, lit(c, 1.1), LIT);
+      for (let k = 0; k < 4; k++)
+        box(
+          J(T(x, h + lantern * 0.5, z), 0, 0, 0, 0, (k * PI) / 4),
+          r * 2.3,
+          lantern * 0.5,
+          2,
+          0,
+          PAL.warm,
+          0.95,
+        );
+      cyl(T(x, h + lantern + 4, z), r * 1.5, 4, band, 0.7);
+    }
+    if (cap) cone(T(x, h + (lantern || 0) + 4, z), r * 1.2, r * 3, cap, 0.8);
+  }
+  const trees = (x, z, n) => {
+    for (let i = 0; i < n; i++) {
+      const tx = x + i * 26;
+      cyl(T(tx, 26, z), 2, 26, [0.25, 0.16, 0.08], 0.2);
+      sph(
+        T(tx, 40, z),
+        14,
+        16,
+        14,
+        [0.06, 0.28 + hash(i, 4) * 0.1, 0.14],
+        0.35,
+      );
+    }
+  };
+  const lowHouses = (x, z, n, c, wnd) => {
+    for (let i = 0; i < n; i++) {
+      const w = 48 + hash(i, 5) * 30,
+        h = 34 + hash(i, 6) * 26,
+        hx = x + i * 84;
+      box(T(hx, 0, z), w, h, 36, h / 2, lit(c, 0.9 + hash(i, 7) * 0.2), 0.32);
+      box(T(hx, h, z), w + 4, 4, 38, 0, lit(c, 1.15), 0.3);
+      windowsGrid(hx, z - 18, w, h * 0.7, 6, 18, 18, i, PAL.warm, 1);
+      if (hash(i, 8) > 0.6)
+        box(T(hx, h + 4, z), 18, 12, 18, 6, lit(c, 0.85), 0.3);
+    }
+  };
+  /* ---------- TASHKENT ---------- */
+  const tashTower = (x, z) => {
+    put(TAPER, T(x, 150, z), 17, 150, 17, 0, [0.82, 0.84, 0.9], 0.5);
+    put(TAPER, T(x, 255, z), 10, 105, 10, 0, [0.85, 0.87, 0.93], 0.5);
+    for (let k = 0; k < 4; k++)
+      put(
+        CYL0,
+        T(x, 90 + k * 40, z),
+        12 + (3 - k) * 1.2,
+        3,
+        12 + (3 - k) * 1.2,
+        0,
+        PAL.glass,
+        0.95,
+      );
+    sph(T(x, 285, z), 36, 14, 36, [0.8, 0.84, 0.95], 0.6);
+    sph(T(x, 285, z), 38, 4, 38, PAL.glass, 1);
+    sph(T(x, 302, z), 24, 12, 24, [0.75, 0.8, 0.95], 0.55);
+    cyl(T(x, 350, z), 4, 48, [0.8, 0.85, 0.95], 0.6);
+    cyl(T(x, 400, z), 1.5, 50, [0.9, 0.9, 0.95], 0.7);
+    sph(
+      T(x, 402, z),
+      3,
+      3,
+      3,
+      Math.floor(performance.now() / 600) % 2
+        ? [1, 0.15, 0.15]
+        : [0.5, 0.05, 0.05],
+      1,
+    );
+  };
+  const tashTower2 = (x, z, w, h, sd) => {
+    box(T(x, 0, z), w, h, w * 0.8, h / 2, [0.12, 0.2, 0.4], 0.35);
+    for (let r = 0; r < h / 16; r++)
+      box(
+        T(x, 8 + r * 16, z - w * 0.4 - 0.5),
+        w * 0.94,
+        5,
+        1,
+        0,
+        hash(r + sd, 2) > 0.2 ? PAL.glass : [0.9, 0.8, 0.5],
+        0.9,
+      );
+    box(T(x, h, z), w * 0.6, 14, w * 0.5, 7, [0.14, 0.24, 0.5], 0.5);
+    cone(T(x, h + 14, z), w * 0.25, 26, [0.5, 0.7, 1], 0.9);
+  };
+  const humo = (x, z) => {
+    cyl(T(x, 36, z), 98, 36, [0.5, 0.6, 0.8], 0.5);
+    sph(T(x, 36, z), 98, 40, 70, [0.55, 0.68, 0.95], 0.6);
+    for (let k = -3; k <= 3; k++)
+      box(T(x + k * 26, 6, z - 52), 6, 40, 2, 0, PAL.glass, 1);
+    box(T(x, 36, z - 60), 190, 3, 1.5, 0, PAL.turq, 1);
+  };
+  const minor = (x, z) => {
+    box(T(x, 0, z), 120, 42, 56, 21, PAL.white, 0.6);
+    for (let k = -2; k <= 2; k++)
+      box(T(x + k * 22, 4, z - 28.5), 12, 26, 1, 0, PAL.warm, 0.95);
+    put(LOD ? SPH1 : SPH0, T(x, 42, z), 30, 30, 30, 0, PAL.white, 0.7);
+    cyl(T(x, 74, z), 1.4, 12, PAL.gold, 1);
+    for (const s of [-1, 1])
+      minaret(x + s * 66, z, 5, 105, PAL.white, PAL.turq, 0.8, 8, PAL.turq);
+  };
+  const amirTimur = (x, z) => {
+    cyl(T(x, 14, z), 62, 14, [0.55, 0.62, 0.8], 0.55);
+    box(T(x, 0, z), 40, 54, 40, 27 + 14, [0.7, 0.68, 0.6], 0.5);
+    sph(T(x, 95, z), 17, 11, 9, PAL.gold, 0.9); // horse
+    box(J(T(x + 10, 107, z), 0, 0, 0, 0, 0, -0.5), 9, 16, 7, 0, PAL.gold, 0.9); // neck
+    sph(T(x + 19, 118, z), 6, 5, 5, PAL.gold, 0.9);
+    box(T(x - 4, 112, z), 9, 20, 9, 0, PAL.gold, 0.9); // rider
+    sph(T(x - 4, 126, z), 5, 5, 5, PAL.gold, 0.9);
+    for (let k = 0; k < 10; k++)
+      box(
+        T(
+          x + Math.cos((k / 10) * TAU) * 80,
+          1.5,
+          z + Math.sin((k / 10) * TAU) * 28 - 10,
+        ),
+        7,
+        3,
+        7,
+        0,
+        [0.4, 0.8, 1],
+        1,
+      ); // fountain lights
+  };
+  const hotelUz = (x, z) => {
+    box(T(x, 0, z), 240, 104, 62, 52, [0.52, 0.5, 0.48], 0.4);
+    box(T(x + 70, 104, z), 100, 36, 50, 18, [0.52, 0.5, 0.48], 0.4);
+    windowsGrid(x, z - 31, 236, 100, 4, 14, 18, 3, PAL.warm, 0.95);
+    box(T(x, 104, z - 31), 240, 3, 1, 0, PAL.warm, 1);
+  };
+  const aptBlock = (x, z, sd) => {
+    const w = 80 + hash(sd, 1) * 40,
+      h = 80 + hash(sd, 2) * 70;
+    box(T(x, 0, z), w, h, 44, h / 2, [0.34, 0.34, 0.42], 0.32);
+    windowsGrid(x, z - 22, w, h - 10, 4, 14, 16, sd, PAL.warm, 1);
+  };
+  /* ---------- SAMARKAND ---------- */
+  const registan = (x, z) => {
+    const st = PAL.sand,
+      tl = PAL.blue;
+    // Ulugh Beg (left), Sher-Dor (right), Tilya-Kori (centre, behind)
+    box(T(x - 200, 0, z), 160, 92, 46, 46, lit(st, 0.95), 0.5);
+    portal(x - 200, z - 24, 78, 118, lit(st, 1.05), PAL.turq, 0.5);
+    minaret(x - 288, z - 14, 9, 128, lit(st, 1), tl, 0.85, 8, PAL.turq);
+    minaret(x - 112, z - 14, 9, 128, lit(st, 1), tl, 0.85, 8, PAL.turq);
+    box(T(x + 200, 0, z), 160, 92, 46, 46, lit(st, 0.95), 0.5);
+    portal(x + 200, z - 24, 78, 118, lit(st, 1.05), PAL.turq, 0.5);
+    minaret(x + 112, z - 14, 9, 128, lit(st, 1), tl, 0.85, 8, PAL.turq);
+    minaret(x + 288, z - 14, 9, 128, lit(st, 1), tl, 0.85, 8, PAL.turq);
+    for (const s of [-1, 1])
+      dome(x + 200 + s * 52, 92, z - 4, 26, PAL.turq, 0.65, true, 18, PAL.blue); // Sher-Dor ribbed domes
+    box(T(x, 0, z + 40), 170, 78, 40, 39, lit(st, 0.9), 0.5);
+    portal(x, z + 15, 70, 96, lit(st, 1.05), PAL.turq, 0.5);
+    dome(x, 78, z + 38, 34, PAL.turq, 0.7, true, 26, PAL.blue);
+    for (const s of [-1, 1])
+      minaret(x + s * 98, z + 20, 7, 96, lit(st, 1), tl, 0.8, 7, PAL.gold);
+    box(T(x, 1, z - 40), 560, 2, 40, 0, [0.9, 0.7, 0.4], 0.8); // lit forecourt
+  };
+  const gurEmir = (x, z) => {
+    box(T(x, 0, z), 112, 66, 112, 33, lit(PAL.sand, 0.9), 0.5);
+    box(T(x, 0, z - 57), 52, 44, 2, 22, [0.03, 0.04, 0.09], 0.15);
+    box(T(x, 40, z - 58), 56, 4, 1.4, 0, PAL.turq, 0.9);
+    dome(x, 66, z, 52, PAL.turq, 0.65, true, 40, PAL.blue);
+    for (const sx of [-1, 1])
+      for (const sz of [-1, 1])
+        minaret(
+          x + sx * 62,
+          z + sz * 20,
+          6,
+          82,
+          lit(PAL.sand, 1),
+          PAL.blue,
+          0.8,
+          6,
+          PAL.turq,
+        );
+    box(T(x, 1, z - 70), 200, 2, 30, 0, [0.9, 0.7, 0.4], 0.8);
+  };
+  const shahi = (x, z) => {
+    for (let k = 0; k < 5; k++) {
+      const h = 44 + hash(k, 3) * 24,
+        bx = x + (k - 2) * 62;
+      box(T(bx, 0, z), 54, h, 36, h / 2, lit(PAL.sand, 0.95), 0.45);
+      box(T(bx, 6, z - 18.6), 24, h * 0.55, 1.2, 0, [0.03, 0.04, 0.09], 0.15);
+      box(T(bx, h * 0.72, z - 18.6), 34, 4, 1.2, 0, PAL.turq, 0.9);
+      dome(
+        bx,
+        h,
+        z,
+        20 + hash(k, 5) * 6,
+        k % 2 ? PAL.turq : PAL.blue,
+        0.65,
+        true,
+        10,
+      );
+    }
+  };
+  const biBi = (x, z) => {
+    portal(x, z - 20, 100, 150, lit(PAL.sand, 1), PAL.turq, 0.5);
+    box(T(x, 0, z + 30), 150, 70, 80, 35, lit(PAL.sandD, 1), 0.4);
+    dome(x, 70, z + 40, 44, PAL.turq, 0.65, true, 36, PAL.blue);
+    minaret(
+      x - 70,
+      z - 10,
+      9,
+      135,
+      lit(PAL.sand, 1),
+      PAL.blue,
+      0.8,
+      8,
+      PAL.turq,
+    );
+  };
+  /* ---------- BUKHARA ---------- */
+  const kalyan = (x, z) => {
+    minaret(
+      x,
+      z,
+      17,
+      220,
+      lit(PAL.brick, 1.05),
+      lit(PAL.brickD, 0.9),
+      0.4,
+      26,
+      PAL.turq,
+    );
+    for (let k = 0; k < 8; k++)
+      box(T(x, 20 + k * 22, z - 17.5), 20, 5, 1, 0, lit(PAL.brickD, 0.7), 0.4);
+    box(T(x + 150, 0, z + 6), 220, 56, 56, 28, lit(PAL.brick, 0.95), 0.5);
+    for (let k = 0; k < 3; k++)
+      dome(x + 90 + k * 60, 56, z + 6, 26, PAL.turq, 0.65, true, 8, PAL.blue);
+    portal(x + 150, z - 24, 70, 100, lit(PAL.brick, 1.05), PAL.turq, 0.5);
+    box(T(x - 140, 0, z + 6), 190, 70, 56, 35, lit(PAL.brick, 0.95), 0.5);
+    portal(x - 140, z - 24, 84, 98, lit(PAL.brick, 1.05), PAL.turq, 0.5);
+    for (const s of [-1, 1])
+      dome(x - 140 + s * 54, 70, z + 4, 30, PAL.turq, 0.7, true, 20, PAL.blue); // Mir-i-Arab
+    box(T(x, 1, z - 44), 480, 2, 32, 0, [0.9, 0.68, 0.38], 0.8);
+  };
+  const chorMinor = (x, z) => {
+    box(T(x, 0, z), 74, 54, 74, 27, lit(PAL.brick, 1), 0.5);
+    box(T(x, 0, z - 38), 34, 38, 1.5, 19, [0.03, 0.04, 0.09], 0.15);
+    for (const sx of [-1, 1])
+      for (const sz of [-1, 1]) {
+        cyl(T(x + sx * 30, 90, z + sz * 30), 11, 36, lit(PAL.brick, 1.1), 0.5);
+        dome(
+          x + sx * 30,
+          90,
+          z + sz * 30,
+          13,
+          PAL.turq,
+          0.8,
+          true,
+          0,
+          PAL.blue,
+        );
+      }
+    dome(x, 54, z, 16, PAL.turq, 0.7, true, 12, PAL.blue);
+  };
+  const ark = (x, z) => {
+    box(T(x, 0, z), 340, 86, 46, 43, lit(PAL.mud, 0.9), 0.45);
+    for (let k = -8; k <= 8; k++)
+      box(T(x + k * 20, 86, z - 20), 10, 12, 8, 6, lit(PAL.mud, 1.05), 0.45);
+    for (const s of [-1, 1]) {
+      put(TAPER, T(x + s * 54, 96, z - 6), 26, 96, 26, 0, lit(PAL.mud, 1), 0.5);
+      for (let k = 0; k < 6; k++)
+        box(
+          T(
+            x + s * 54 + Math.cos((k / 6) * TAU) * 22,
+            96,
+            z - 6 + Math.sin((k / 6) * TAU) * 22,
+          ),
+          9,
+          10,
+          9,
+          5,
+          lit(PAL.mud, 1.05),
+          0.5,
+        );
+    }
+    box(T(x, 0, z - 24), 70, 70, 2, 35, [0.03, 0.04, 0.09], 0.12);
+    put(
+      CYL0,
+      J(T(x, 70, z - 24.5), 0, 0, 0, PI / 2),
+      35,
+      2,
+      35,
+      0,
+      [0.03, 0.04, 0.09],
+      0.12,
+    );
+    box(T(x, 4, z - 26), 100, 4, 6, 0, PAL.warm, 1);
+  };
+  const samanid = (x, z) => {
+    box(T(x, 0, z), 76, 64, 76, 32, lit(PAL.brick, 1), 0.5);
+    for (let k = 0; k < 5; k++)
+      box(
+        T(x, 10 + k * 11, z - 38.4),
+        70,
+        2.5,
+        1,
+        0,
+        lit(PAL.brickD, 0.75),
+        0.4,
+      );
+    dome(x, 64, z, 34, lit(PAL.brick, 1.05), 0.5, false, 0);
+    for (const sx of [-1, 1])
+      for (const sz of [-1, 1])
+        sph(
+          T(x + sx * 30, 70, z + sz * 30),
+          9,
+          9,
+          9,
+          lit(PAL.brick, 1.05),
+          0.5,
+        );
+  };
+  const lyabi = (x, z) => {
+    box(T(x, 0.6, z - 30), 200, 1.2, 100, 0, [0.12, 0.35, 0.7], 0.7);
+    trees(x - 110, z + 30, 3);
+    trees(x + 40, z + 30, 3);
+    box(T(x, 0, z + 50), 220, 56, 40, 28, lit(PAL.sand, 0.95), 0.45);
+    portal(x, z + 28, 72, 78, lit(PAL.sand, 1), PAL.turq, 0.5);
+    for (let k = -4; k <= 4; k++)
+      sph(T(x + k * 24, 22, z - 78), 3, 3, 3, PAL.warm, 1);
+  };
+  /* ---------- KHIVA ---------- */
+  const kalta = (x, z) => {
+    put(TAPER, T(x, 74, z), 38, 74, 38, 0, PAL.turq, 0.6);
+    for (let k = 0; k < 6; k++)
+      put(
+        CYL0,
+        T(x, 12 + k * 11, z),
+        39.5 - k * 0.3,
+        4,
+        39.5 - k * 0.3,
+        0,
+        k % 2 ? PAL.blue : PAL.white,
+        0.7,
+      );
+    cyl(T(x, 78, z), 41, 5, PAL.white, 0.6);
+    for (let k = 0; k < 3; k++)
+      box(T(x, 20 + k * 20, z - 38.5), 16, 5, 1, 0, PAL.warm, 1);
+    box(T(x - 104, 0, z + 20), 110, 48, 48, 24, lit(PAL.mud, 1), 0.45);
+  };
+  const islamKhoja = (x, z) => {
+    put(TAPER, T(x, 236, z), 11, 236, 11, 0, lit(PAL.brick, 1.05), 0.55);
+    for (let k = 0; k < 9; k++)
+      put(
+        CYL0,
+        T(x, 232 - k * 24, z),
+        13.4 - k * 0.45,
+        7,
+        13.4 - k * 0.45,
+        0,
+        k % 3 === 0 ? PAL.turq : k % 3 === 1 ? PAL.white : PAL.red,
+        0.8,
+      );
+    cyl(T(x, 258, z), 15, 22, lit(PAL.brick, 1.1), 0.6);
+    for (let k = 0; k < 4; k++)
+      box(J(T(x, 247, z), 0, 0, 0, 0, (k * PI) / 4), 28, 14, 3, 0, PAL.warm, 1);
+    cone(T(x, 260, z), 14, 30, PAL.turq, 0.8);
+    box(T(x - 90, 0, z + 14), 120, 54, 44, 27, lit(PAL.mud, 1), 0.45);
+    portal(x - 90, z - 8, 56, 70, lit(PAL.mud, 1.05), PAL.turq, 0.5);
+    dome(x - 130, 54, z + 14, 20, PAL.turq, 0.65, true, 8, PAL.blue);
+  };
+  const juma = (x, z) => {
+    box(T(x, 0, z), 230, 52, 70, 26, lit(PAL.mud, 0.9), 0.4);
+    for (let k = -5; k <= 5; k++)
+      cyl(T(x + k * 20, 48, z - 35.5), 3, 48, [0.4, 0.22, 0.1], 0.5);
+    box(T(x, 52, z), 236, 5, 74, 0, lit(PAL.mud, 1.1), 0.4);
+    box(T(x + 60, 56, z), 40, 14, 40, 0, lit(PAL.mud, 1.0), 0.4);
+  };
+  const khivaWall = (x, z, w) => {
+    box(T(x, 0, z), w, 64, 22, 32, lit(PAL.mud, 0.95), 0.42);
+    for (let k = 0; k < w / 16; k++)
+      box(
+        T(x - w / 2 + 8 + k * 16, 64, z - 8),
+        8,
+        12,
+        5,
+        6,
+        lit(PAL.mud, 1.05),
+        0.42,
+      );
+    for (const s of [-1, 1]) {
+      put(
+        TAPER,
+        T(x + s * (w / 2), 86, z),
+        20,
+        86,
+        20,
+        0,
+        lit(PAL.mud, 1),
+        0.45,
+      );
+      cyl(T(x + s * (w / 2), 94, z), 22, 8, lit(PAL.mud, 1.1), 0.45);
+    }
+    box(T(x, 4, z - 12), w * 0.6, 3, 3, 0, PAL.warm, 1);
+  };
+  const khivaWallLow = (x, z, w) => {
+    box(T(x, 0, z), w, 30, 18, 15, lit(PAL.mud, 0.9), 0.4);
+    for (let k = 0; k < w / 14; k++)
+      box(
+        T(x - w / 2 + 7 + k * 14, 30, z - 6),
+        7,
+        8,
+        4,
+        4,
+        lit(PAL.mud, 1.05),
+        0.4,
+      );
+    box(T(x, 3, z - 9.5), w * 0.7, 2, 2, 0, PAL.warm, 1);
+  };
+  const khivaGate = (x, z) => {
+    box(T(x, 0, z), 150, 92, 30, 46, lit(PAL.mud, 0.95), 0.42);
+    box(T(x, 0, z - 16), 44, 68, 2, 34, [0.03, 0.04, 0.09], 0.12);
+    put(
+      CYL0,
+      J(T(x, 68, z - 16.5), 0, 0, 0, PI / 2),
+      22,
+      2,
+      22,
+      0,
+      [0.03, 0.04, 0.09],
+      0.12,
+    );
+    for (const s of [-1, 1]) {
+      put(TAPER, T(x + s * 62, 112, z), 24, 112, 24, 0, lit(PAL.mud, 1), 0.45);
+      cyl(T(x + s * 62, 120, z), 26, 8, lit(PAL.mud, 1.1), 0.45);
+    }
+    box(T(x, 3, z - 20), 90, 3, 4, 0, PAL.warm, 1);
+  };
+  const kunya = (x, z) => {
+    box(T(x, 0, z), 170, 70, 52, 35, lit(PAL.mud, 0.95), 0.42);
+    portal(x - 30, z - 28, 60, 90, lit(PAL.mud, 1.05), PAL.turq, 0.5);
+    box(T(x + 56, 70, z), 54, 30, 40, 15, lit(PAL.mud, 1.05), 0.42);
+    dome(x + 56, 100, z, 14, PAL.turq, 0.7, true, 0);
+  };
+  /* ---- sequences (piece, width) per city for the mid layer ---- */
+  const P = (f, w) => ({ f, w });
+  const SEQ = {
+    tash: [
+      P(tashTower, 160),
+      P((x, z) => aptBlock(x, z, 1), 130),
+      P(humo, 240),
+      P((x, z) => tashTower2(x, z, 62, 210, 1), 120),
+      P((x, z) => tashTower2(x, z, 52, 160, 2), 110),
+      P(minor, 280),
+      P((x, z) => aptBlock(x, z, 5), 130),
+      P(amirTimur, 220),
+      P(hotelUz, 320),
+      P((x, z) => tashTower2(x, z, 70, 250, 3), 130),
+      P((x, z) => aptBlock(x, z, 9), 130),
+    ],
+    sam: [
+      P((x, z) => lowHouses(x - 120, z, 3, PAL.sand, 1), 300),
+      P(gurEmir, 360),
+      P((x, z) => trees(x - 40, z, 4), 180),
+      P(registan, 780),
+      P((x, z) => lowHouses(x - 120, z, 3, PAL.sand, 1), 300),
+      P(shahi, 420),
+      P((x, z) => trees(x - 40, z, 4), 160),
+      P(biBi, 380),
+    ],
+    bux: [
+      P((x, z) => lowHouses(x - 120, z, 3, PAL.mud, 1), 300),
+      P(chorMinor, 190),
+      P(kalyan, 800),
+      P(lyabi, 330),
+      P((x, z) => lowHouses(x - 120, z, 3, PAL.mud, 1), 300),
+      P(samanid, 190),
+      P(ark, 420),
+    ],
+    khi: [
+      P((x, z) => khivaWall(x, z, 260), 260),
+      P(khivaGate, 220),
+      P(islamKhoja, 400),
+      P(juma, 300),
+      P(kalta, 330),
+      P(kunya, 260),
+      P((x, z) => khivaWall(x, z, 260), 260),
+    ],
+  };
+  /* far skyline per city */
+  function farLayer(id, z, s, D, vis, side, bx) {
+    const sp = id === "tash" ? 330 : 260,
+      per = Math.ceil((((vis * (D + z)) / D) * 1.3) / sp) * sp,
+      N = per / sp,
+      sh = s * ((D + z) / D);
     for (let i = 0; i < N; i++) {
-      const hs = hash(i, layer),
-        w = wMin + hash(i, layer + 9) * (wMax - wMin),
-        h = hMin + hs * (hMax - hMin),
-        x = mod(i * spacing - s + per / 2, per) - per / 2,
-        d = w * 0.8;
-      const c = mixc(base, [0.04, 0.05, 0.1], 0.1 + hash(i, layer + 4) * 0.25);
-      box(T(x, 0, z), w, h, d, h / 2, c, 0);
-      box(T(x, h - 3, z), w * 1.03, 6, d * 1.03, 0, mulc(c, 1.55), 0.08); // roof edge
-      if (LOD) {
-        for (const q of [-0.36, 0.36])
-          box(
-            T(x + q * w, 0, z - d / 2 - 0.4),
-            w * 0.07,
-            h,
-            0.8,
-            h / 2,
-            mulc(c, 1.3),
-            0,
-          ); // pilasters
-        if (layer > 0 && hash(i, layer + 5) > 0.55)
-          box(
-            T(x, h * (0.35 + hash(i, layer + 6) * 0.4), z - d / 2 - 0.7),
-            w * 0.82,
-            4,
-            1,
-            0,
-            acc,
-            0.95,
-          ); // neon band
-      }
-      if (hash(i, layer + 7) > 0.72) {
-        const rc = mulc(c, 1.25);
-        box(T(x + w * 0.1, h, z), w * 0.5, 14, d * 0.6, 7, rc, 0);
-        if (hash(i, layer + 8) > 0.5)
-          cyl(T(x, h + 14, z), 1.6, 36, K.grey, 0.4);
-      }
-      if (LOD && layer > 0) {
-        const cols = Math.max(2, Math.floor(w / 22)),
-          rows = Math.min(6, Math.floor(h / 26));
-        for (let r = 0; r < rows; r++)
-          for (let q = 0; q < cols; q++) {
-            const on =
-              hash(i * 31 + r * 7 + q, layer + 2) > (night ? 0.3 : 0.62);
-            if (!on) continue;
-            box(
-              T(
-                x - w / 2 + (q + 0.5) * (w / cols),
-                14 + r * 26,
-                z - d / 2 - 0.5,
-              ),
-              8,
-              11,
-              1,
-              0,
-              night ? [1, 0.82, 0.45] : [0.7, 0.85, 1],
-              night ? 1 : 0.5,
-            );
-          }
+      const x = mod(i * sp - sh + per / 2, per) - per / 2;
+      if (side === 1 && x < bx) continue;
+      if (side === 2 && x >= bx) continue;
+      const r = hash(i, 11),
+        c = [0.12, 0.14, 0.3];
+      if (id === "tash") {
+        box(T(x, 0, z), 70 + r * 50, 200 + r * 260, 60, 100 + r * 130, c, 0.2);
+        windowsGrid(
+          x,
+          z - 30,
+          70 + r * 50,
+          200 + r * 260,
+          8,
+          16,
+          22,
+          i,
+          PAL.warm,
+          0.9,
+        );
+      } else if (r > 0.45) {
+        box(
+          T(x, 0, z),
+          90,
+          60 + r * 40,
+          50,
+          30 + r * 20,
+          [0.2, 0.17, 0.3],
+          0.2,
+        );
+        dome(x, 60 + r * 40, z, 22, [0.16, 0.5, 0.7], 0.45, false, 0);
+      } else {
+        box(
+          T(x, 0, z),
+          130,
+          50 + r * 30,
+          50,
+          25 + r * 15,
+          [0.22, 0.17, 0.26],
+          0.2,
+        );
+        cyl(T(x + 30, 130, z), 5, 80, [0.22, 0.17, 0.28], 0.2);
       }
     }
   }
-  function landmark(cityId, X, z, tN, tp) {
-    const pale = [0.82, 0.86, 0.95];
-    if (cityId === "sam") {
-      box(T(X, 0, z), 150, 120, 80, 60, [0.78, 0.7, 0.55], 0);
-      cyl(T(X, 150, z), 38, 30, [0.15, 0.55, 0.85], 0.35);
-      sph(T(X, 150, z), 40, 44, 40, [0.1, 0.62, 0.9], 0.45);
-      for (const s of [-1, 1]) {
-        cyl(T(X + s * 100, 190, z), 9, 190, pale, 0.2);
-        sph(T(X + s * 100, 196, z), 11, 11, 11, [0.15, 0.6, 0.9], 0.4);
+  /* mid strip: sequence repeated to cover the view, with a moving "city boundary" for the Tashkent→Samarkand→... hand-over */
+  function strip(id, z, s, D, vis, side, bx) {
+    const seq = SEQ[id] || SEQ.tash;
+    let tot = 0;
+    for (const p of seq) tot += p.w;
+    const reps = Math.max(1, Math.ceil((((vis * (D + z)) / D) * 1.4) / tot)),
+      per = tot * reps,
+      sh = s * ((D + z) / D),
+      half = (vis * (D + z)) / D / 2 + 340;
+    let off = 0;
+    for (let r = 0; r < reps; r++)
+      for (const p of seq) {
+        const x = mod(off + p.w / 2 - sh + per / 2, per) - per / 2;
+        off += p.w;
+        if (Math.abs(x) > half) continue;
+        if (side === 1 && x < bx) continue;
+        if (side === 2 && x >= bx) continue;
+        p.f(x, z);
       }
-    } else if (cityId === "bux") {
-      cyl(T(X, 230, z), 22, 230, [0.78, 0.6, 0.4], 0.15);
-      cyl(T(X, 250, z), 28, 14, [0.2, 0.6, 0.8], 0.3);
-      cone(T(X, 252, z), 18, 36, [0.2, 0.6, 0.8], 0.3);
-      box(T(X + 120, 0, z), 130, 70, 60, 35, [0.76, 0.6, 0.42], 0);
-    } else if (cityId === "khi") {
-      box(T(X, 0, z), 200, 90, 70, 45, [0.78, 0.62, 0.4], 0);
-      for (let i = -4; i <= 4; i++)
-        box(T(X + i * 22, 90, z - 30), 12, 16, 10, 8, [0.78, 0.62, 0.4], 0);
-      cyl(T(X - 120, 140, z), 14, 140, [0.7, 0.55, 0.36], 0.1);
-    } else {
-      cyl(T(X, 330, z), 9, 330, pale, 0.3);
-      cyl(T(X, 300, z), 34, 8, pale, 0.4);
-      sph(T(X, 300, z), 26, 10, 26, [0.9, 0.93, 1], 0.5);
-      cyl(T(X, 385, z), 2.5, 56, [1, 0.3, 0.3], 0.9);
-      sph(T(X, 388, z), 4, 4, 4, [1, 0.2, 0.2], 1);
+  }
+  /* near street layer: low houses / the Itchan Kala wall / trees */
+  function nearLayer(id, z, s, D, vis, side, bx) {
+    const sp = id === "khi" ? 260 : 150,
+      per = Math.ceil((((vis * (D + z)) / D) * 1.3) / sp) * sp,
+      N = per / sp,
+      sh = s * ((D + z) / D);
+    for (let i = 0; i < N; i++) {
+      const x = mod(i * sp - sh + per / 2, per) - per / 2;
+      if (side === 1 && x < bx) continue;
+      if (side === 2 && x >= bx) continue;
+      if (id === "khi") {
+        if (hash(i, 9) > 0.35) khivaWallLow(x, z, 230);
+      } else if (id === "tash") {
+        box(
+          T(x, 0, z),
+          70,
+          44 + hash(i, 4) * 30,
+          34,
+          30,
+          [0.24, 0.25, 0.34],
+          0.3,
+        );
+        windowsGrid(x, z - 17, 66, 60, 6, 14, 16, i, PAL.warm, 1);
+      } else if (hash(i, 6) > 0.4) trees(x - 30, z, 3);
+      else lowHouses(x - 30, z, 1, id === "sam" ? PAL.sand : PAL.mud, 1);
     }
   }
+
   /* ================= PER-FRAME ================= */
   API.render = function (dx, dy) {
     if (!API.on) return;
@@ -870,7 +1481,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
           ? zoom
           : 1);
     const D = H / (2 * Math.tan((18 * PI) / 360)),
-      night = cur.night ? 1 : 0;
+      night = 1;
     LOD = Q.level < 2 ? 1 : 0;
     mp = 0;
     nv = 0;
@@ -881,31 +1492,47 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     lastM = midOff;
     sGnd += dWrap(gndOff, lastG, Art.GW);
     lastG = gndOff;
-    const top = C(cur.top),
-      bot = C(cur.bot);
-    /* sky (NDC pass) */
+    const cid0 =
+      API.forceCity || (cur.city === "tashN" ? "tash" : cur.city || "tash");
+    if (!curCity) curCity = cid0;
+    if (cid0 !== curCity) {
+      prevCity = curCity;
+      curCity = cid0;
+    }
+    if (API.forceCity || (prevCity && (!lm || lm.x < -520))) prevCity = null;
+    const kT = prevCity ? clampN((W + 420 - lm.x) / (W + 900), 0, 1) : 1,
+      NA = NIGHT_SKY[prevCity || curCity] || NIGHT_SKY.tash,
+      NB = NIGHT_SKY[curCity] || NIGHT_SKY.tash,
+      top = mixc(NA.top, NB.top, kT),
+      bot = mixc(NA.bot, NB.bot, kT);
+    /* sky (NDC pass): night gradient, stars, moon */
     const gy = 1 - (2 * groundY) / H;
     ndcQuad(-1, gy, 1, 1, bot, top, 1);
     ndcQuad(-1, -1, 1, gy, bot, bot, 1);
-    if (night && LOD)
-      for (const s of stars)
+    if (LOD)
+      for (let i = 0; i < 80; i++) {
+        const sx0 = hash(i, 21) * 2 - 1,
+          sy0 = 1 - hash(i, 22) * (gy < 0 ? 1.2 : 1 - gy) * 1.7,
+          tw = 0.55 + 0.45 * Math.sin(frame * 0.05 + i);
+        if (sy0 < gy + 0.08) continue;
         ndcQuad(
-          (s.x / W) * 2 - 1,
-          1 - (s.y / H) * 2,
-          (s.x / W) * 2 - 1 + (2 * s.s) / W,
-          1 - (s.y / H) * 2 - (2 * s.s) / H,
-          [0.78, 0.93, 1],
-          [0.78, 0.93, 1],
-          s.a,
+          sx0,
+          sy0,
+          sx0 + (2 * (1 + hash(i, 23))) / W,
+          sy0 - (2 * (1 + hash(i, 23))) / H,
+          [0.8, 0.92, 1],
+          [0.8, 0.92, 1],
+          tw,
         );
+      }
     const b = cur.body || [0.84, 0.22, 26, "#ffffff"],
-      bc = C(b[3].length === 7 ? b[3] : "#ffffff"),
+      bc = [0.96, 0.97, 1],
       bx = W * b[0],
       by = Math.min(b[1] * H, groundY - 30),
-      br = b[2] * Math.max(1, UI * 0.8);
+      br = Math.max(16, b[2] * 0.8) * Math.max(1, UI * 0.8);
     for (const [k, a] of [
-      [2.4, 0.18],
-      [1.5, 0.35],
+      [2.6, 0.12],
+      [1.6, 0.28],
       [1, 1],
     ])
       ndcDisc(
@@ -913,7 +1540,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         1 - (by / H) * 2,
         (br * k * 2) / W,
         (br * k * 2) / H,
-        mixc(top, bc, a),
+        mixc(mixc(top, bot, clampN(by / groundY, 0, 1)), bc, a),
         1,
       );
     const skyI = ni;
@@ -924,51 +1551,19 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       persp(fov, asp, 40, 6000),
       lookAt([cx, cy, -D], [cx, cy, 0]),
     );
-    const base = mixc(bot, [0.05, 0.06, 0.12], 0.45),
-      ACC_C = C(
-        typeof cur.a === "string" && cur.a.length === 7 ? cur.a : "#53f7ff",
-      );
-    /* far/mid/near skylines + the landmark */
-    city(
-      0,
-      1100,
-      sFar,
-      220,
-      520,
-      160,
-      260,
-      360,
-      mixc(bot, [0.5, 0.55, 0.7], 0.25),
-      D,
-      W,
-      ACC_C,
-      night,
-    );
-    city(1, 520, sMid, 110, 250, 90, 150, 190, base, D, W, ACC_C, night);
-    if (lm && lm.x > -400 && lm.x < W + 400)
-      landmark(
-        lm.city || cur.city,
-        ((lm.x - W / 2) * (D + 640)) / D,
-        640,
-        night,
-      );
-    city(
-      2,
-      190,
-      sGnd * 0.6,
-      50,
-      120,
-      56,
-      96,
-      140,
-      mixc(base, [0.1, 0.12, 0.2], 0.4),
-      D,
-      W,
-      ACC_C,
-      night,
-    );
+    const bnd = (z) => (lm ? ((lm.x - W / 2) * (D + z)) / D : 1e9);
+    for (const [id, side] of prevCity
+      ? [
+          [prevCity, 2],
+          [curCity, 1],
+        ]
+      : [[curCity, 0]]) {
+      farLayer(id, 1100, sFar, D, W, side, bnd(1100));
+      strip(id, 520, sMid, D, W, side, bnd(520));
+      nearLayer(id, 190, sGnd * 0.6, D, W, side, bnd(190));
+    }
     /* ground: road, lane dashes, sidewalk, lamps, far plain */
-    const road = mixc(C(cur.bot), [0.05, 0.06, 0.1], 0.72),
+    const road = mixc(bot, [0.04, 0.045, 0.08], 0.7),
       side = mixc(road, [0.5, 0.52, 0.6], 0.4);
     box(T(0, 0, -10), 9000, 20, 170, -10, road, 0.04);
     box(T(0, 0, 85), 9000, 6, 70, -3 + 6, side, 0.05);
