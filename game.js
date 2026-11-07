@@ -2178,11 +2178,13 @@ function resize() {
   const cw = Math.max(200, wrap.clientWidth),
     ch = Math.max(140, wrap.clientHeight);
   const oldG = groundY;
+  /* phones held upright: a narrower world (440 instead of 560 units) draws the city, obstacles and hero ~30% larger */
+  const minW = COARSE && window.innerHeight > window.innerWidth ? 440 : 560;
   let s = ch / 350,
     w = cw / s;
-  if (w < 560) {
-    s = cw / 560;
-    w = 560;
+  if (w < minW) {
+    s = cw / minW;
+    w = minW;
   } else if (w > 1100) {
     s = cw / 1100;
     w = 1100;
