@@ -121,7 +121,10 @@ function update(dt) {
       const sc = secAt(pz + 4);
       const stn = sc === 1 ? stationOf(Math.floor((pz + 4) / CH)) : -1;
       if (stn !== lastStn) {
-        if (stn >= 0 && pz > 50) floatText("🚇 " + STN[stn].n, "#9fd8ff");
+        if (stn >= 0 && pz > 50) {
+          floatText("🚇 " + STN[stn].n, "#9fd8ff");
+          stationChime(STN[stn].n);
+        }
         lastStn = stn;
       }
       if (sc !== lastMetro) {
@@ -226,11 +229,11 @@ function update(dt) {
     if (stumbleT > 0) stumbleT -= dt;
     courUpdate(dt);
     if (storyCard.t > 0) storyCard.t -= dt;
-    evUpdate();
+    sr(evUpdate);
     rushK = lerp(rushK, RUNEV.on && RUNEV.cur === "rush" ? 1 : 0, Math.min(1, dt * 2.5));
     nightK = lerp(nightK, RUNEV.on && RUNEV.cur === "night" ? 1 : 0, Math.min(1, dt * 1.2));
     gap = lerp(gap, hits > 0 ? 4.4 : 11 - 5.5 * clamp((heat - 45) / 55, 0, 1), Math.min(1, dt * 1.6));
-    while (nextSpawn < pz + 150) spawn();
+    while (nextSpawn < pz + 150) sr(spawn);
     if (!heli && pz > nextHeli) {
       heli = { t: 0, dur: 11, ph: Math.random() * 6, x: 0 };
       nextHeli = pz + rnd(1200, 1800);

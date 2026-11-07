@@ -118,7 +118,8 @@ function reset() {
   while (sparks.length) SPARK_POOL.push(sparks.pop());
   floaties = [];
   nextSpawn = startZ + 55;
-  RUNSEED = (Math.random() * 1e9) | 0;
+  RUNSEED = DAILY.on ? DAILY.seed : (Math.random() * 1e9) | 0;
+  if (DAILY.on) DAILY.rng = mulberry32(DAILY.seed);
   courReset();
   evReset();
   coinHud = 0;

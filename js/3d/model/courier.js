@@ -93,7 +93,7 @@ const ITEM_CU = [6, 0, 8, 7],
 function pickCust(story) {
   if (story) return STORY_CU[ST.th] ?? 0;
   let c;
-  do c = (Math.random() * CU.length) | 0;
+  do c = (RNG() * CU.length) | 0;
   while (c === lastCu);
   return c;
 }
@@ -167,7 +167,7 @@ function courTouch(o) {
   if (o.k === "pkg") {
     const story = !!o.story,
       dist = 3000,
-      l = (Math.random() * 3) | 0;
+      l = (RNG() * 3) | 0;
     CR.st = "carry";
     CR.pkg = null;
     CR.hits = 0;
@@ -176,7 +176,7 @@ function courTouch(o) {
     CR.item = o.item;
     CR.anim = { k: "in", item: o.item, t: 0, x: o.x, y: o.y, z: o.z };
     CR.tMax = CR.tLeft = (dist / Math.max(speed, SPEED0)) * 1.15 + 4;
-    CR.drop = { k: "drop", x: LX[l], z: pz + dist, len: 3, story, item: o.item };
+    CR.drop = { k: "drop", x: LX[l], z: pz + dist, len: 3, story, item: o.item, cust: o.cust };
     objs.push(CR.drop);
     courClear();
     floatText(story ? T("qPick") : T("cPick"), story ? "#7fe6ff" : "#ffd84f");
@@ -233,7 +233,7 @@ function courTouch(o) {
     if (jr.done === 1 && jrCount() === QUEST.length && firstQ) extra.push("🏆 " + T("jrEnd"));
   }
   showTalk({ c: CR.cust, pages, rt, reward, add: tr.add, extra, must: story || tr.ch >= 0 });
-  CR.anim = { k: "out", item: o.item, t: 0, x: o.x, z: o.z };
+  CR.anim = { k: "out", item: o.item, t: 0, x: o.x, z: o.z, cust: o.cust, cx: o.x + (o.x >= 0 ? 1.9 : -1.9) };
   CR.story = false;
   CR.st = "find";
   CR.drop = null;
@@ -245,7 +245,7 @@ function courUpdate(dt) {
     const wantStory = ST.state === "pending" && pz + 120 >= ST.z0 + 40;
     if (!CR.pkg && (wantStory || pz + 120 >= CR.at)) {
       const cust = (lastCu = pickCust(wantStory));
-      CR.pkg = { k: "pkg", x: LX[(Math.random() * 3) | 0], z: Math.max(wantStory ? ST.z0 + 40 : CR.at, pz + 120), y: 1.1, len: 0, story: wantStory, cust, item: wantStory ? ST.th : ITEM_CU[cust] };
+      CR.pkg = { k: "pkg", x: LX[(RNG() * 3) | 0], z: Math.max(wantStory ? ST.z0 + 40 : CR.at, pz + 120), y: 1.1, len: 0, story: wantStory, cust, item: wantStory ? ST.th : ITEM_CU[cust] };
       if (wantStory) ST.state = "carry";
       objs.push(CR.pkg);
       courClear();

@@ -93,40 +93,124 @@ const vib = (n) => {
     navigator.vibrate && navigator.vibrate(n);
   } catch (e) {}
 };
-/* tiny procedural soundtrack: a bass + hat + arpeggio in a Hijaz-like scale, key changes per city */
+/* ---------- soundtrack: every city has its own groove; the metro has calm station music, a train rumble and announcements ---------- */
 const MUS = { step: 0, next: 0 },
   SCALE = [1, 1.0595, 1.26, 1.335, 1.5, 1.587, 1.888],
-  ROOT = [146.8, 164.8, 155.6, 146.8, 174.6, 130.8];
+  ROOT = [146.8, 164.8, 155.6, 146.8, 174.6, 130.8],
+  /* per city: tempo offset, lead voice and gain, doira (frame drum) pattern, 8th-note bass pulse */
+  STYLE = [
+    { bpm: 0, wave: "triangle", g: 0.018, doira: 0, pulse: 0 }, // Tashkent
+    { bpm: -6, wave: "triangle", g: 0.026, doira: 1, pulse: 0 }, // Samarkand: plucked dutor + doira
+    { bpm: -10, wave: "sine", g: 0.03, doira: 2, pulse: 0 }, // Bukhara: warm, slow
+    { bpm: 6, wave: "square", g: 0.011, doira: 1, pulse: 0 }, // Khiva: reedy
+    { bpm: -4, wave: "sine", g: 0.03, doira: 0, pulse: 0 }, // Fergana: soft
+    { bpm: 10, wave: "sawtooth", g: 0.014, doira: 0, pulse: 1 }, // Neon Tashkent: synth
+  ],
+  STROOT = [146.8, 130.8, 164.8, 138.6, 155.6, 123.5, 174.6, 146.8, 196, 130.8];
+let noiseBuf = null,
+  rumble = null,
+  trainT = 0,
+  lastSpeak = "";
+function noiseBuffer() {
+  if (!noiseBuf && AC) {
+    noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  return noiseBuf;
+}
+/* low looping rumble of the tunnel; its volume follows how deep inside the metro we are */
+function rumbleTick(on) {
+  if (!AC || AC.state !== "running" || !noiseBuffer()) return;
+  if (!rumble) {
+    const src = AC.createBufferSource(),
+      lp = AC.createBiquadFilter(),
+      g = AC.createGain();
+    src.buffer = noiseBuf;
+    src.loop = true;
+    lp.type = "lowpass";
+    lp.frequency.value = 170;
+    g.gain.value = 0;
+    src.connect(lp);
+    lp.connect(g);
+    g.connect(AC.destination);
+    src.start();
+    rumble = g;
+  }
+  rumble.gain.setTargetAtTime(on, AC.currentTime, 0.25);
+}
+/* a train passing in the next tunnel: filtered noise sweeping up and fading */
+function trainWhoosh() {
+  if (muted || !AC || !noiseBuffer()) return;
+  const t = AC.currentTime,
+    src = AC.createBufferSource(),
+    bp = AC.createBiquadFilter(),
+    g = AC.createGain();
+  src.buffer = noiseBuf;
+  bp.type = "bandpass";
+  bp.Q.value = 1.2;
+  bp.frequency.setValueAtTime(180, t);
+  bp.frequency.exponentialRampToValueAtTime(900, t + 1.6);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.1, t + 0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+  src.connect(bp);
+  bp.connect(g);
+  g.connect(AC.destination);
+  src.start(t);
+  src.stop(t + 1.9);
+}
+/* station chime ("ding-dong") plus a spoken announcement when this device has a voice for the game's language */
+function stationChime(name) {
+  if (muted) return;
+  tone(784, 0.5, "sine", 0.07);
+  setTimeout(() => tone(587, 0.7, "sine", 0.07), 330);
+  try {
+    const ss = window.speechSynthesis,
+      lg = LG === "ja" ? "ja" : LG === "uz" ? "uz" : "en",
+      v = ss && ss.getVoices().find((x) => x.lang && x.lang.toLowerCase().startsWith(lg));
+    if (v && name !== lastSpeak) {
+      lastSpeak = name;
+      const u = new SpeechSynthesisUtterance(lg === "ja" ? "次は、" + name + "です" : lg === "uz" ? "Navbatdagi bekat: " + name : "Next station: " + name);
+      u.voice = v;
+      u.lang = v.lang;
+      u.volume = 0.7;
+      setTimeout(() => ss.speak(u), 900);
+    }
+  } catch (e) {}
+}
 function musicTick() {
-  if (muted || state !== "play" || paused || !AC || AC.state !== "running")
-    return;
+  const inMetro = state === "play" && !paused && metroAmt(pz) > 0.5 && secAt(pz) === 1;
+  rumbleTick(muted || state !== "play" || paused ? 0 : 0.05 * metroAmt(pz) * (secAt(pz) === 1 ? 1 : 0.4));
+  if (muted || state !== "play" || paused || !AC || AC.state !== "running") return;
   const t = AC.currentTime;
+  if (inMetro && t > trainT) {
+    if (trainT) trainWhoosh();
+    trainT = t + 7 + Math.random() * 6;
+  }
   if (MUS.next < t) MUS.next = t + 0.05;
-  const sp = 60 / (112 + speed * 0.9) / 4;
+  const th = themeAt(pz),
+    ST_ = STYLE[th] || STYLE[0],
+    sp = 60 / (inMetro ? 84 : 112 + ST_.bpm + speed * 0.9) / 4;
   while (MUS.next < t + 0.3) {
     const s = MUS.step++ % 16,
-      root = ROOT[themeAt(pz)],
       at = MUS.next;
-    if (s % 4 === 0) tone(120, 0.12, "sine", 0.07, 45, at);
-    if (s % 2 === 1) tone(6000, 0.03, "square", 0.008, 0, at);
-    if ([0, 3, 6, 8, 11, 14].includes(s))
-      tone(
-        (root / 2) * (s === 8 ? 1.5 : s === 14 ? 1.26 : 1),
-        sp * 2.2,
-        "sawtooth",
-        0.03,
-        0,
-        at,
-      );
-    if (s % 2 === 0)
-      tone(
-        root * 2 * SCALE[((s / 2 + (MUS.step >> 4)) % 7) | 0],
-        sp * 1.6,
-        "triangle",
-        0.018,
-        0,
-        at,
-      );
+    if (inMetro) {
+      /* calm station music: a slow pad chord and a bell-like arpeggio in the station's own key */
+      const root = STROOT[stationOf(Math.floor(pz / CH))];
+      if (s === 0) for (const r of [1, 1.26, 1.5]) tone(root * r, sp * 14, "sine", 0.022, 0, at);
+      if (s % 4 === 0) tone(root / 2, sp * 3, "sine", 0.05, 0, at);
+      if (s % 2 === 0) tone(root * 4 * SCALE[((s / 2 + (MUS.step >> 4)) * 3) % 7 | 0], sp * 2.4, "sine", 0.012, 0, at);
+    } else {
+      const root = ROOT[th];
+      if (s % 4 === 0) tone(120, 0.12, "sine", 0.07, 45, at);
+      if (s % 2 === 1) tone(6000, 0.03, "square", 0.008, 0, at);
+      if ([0, 3, 6, 8, 11, 14].includes(s)) tone((root / 2) * (s === 8 ? 1.5 : s === 14 ? 1.26 : 1), sp * 2.2, "sawtooth", 0.03, 0, at);
+      if (ST_.pulse && s % 2 === 0) tone(root / 2, sp * 0.8, "square", 0.012, 0, at);
+      if (ST_.doira === 1 && [0, 3, 6, 10, 12].includes(s)) tone(s % 3 ? 640 : 220, 0.07, "triangle", 0.05, 160, at); // doira: dum / tak
+      if (ST_.doira === 2 && [0, 4, 7, 8, 12, 15].includes(s)) tone(s % 8 === 0 ? 200 : 700, 0.08, "triangle", 0.045, 150, at);
+      if (s % 2 === 0) tone(root * 2 * SCALE[((s / 2 + (MUS.step >> 4)) % 7) | 0], sp * (ST_.wave === "triangle" ? 1.6 : 2.4), ST_.wave, ST_.g, 0, at);
+    }
     MUS.next += sp;
   }
 }

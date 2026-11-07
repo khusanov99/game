@@ -88,6 +88,64 @@ const ITEMB = [
     b.sph(0.02, 0.7, 0.0, 0.08, 0.02, 0.04, 4, 6, [0.2, 0.6, 0.2]);
   },
 ];
+/* ---------- customers waiting at the gate (front faces -z); the right arm is a separate mesh so it can wave ---------- */
+const CUST3 = [
+  { k: 0.95, skin: [0.93, 0.74, 0.58], top: [0.55, 0.2, 0.52], dress: true, apron: [0.96, 0.94, 0.9], hat: "scarf", hc: [0.9, 0.3, 0.35], leg: [0.3, 0.2, 0.2] },
+  { k: 0.72, skin: [0.95, 0.78, 0.62], top: [0.2, 0.5, 0.9], dress: false, short: true, hat: "cap", hc: [0.9, 0.2, 0.25], leg: [0.15, 0.2, 0.5] },
+  { k: 1.05, skin: [0.88, 0.68, 0.5], top: [0.16, 0.3, 0.62], dress: true, sash: [0.95, 0.75, 0.25], hat: "tub", hc: [0.08, 0.08, 0.12], mus: true, leg: [0.12, 0.12, 0.16] },
+  { k: 1.0, skin: [0.93, 0.76, 0.6], top: [0.12, 0.2, 0.45], dress: true, hat: "hijab", hc: [0.2, 0.62, 0.45], glasses: true, book: true, leg: [0.1, 0.1, 0.2] },
+];
+const CUSTM = [];
+function custMesh(i) {
+  if (CUSTM[i]) return CUSTM[i];
+  const C = CUST3[i],
+    k = C.k,
+    b = new B(),
+    arm = new B(),
+    dk = [0.07, 0.05, 0.05];
+  for (const sx of [-0.12, 0.12]) {
+    b.cyl(sx * k, 0.06 * k, 0, 0.075 * k, 0.065 * k, (C.short ? 0.36 : 0.5) * k, 8, C.short ? C.skin : C.leg);
+    b.sph(sx * k, 0.06 * k, -0.04 * k, 0.1 * k, 0.06 * k, 0.15 * k, 5, 6, [0.15, 0.1, 0.08]);
+  }
+  if (C.short) b.cyl(0, 0.3 * k, 0, 0.2 * k, 0.2 * k, 0.26 * k, 10, C.leg);
+  if (C.dress) b.cyl(0, 0.14 * k, 0, 0.36 * k, 0.24 * k, 0.9 * k, 12, C.top);
+  else b.cyl(0, 0.5 * k, 0, 0.26 * k, 0.2 * k, 0.6 * k, 10, C.top);
+  if (C.apron) b.box(0, 0.5 * k, -0.28 * k, 0.4 * k, 0.55 * k, 0.03 * k, C.apron);
+  if (C.sash) b.box(0, 0.78 * k, 0, 0.6 * k, 0.09 * k, 0.5 * k, C.sash);
+  if (C.book) b.box(0.3 * k, 0.78 * k, -0.12 * k, 0.1 * k, 0.26 * k, 0.2 * k, [0.88, 0.2, 0.25]);
+  /* left arm (screen-right is -x): hangs down */
+  b.cyl(0.29 * k, 0.6 * k, 0, 0.055 * k, 0.05 * k, 0.5 * k, 7, C.top);
+  b.sph(0.29 * k, 0.56 * k, 0, 0.065 * k, 0.065 * k, 0.065 * k, 5, 6, C.skin);
+  b.sph(0, 1.37 * k, 0, 0.2 * k, 0.22 * k, 0.2 * k, 8, 10, C.skin);
+  for (const sx of [-0.07, 0.07]) b.sph(sx * k, 1.4 * k, -0.17 * k, 0.026 * k, 0.03 * k, 0.02 * k, 4, 5, dk);
+  b.box(0, 1.31 * k, -0.19 * k, 0.09 * k, 0.016 * k, 0.02 * k, [0.7, 0.2, 0.2]);
+  if (C.mus) b.box(0, 1.345 * k, -0.2 * k, 0.15 * k, 0.03 * k, 0.025 * k, dk);
+  if (C.glasses) for (const sx of [-0.075, 0.075]) b.box(sx * k, 1.4 * k, -0.2 * k, 0.1 * k, 0.075 * k, 0.012 * k, [0.15, 0.15, 0.2]);
+  if (C.hat === "scarf" || C.hat === "hijab") {
+    b.sph(0, 1.44 * k, 0.02 * k, 0.235 * k, 0.2 * k, 0.225 * k, 8, 10, C.hc);
+    if (C.hat === "hijab") b.cyl(0, 1.0 * k, 0.02 * k, 0.26 * k, 0.21 * k, 0.4 * k, 10, C.hc);
+    else b.box(0, 1.22 * k, 0.2 * k, 0.2 * k, 0.28 * k, 0.05 * k, C.hc);
+  } else if (C.hat === "cap") {
+    b.cyl(0, 1.5 * k, 0, 0.215 * k, 0.19 * k, 0.1 * k, 10, C.hc, true);
+    b.box(0, 1.52 * k, -0.24 * k, 0.26 * k, 0.025 * k, 0.14 * k, C.hc);
+  } else {
+    b.cyl(0, 1.54 * k, 0, 0.21 * k, 0.17 * k, 0.13 * k, 8, C.hc, true);
+    b.box(0, 1.585 * k, -0.18 * k, 0.28 * k, 0.04 * k, 0.012 * k, [0.95, 0.95, 0.95]);
+  }
+  arm.cyl(0, -0.5 * k, 0, 0.05 * k, 0.055 * k, 0.5 * k, 7, C.top);
+  arm.sph(0, -0.55 * k, 0, 0.065 * k, 0.065 * k, 0.065 * k, 5, 6, C.skin);
+  return (CUSTM[i] = { b: b.mesh(), arm: arm.mesh(), k });
+}
+/* c: customer index, wave speed w, hop h (0 = standing, 1 = cheering) */
+function drawCustomer(c, x, z, t, cheer) {
+  const M = custMesh(c),
+    hop = cheer ? Math.abs(Math.sin(t * 7)) * 0.22 : 0,
+    B0 = Tp(x, hop, z),
+    opt = { emis: 0.4, spec: 0.25, rim: 0.4 },
+    wv = cheer ? 0.35 * Math.sin(t * 14) : 0.25 * Math.sin(t * 5);
+  draw(M.b, B0, null, opt);
+  draw(M.arm, joint(B0, -0.29 * M.k, 1.07 * M.k, 0, 0, 0, -(2.7 + wv)), null, opt);
+}
 const ITEMM = [];
 const itemMesh = (i) => {
   if (!ITEMM[i]) {
@@ -153,7 +211,7 @@ function courAnimTick(rdt) {
     BAGPOP = 0.7;
     burst(a.x, 2.2, a.z, 28, "#ffd84f", 7);
   }
-  if (a.t > 2.4) CR.anim = null;
+  if (a.t > 2.4 && !talk) CR.anim = null;
 }
 function drawBagLabel(root) {
   const L = bagLabel();
@@ -176,12 +234,12 @@ function drawItemFx(root, ca) {
     z = a.z + (pz - 0.4 - a.z) * e;
     sc = 1.15 - 0.65 * e;
     if (k < 1) draw(itemMesh(a.item), scaleM(joint(Tp(x, y - 0.4, z), 0, a.t * 9, 0, 0), sc), null, ITEM_OPT);
-  } else if (a.t < 2.2) {
+  } else if (a.t < 2.2 || talk) {
     /* out: from the bag up onto the gate, then it rests there glowing */
-    const gx = a.x,
-      gz = a.z + 1.2;
+    const gx = a.cx,
+      gz = a.z - 0.35;
     x = px + (gx - px) * e;
-    y = py + 1.05 + (1.7 - py - 1.05) * e + Math.sin(k * Math.PI) * 1.2;
+    y = py + 1.05 + (1.3 - py - 1.05) * e + Math.sin(k * Math.PI) * 1.2;
     z = pz - 0.4 + (gz - pz + 0.4) * e;
     sc = 0.5 + 0.8 * e;
     draw(itemMesh(a.item), scaleM(joint(Tp(x, y, z), 0, a.t * 5, 0, 0), sc), null, ITEM_OPT);
@@ -189,11 +247,12 @@ function drawItemFx(root, ca) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
       gl.depthMask(false);
-      draw(PKGM.halo, Tp(gx, 1.9, gz - 0.2), HALOT, { emis: 1, alpha: Math.max(0, 0.9 - (a.t - 0.75) * 0.6), tint: [1, 0.9, 0.5] });
+      draw(PKGM.halo, Tp(gx, 1.5, gz - 0.2), HALOT, { emis: 1, alpha: Math.max(0, 0.9 - (a.t - 0.75) * 0.6), tint: [1, 0.9, 0.5] });
       gl.depthMask(true);
       gl.disable(gl.BLEND);
     }
   }
+  if (a.k === "out" && a.cust >= 0) drawCustomer(a.cust, a.cx, a.z, a.t, a.t > 0.5);
 }
 function courBuild() {
   const g = new B(),
@@ -235,6 +294,7 @@ function drawCourierObj(o, ca) {
   draw(DROPM.b, M, null, { emis: 0.3 });
   draw(DROPM.g, Tp(o.x, bob * 0.3, o.z), null, { emis: 1 });
   draw(DROPM.sign.m, Tp(o.x, 3.0, o.z - 0.02), DROPM.sign.tex, { emis: 0.9 });
+  if (o.cust >= 0) drawCustomer(o.cust, o.x + (o.x >= 0 ? 1.9 : -1.9), o.z, ca * 0.38, false);
 }
 /* ---------- landmark plazas ---------- */
 const PLAZA = {};

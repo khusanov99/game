@@ -81,6 +81,7 @@ function showOv(title, sub, row, btn, canRevive) {
   cityBtn.style.display = "none";
   jrBtn.style.display = "none";
   cuBtn.style.display = "none";
+  dlBtn.style.display = "none";
   $("oTitle").textContent = title;
   $("oSub").innerHTML = sub;
   $("oRow").innerHTML = row;
@@ -98,6 +99,7 @@ function missionHtml() {
 function menu() {
   ovMode = "menu";
   jrStart = 0;
+  dailyOff();
   showOv(
     T("title"),
     T("sub"),
@@ -109,6 +111,8 @@ function menu() {
   gfxBtn.style.display = "block";
   gfxLabel();
   jrBtn.style.display = "block";
+  dlBtn.style.display = "block";
+  dlBtn.textContent = T("dlBtn") + (dailyToday() ? "  ✔" : "");
   cuBtn.style.display = "block";
   cuBtn.textContent = T("cuBtn") + "  " + cu.c.reduce((a, b) => a + b, 0) + "/" + CU.length * CU_AT.length;
   jrBtn.textContent = T("jrBtn") + "  " + jrCount() + "/" + QUEST.length;
@@ -166,6 +170,26 @@ function cuOv() {
     return `<div style="width:100%;text-align:left;font:600 11px Inter,sans-serif;padding:7px 0;color:#c8cdf0"><div style="display:flex;justify-content:space-between"><b>${c.e} ${cuName(i)}</b><span style="color:#ffa8d4">${t}${nx ? " / " + nx : ""} ♥</span></div>${chs}</div>`;
   }).join("");
   showOv(T("cuTitle"), T("cuHint"), rows, T("back2"), false);
+}
+function dailyOv() {
+  ovMode = "dl";
+  const t = dailyToday(),
+    ks = Object.keys(dl.days).sort().reverse().slice(0, 7),
+    rows = ks
+      .map((k) => `<div style="width:100%;display:flex;justify-content:space-between;gap:8px;font:600 11px Inter,sans-serif;padding:4px 0;color:${k === dKey() ? "#ffb35c" : "#c8cdf0"}"><span>${k}</span><span>📦 ${dl.days[k].deliv}</span><span>${dl.days[k].rate ? starStr(Math.round(dl.days[k].rate)) : ""}</span><b>${dl.days[k].score}</b></div>`)
+      .join("");
+  showOv(
+    T("dlTitle"),
+    "<b>" + dKey() + "</b><br>" + T("dlHint"),
+    `<div class="pill"><small>${T("dlToday")}</small>${t ? t.score : "—"}</div><div class="pill"><small>🔥 ${T("dlStreak")}</small>${dailyStreak()}</div>` +
+      `<div style="width:100%;text-align:left;margin-top:6px"><div style="font:700 9px Orbitron,sans-serif;letter-spacing:1.5px;color:#8c93b8;margin-bottom:4px">${T("dlBoard")}</div>${rows || `<div style="font:500 11px Inter,sans-serif;color:#6b7299">${T("dlNone")}</div>`}</div>`,
+    T("dlGo"),
+    false,
+  );
+  rsBtn.style.display = "block";
+  rsBtn.textContent = "📋 " + T("dlShare");
+  rvBtn.style.display = "block";
+  rvBtn.textContent = T("back2");
 }
 function achOv() {
   ovMode = "ach";
@@ -225,7 +249,12 @@ function endGame() {
   shakeT = 0.5;
   vy = 4;
   const nb = bank(),
-    d = scoreNow();
+    d = scoreNow(),
+    dr = DAILY.on ? dailySave(d, CR.n, CR.n ? (CR.rsum || 0) / CR.n : 0) : null;
+  if (dr && dr.bonus) {
+    wallet += dr.bonus;
+    store.set("zr_wallet", wallet);
+  }
   setTimeout(() => {
     if (state !== "over") return;
     const extra =
@@ -236,7 +265,8 @@ function endGame() {
         .join("") +
       (lvlMsg ? `<br><b style="color:#ffd84f">${lvlMsg}</b>` : "") +
       (CR.n ? `<br><b style="color:#7ffcb0">📦 ${T("cDelivSum")}: ${CR.n}  (+${CR.earned})</b>` : "") +
-      (LT.rateN ? `<br><b style="color:#ffd84f">${T("rating")}: ${starStr(Math.round(LT.rateSum / LT.rateN))}</b>` : "");
+      (LT.rateN ? `<br><b style="color:#ffd84f">${T("rating")}: ${starStr(Math.round(LT.rateSum / LT.rateN))}</b>` : "") +
+      (dr ? `<br><b style="color:#ffb35c">📅 ${T("dlRun").replace("{b}", dr.best)}${dr.bonus ? " · " + T("dlBonus") : ""}</b>` : "");
     showOv(
       T("busted"),
       T("caught") +
@@ -249,6 +279,7 @@ function endGame() {
   }, 1500);
 }
 rvBtn.addEventListener("click", () => {
+  if (ovMode === "dl") return menu();
   if (state !== "over" || revived || wallet < 100) return;
   wallet -= 100;
   store.set("zr_wallet", wallet);
@@ -271,10 +302,26 @@ rvBtn.addEventListener("click", () => {
 });
 $("go").addEventListener("click", () => {
   if (ovMode === "pause") setPause(false);
-  else if (ovMode === "ach" || ovMode === "city" || ovMode === "jr" || ovMode === "cu") menu();
+  else if (ovMode === "dl") {
+    jrStart = 0;
+    dailyArm();
+    start();
+  } else if (ovMode === "ach" || ovMode === "city" || ovMode === "jr" || ovMode === "cu") menu();
   else start();
 });
 rsBtn.addEventListener("click", () => {
+  if (ovMode === "dl") {
+    const txt = dailyShareText();
+    try {
+      navigator.clipboard.writeText(txt).then(
+        () => (rsBtn.textContent = "✔ " + T("dlCopied")),
+        () => (rsBtn.textContent = txt.replace(/\n/g, "  ")),
+      );
+    } catch (e) {
+      rsBtn.textContent = txt.replace(/\n/g, "  ");
+    }
+    return;
+  }
   paused = false;
   try {
     AC && AC.resume();
@@ -283,6 +330,7 @@ rsBtn.addEventListener("click", () => {
 });
 achBtn.addEventListener("click", achOv);
 cityBtn.addEventListener("click", cityOv);
+dlBtn.addEventListener("click", dailyOv);
 jrBtn.addEventListener("click", jrOv);
 cuBtn.addEventListener("click", cuOv);
 $("oRow").addEventListener("click", (e) => {
