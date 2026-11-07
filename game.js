@@ -2274,6 +2274,19 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         cyl(J(cd, 0, -1.6, 0), r * 0.94, 3.4, cc, 1);
         cyl(J(cd, 0, 2.2, 0), r * 0.5, 3.4, mulc(cc, 1.15), 1);
         cyl(J(cd, 0, -2.2, 0), r * 0.5, 3.4, mulc(cc, 1.15), 1);
+      } else if (it.k === "parcel") {
+        const bob = Math.sin(frame * 0.1 + it.x) * 3,
+          pm = J(T(X, Y + bob, 0), 0, 0, 0, 0.2, frame * 0.04, 0);
+        box(pm, 22, 18, 22, 0, [0.96, 0.9, 0.74], 0.35);
+        box(pm, 23, 4, 23, 0, [0.9, 0.2, 0.18], 0.6);
+        box(pm, 4, 19, 23, 0, [0.9, 0.2, 0.18], 0.6);
+        sph(J(pm, 0, 11, 0), 5, 3, 5, [1, 0.78, 0.2], 0.8);
+      } else if (it.k === "relic") {
+        const bob = Math.sin(frame * 0.08 + it.x) * 4,
+          rm = J(T(X, Y + bob, 0), 0, 0, 0, 0, frame * 0.05, 0);
+        sph(rm, 20, 20, 20, [1, 0.8, 0.25], 0.9);
+        sph(rm, 26, 26, 26, [1, 0.9, 0.5], 0.25);
+        cyl(J(rm, 0, 0, 0, PI / 2.3, 0, 0), 27, 2, [1, 0.85, 0.3], 0.9);
       } else {
         const bob = Math.sin(frame * 0.1 + it.x) * 3,
           pc = C(POWER[it.k].color),
@@ -3942,6 +3955,7 @@ function renderMedals() {
   const st = `<div class="stats">${cell(meta.runs, "stats.runs")}${cell(meta.dist, "stats.dist")}${cell(meta.coinsTotal, "stats.coins")}${cell(meta.bestCombo, "stats.combo")}${cell(fmtT(meta.time), "stats.time")}${cell(meta.bestDist || 0, "stats.best")}</div>`;
   return (
     album +
+    albumHtml() +
     `<div class="top-title">${t("stats.title")}</div>${st}<div class="top-title">${t("medals.title", { a: Object.keys(meta.medals).length, b: ACH.length })}</div><div class="shop">` +
     ACH.map(
       (a) =>
@@ -4731,6 +4745,345 @@ function x10Draw() {
       ctx.fillText("!", x, y + 9);
     }
 }
+/* ============ X11: ghost run · ZAP · parcel delivery · relic album ============ */
+const RELICS = {
+  tash: [
+    ["📡", "Tashkent tower model", "Teleminora modeli", "テレビ塔の模型"],
+    ["🚇", "Metro token", "Metro jetoni", "メトロのトークン"],
+    ["🥟", "Golden samsa", "Oltin somsa", "黄金のサムサ"],
+  ],
+  sam: [
+    ["🕌", "Registan tile", "Registon plitkasi", "レギスタンのタイル"],
+    ["🧵", "Silk roll", "Ipak o'rami", "シルクの反物"],
+    ["🥖", "Samarkand bread", "Samarqand noni", "サマルカンドのパン"],
+  ],
+  bux: [
+    ["🏺", "Clay kuza", "Sopol ko'za", "陶器の壺"],
+    ["🧣", "Zardozi scarf", "Zardo'zi ro'mol", "金糸刺繍のスカーフ"],
+    ["🏛️", "Kalon minaret", "Kalon minorasi", "カラーン・ミナレット"],
+  ],
+  khi: [
+    ["🍈", "Khiva melon", "Xiva qovuni", "ヒヴァのメロン"],
+    ["🎩", "Fur telpak hat", "Telpak", "毛皮の帽子"],
+    ["🗡️", "Khiva dagger", "Xiva xanjari", "ヒヴァの短剣"],
+  ],
+};
+const PARCEL = {
+  tash: ["🥟", "Somsa", "Somsa", "サムサ"],
+  sam: ["🥖", "Bread", "Non", "パン"],
+  bux: ["🍯", "Sweets", "Paxlava", "お菓子"],
+  khi: ["🍈", "Melon", "Qovun", "メロン"],
+};
+const relicCity = () => (RELICS[cur.city] ? cur.city : "tash");
+const X11 = {
+  par: 0,
+  zap: 0,
+  nextPar: 90,
+  nextRel: 260,
+  ghost: store.get("zr_ghost", null),
+  rec: [],
+  recT: 0,
+  beam: null,
+  passed: false,
+  btn: null,
+};
+function x11Reset() {
+  Object.assign(X11, {
+    par: 0,
+    zap: 0,
+    nextPar: 80 + Math.random() * 60,
+    nextRel: 200 + Math.random() * 120,
+    rec: [],
+    recT: 0,
+    beam: null,
+    passed: false,
+  });
+}
+function x11Coin() {
+  X11.zap = Math.min(100, X11.zap + 6);
+}
+function x11Save() {
+  /* keep the ghost of the best endless run */
+  if (lvl || X11.rec.length < 20 || score <= X10.best0) return;
+  const rec = X11.rec.length > 3000 ? X11.rec.slice(0, 3000) : X11.rec;
+  X11.ghost = { s: Math.floor(score), r: rec };
+  store.set("zr_ghost", X11.ghost);
+}
+function x11Zap() {
+  if (state !== "play") return;
+  if (X11.zap < 100) {
+    pop(
+      player.x + 20,
+      player.y - 30,
+      T3("charging…", "zaryad…", "充電中…"),
+      "#8aa",
+    );
+    return;
+  }
+  let tgt = null;
+  for (const o of obstacles)
+    if (
+      (o.t === "drone" || o.t === "shot" || o.t === "block") &&
+      o.x + o.w > player.x + 10 &&
+      o.x < W - 10 &&
+      (!tgt || o.x < tgt.x)
+    )
+      tgt = o;
+  if (!tgt) {
+    pop(
+      player.x + 20,
+      player.y - 30,
+      T3("no target", "nishon yo'q", "標的なし"),
+      "#8aa",
+    );
+    return;
+  }
+  X11.zap = 0;
+  const tx = tgt.x + tgt.w / 2,
+    ty = tgt.y + tgt.h / 2;
+  X11.beam = {
+    x1: player.x + player.w,
+    y1: player.y + 14,
+    x2: tx,
+    y2: ty,
+    t: 220,
+  };
+  obstacles.splice(obstacles.indexOf(tgt), 1);
+  burst(tx, ty, "#53f7ff", 22);
+  burst(tx, ty, "#ffffff", 10);
+  ring(tx, ty, "#53f7ff", 50);
+  flash = { c: "#53f7ff", a: 0.16 };
+  const g = 60 * mult();
+  score += g;
+  pop(tx, ty - 16, "ZAP +" + g, "#9ff");
+  shake = Math.max(shake, 5);
+  beep(1400, 0.08, "sawtooth", 0.05, -900);
+  setTimeout(() => beep(300, 0.14, "square", 0.05, -150), 60);
+  vib(20);
+  meta.zaps = (meta.zaps | 0) + 1;
+}
+function x11Collect(it) {
+  if (it.k === "parcel") {
+    X11.par++;
+    const pc = PARCEL[relicCity()];
+    burst(it.x, it.y, "#ffe29a", 12);
+    sfx.coin();
+    if (X11.par >= 3) {
+      X11.par = 0;
+      const g = 300 * mult();
+      score += g;
+      coins += 10;
+      meta.deliv = (meta.deliv | 0) + 1;
+      saveMeta();
+      shout(
+        T3("DELIVERED! ", "YETKAZILDI! ", "配達完了！") + pc[0] + " +" + g,
+        "#ffe29a",
+        1700,
+      );
+      ring(it.x, it.y, "#ffe29a", 70);
+      burst(it.x, it.y, "#ffd84f", 24);
+      [659, 784, 988, 1319].forEach((f, i) =>
+        setTimeout(() => beep(f, 0.1, "triangle", 0.05), i * 70),
+      );
+    } else pop(it.x, it.y - 14, pc[0] + " " + X11.par + "/3", "#ffe29a");
+    return;
+  }
+  /* relic */
+  meta.album = meta.album || {};
+  meta.album[it.id] = 1;
+  const [city, idx] = it.id.split(":"),
+    r = RELICS[city][idx | 0];
+  const full = RELICS[city].every((_, i) => meta.album[city + ":" + i]);
+  shout(
+    T3("NEW FIND: ", "YANGI TOPILMA: ", "発見：") +
+      r[0] +
+      " " +
+      T3(r[1], r[2], r[3]),
+    "#ffd84f",
+    2000,
+  );
+  ring(it.x, it.y, "#ffd84f", 70);
+  burst(it.x, it.y, "#ffd84f", 26);
+  flash = { c: "#ffd84f", a: 0.16 };
+  [523, 659, 784, 1047, 1319].forEach((f, i) =>
+    setTimeout(() => beep(f, 0.12, "triangle", 0.055), i * 70),
+  );
+  if (full) {
+    coins += 100;
+    setTimeout(
+      () =>
+        shout(
+          T3(
+            "SET COMPLETE! +100",
+            "TO'PLAM TUGADI! +100",
+            "コンプリート！+100",
+          ),
+          "#ff4fd8",
+          2000,
+        ),
+      1800,
+    );
+  }
+  saveMeta();
+}
+function x11Update(delta) {
+  const b = X11.btn;
+  if (b) {
+    const on = state === "play";
+    b.classList.toggle("show", on);
+    b.classList.toggle("rdy", X11.zap >= 100);
+    b.style.setProperty("--c", X11.zap + "%");
+  }
+  if (state !== "play") return;
+  const p = player;
+  /* record this run (endless only) */
+  if (!lvl) {
+    X11.recT += delta;
+    while (X11.recT >= 100) {
+      X11.recT -= 100;
+      X11.rec.push([
+        Math.round(runDist * 10) / 10,
+        Math.round(groundY - (p.y + p.h)),
+      ]);
+    }
+  }
+  /* spawn parcels and relics ahead */
+  if (runDist > X11.nextPar) {
+    X11.nextPar = runDist + 110 + Math.random() * 90;
+    items.push({
+      k: "parcel",
+      x: W + 40,
+      y: groundY - 52 - Math.random() * 34,
+      r: 14,
+    });
+  }
+  if (runDist > X11.nextRel) {
+    X11.nextRel = runDist + 300 + Math.random() * 200;
+    const c = relicCity(),
+      al = meta.album || {},
+      i = RELICS[c].findIndex((_, k) => !al[c + ":" + k]);
+    if (i >= 0)
+      items.push({
+        k: "relic",
+        id: c + ":" + i,
+        e: RELICS[c][i][0],
+        x: W + 40,
+        y: groundY - 70,
+        r: 17,
+      });
+  }
+  if (X11.beam && (X11.beam.t -= delta) <= 0) X11.beam = null;
+}
+function ghostAt(t) {
+  const g = X11.ghost && X11.ghost.r;
+  if (!g || !g.length) return null;
+  const f = t / 100,
+    i = Math.min(g.length - 1, Math.floor(f)),
+    j = Math.min(g.length - 1, i + 1),
+    k = f - Math.floor(f);
+  if (f > g.length + 5) return null;
+  return [g[i][0] + (g[j][0] - g[i][0]) * k, g[i][1] + (g[j][1] - g[i][1]) * k];
+}
+function x11Draw() {
+  const p = player;
+  if (X11.beam) {
+    const bm = X11.beam;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, bm.t / 120);
+    ctx.strokeStyle = "#9ff";
+    ctx.lineWidth = 5;
+    ctx.shadowColor = "#53f7ff";
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.moveTo(bm.x1, bm.y1);
+    ctx.lineTo(bm.x2, bm.y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  if (state !== "play") return;
+  /* relic emoji on top of the 3D orb */
+  ctx.textAlign = "center";
+  ctx.font = "20px sans-serif";
+  for (const it of items)
+    if (it.k === "relic") ctx.fillText(it.e, it.x, it.y + 7);
+    else if (it.k === "parcel")
+      ctx.fillText(PARCEL[relicCity()][0], it.x, it.y + 6);
+  /* ghost of the best run */
+  if (lvl) return;
+  const gh = ghostAt(runTime);
+  if (!gh) return;
+  const off = (gh[0] - runDist) * PX_M,
+    gx = p.x + p.w / 2 + off,
+    gy = groundY - gh[1];
+  if (!X11.passed && off < -30 && runTime > 4000) {
+    X11.passed = true;
+    shout(
+      T3("GHOST BEATEN!", "SPOKNI OZDINGIZ!", "ゴースト超え！"),
+      "#53f7ff",
+      1400,
+    );
+  }
+  if (gx > -30 && gx < W + 30) {
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle = "#53f7ff";
+    ctx.beginPath();
+    ctx.ellipse(gx, gy - 22, 11, 20, 0, 0, 7);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(gx + 3, gy - 48, 9, 0, 7);
+    ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = "#cfffff";
+    ctx.font = "700 9px Orbitron, sans-serif";
+    ctx.fillText(T3("BEST", "REKORD", "ベスト"), gx, gy - 62);
+    ctx.restore();
+  } else if (gx >= W + 30) {
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = "#53f7ff";
+    ctx.font = "700 11px Orbitron, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText("▶ " + Math.round(off / PX_M) + " m", W - 8, groundY - 70);
+    ctx.restore();
+  }
+}
+function albumHtml() {
+  const al = meta.album || {};
+  let n = 0;
+  const cities = Object.keys(RELICS).map((c) => {
+    const cells = RELICS[c]
+      .map((r, i) => {
+        const got = al[c + ":" + i];
+        if (got) n++;
+        return `<div class="rel${got ? " got" : ""}"><i>${got ? r[0] : "❔"}</i><small>${got ? T3(r[1], r[2], r[3]) : "???"}</small></div>`;
+      })
+      .join("");
+    return `<div class="relrow"><b>${{ tash: "TASHKENT", sam: "SAMARKAND", bux: "BUKHARA", khi: "KHIVA" }[c]}</b>${cells}</div>`;
+  });
+  return (
+    `<div class="top-title">${T3("RELIC ALBUM", "KOLLEKSIYA ALBOMI", "コレクション")} · ${n}/12</div><div class="relalbum">` +
+    cities.join("") +
+    `</div><div class="stats"><div><b>${meta.deliv | 0}</b><small>${T3("deliveries", "yetkazmalar", "配達")}</small></div><div><b>${meta.zaps | 0}</b><small>ZAP</small></div></div>`
+  );
+}
+{
+  const w = document.getElementById("wrap");
+  if (w) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = "zapBtn";
+    b.className = "zapbtn";
+    b.innerHTML = "<i>🎯</i><span>ZAP</span>";
+    b.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      x11Zap();
+    });
+    w.appendChild(b);
+    X11.btn = b;
+  }
+}
 function updateGame(delta) {
   const f = Math.min(delta / 16.67, 2);
   frame += f;
@@ -4743,6 +5096,7 @@ function updateGame(delta) {
   if (boardT > 0) boardT -= delta;
   cleanT += delta;
   x10Update(delta);
+  x11Update(delta);
   if (cleanT > 14000 && lives < maxLives) {
     lives++;
     cleanT = 0;
@@ -5020,6 +5374,8 @@ function updateGame(delta) {
       it.got = true;
       if (it.k === "coin") {
         coinCollect(it);
+      } else if (it.k === "parcel" || it.k === "relic") {
+        x11Collect(it);
       } else {
         if (it.k === "shield") shield = true;
         else if (it.k === "fuel") fuel = fuelMax();
@@ -5500,6 +5856,14 @@ function drawObstacles() {
 function drawItems() {
   const CN = coinSheet();
   for (const it of items) {
+    if (it.k === "parcel" || it.k === "relic") {
+      ctx.fillStyle =
+        it.k === "relic" ? "rgba(255,216,79,.45)" : "rgba(255,226,154,.4)";
+      ctx.beginPath();
+      ctx.arc(it.x, it.y, it.r + 6, 0, 7);
+      ctx.fill();
+      continue;
+    }
     if (it.k === "coin" && it.ct) {
       const fr = coinTypeSheets()[it.ct],
         sz = it.ct === 3 ? 40 : 34;
@@ -6170,6 +6534,7 @@ function draw() {
   drawPlayer();
   WE_drawFront();
   x10Draw();
+  x11Draw();
   if (FX.env) drawWeather();
   if (FX.light) drawDark();
   ctx.restore();
@@ -6352,6 +6717,7 @@ function resetGame() {
   dist = 0;
   hits = 0;
   x10Reset();
+  x11Reset();
   maxLives = (lvl ? 3 : 2) + up.life;
   lives = maxLives;
   shotTimer = 1500;
@@ -6566,6 +6932,7 @@ function doRevive() {
 }
 function finalizeOver() {
   state = "over";
+  x11Save();
   const s = Math.floor(score),
     isBest = saveBest();
   if (!lvl && s > 0) {
@@ -6867,6 +7234,7 @@ function coinCollect(it) {
     meta.xp += ty.xp;
   }
   x10Coin();
+  x11Coin();
   const g = 25 * mult() * cv;
   score += g;
   pop(it.x, it.y, "+" + g, ty.col);
@@ -7423,6 +7791,8 @@ document.addEventListener("keydown", (e) => {
     e.code === "ShiftRight"
   ) {
     useTurbo();
+  } else if (e.code === "KeyX" || e.code === "KeyZ") {
+    x11Zap();
   } else if (e.code === "KeyP" || e.code === "Escape") {
     state === "pause" ? resumeGame() : pauseGame();
   } else if (e.code === "KeyM") toggleMute();

@@ -1719,3 +1719,101 @@ body.nohints .fact {
 .lookchips + small {
   display: none;
 }
+
+/* ZAP button (drone strike) */
+.zapbtn {
+  position: absolute;
+  right: 10px;
+  bottom: 12px;
+  z-index: 6;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  color: #cfeaff;
+  border: 2px solid rgba(83, 247, 255, 0.35);
+  background: conic-gradient(
+    rgba(83, 247, 255, 0.55) var(--c, 0%),
+    rgba(8, 12, 30, 0.7) 0
+  );
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.zapbtn.show {
+  display: flex;
+}
+.zapbtn i {
+  font-style: normal;
+  font-size: 18px;
+  line-height: 1;
+}
+.zapbtn span {
+  font:
+    700 8px Orbitron,
+    sans-serif;
+  letter-spacing: 0.6px;
+}
+.zapbtn.rdy {
+  border-color: #9ff;
+  box-shadow: 0 0 14px #53f7ff;
+  animation: zapPulse 0.8s infinite alternate;
+}
+@keyframes zapPulse {
+  to {
+    transform: scale(1.1);
+  }
+}
+.relalbum {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.relrow {
+  display: grid;
+  grid-template-columns: 70px repeat(3, 1fr);
+  gap: 5px;
+  align-items: center;
+}
+.relrow b {
+  font:
+    700 8px Orbitron,
+    sans-serif;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+.rel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  min-width: 0;
+}
+.rel i {
+  font-style: normal;
+  font-size: 20px;
+  opacity: 0.4;
+}
+.rel small {
+  font-size: 8px;
+  color: var(--muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.rel.got {
+  border-color: #ffd84f;
+  background: rgba(255, 216, 79, 0.1);
+}
+.rel.got i {
+  opacity: 1;
+}
