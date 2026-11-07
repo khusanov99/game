@@ -11,7 +11,7 @@ $("go").parentNode.insertBefore(rvBtn, $("go"));
 const tkEl = document.createElement("div");
 tkEl.id = "talk";
 tkEl.style.cssText =
-  "position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(92vw,440px);z-index:30;display:none;background:rgba(10,12,30,.9);backdrop-filter:blur(8px);border:1.5px solid rgba(127,230,255,.45);border-radius:18px;padding:14px 16px;color:#fff;font:600 14px Inter,'Hiragino Sans',sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.5);cursor:pointer;user-select:none";
+  "position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(92vw,440px);z-index:30;display:none;background:rgba(10,12,30,.9);border:1.5px solid rgba(127,230,255,.45);border-radius:18px;padding:14px 16px;color:#fff;font:600 14px Inter,'Hiragino Sans',sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.5);cursor:pointer;user-select:none";
 document.body.appendChild(tkEl);
 function uiTalk(d) {
   const c = CU[d.c];

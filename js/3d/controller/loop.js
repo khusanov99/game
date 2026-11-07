@@ -127,4 +127,5 @@ function frame(ts) {
   if (!paused && resumeCd <= 0) update(dt * (slow > 0 ? 0.62 : 1));
   syncUi();
   render();
+  warmTick(dt);
 }
