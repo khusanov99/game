@@ -9,7 +9,7 @@ const canvas = $("game"),
   wrap = $("wrap"),
   shell = $("shell"),
   ctx = canvas.getContext("2d", {
-    alpha: !/[?&]2d=1/.test(location.search),
+    alpha: true,
     desynchronized: false, // a low-latency (desynchronized) overlay ignores alpha on Windows/Chrome and paints the 2D layer opaque black over the 3D canvas
   });
 
@@ -62,13 +62,12 @@ const Q = { level: 0, shadow: !COARSE, flat: false, dpr: 2, maxP: 140 };
    by a tiny WebGL batcher that lives in this file. Gameplay, controls and hitboxes are untouched: the game still runs on its
    2D coordinates, and every object is simply placed in 3D at that position (1 world unit = 1 game pixel).
    One dynamic buffer, one draw call for the world, one for soft shadows. No textures, no model files.
-   The 2D canvas on top only carries particles, weather, HUD and menus. ?2d=1 (or no WebGL) keeps the classic 2D renderer.
+   The game is 3D only (WebGL). The canvas on top only carries particles, weather and the HUD.
 ===================================================== */
 const GL3 = (() => {
   const PI = Math.PI,
     TAU = PI * 2,
     API = { on: false };
-  if (/[?&]2d=1/.test(location.search)) return API;
   let gl = null,
     cv3 = null,
     prog = null,
@@ -540,24 +539,11 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, IB.byteLength, gl.DYNAMIC_DRAW);
       cv3.addEventListener("webglcontextlost", (e) => {
         e.preventDefault();
-        API.on = false; // the classic 2D renderer takes over at once (no black frame)
-        cv3.style.visibility = "hidden";
-        setTimeout(() => typeof resize === "function" && resize(), 0);
+        API.on = false; // paused until the browser hands the context back
       });
-      cv3.addEventListener("webglcontextrestored", () => {
-        try {
-          SBUF.clear();
-          const old = cv3;
-          if (old.parentNode) old.parentNode.removeChild(old);
-          if (init() && !API.dead) {
-            API.size(API.gw, API.gh);
-            API.on = true;
-            setTimeout(() => typeof resize === "function" && resize(), 0);
-          }
-        } catch (e) {
-          API.on = false;
-        }
-      });
+      cv3.addEventListener("webglcontextrestored", () =>
+        setTimeout(rebuild, 0),
+      );
       canvas.parentNode.insertBefore(cv3, canvas);
       return true;
     } catch (e) {
@@ -1597,11 +1583,11 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     mp = 0;
     nv = 0;
     ni = 0;
-    sFar += dWrap(farOff, lastF, Art.TW);
+    sFar += dWrap(farOff, lastF, TW_);
     lastF = farOff;
-    sMid += dWrap(midOff, lastM, Art.TW);
+    sMid += dWrap(midOff, lastM, TW_);
     lastM = midOff;
-    sGnd += dWrap(gndOff, lastG, Art.GW);
+    sGnd += dWrap(gndOff, lastG, GW_);
     lastG = gndOff;
     const cid0 =
       API.forceCity || (cur.city === "tashN" ? "tash" : cur.city || "tash");
@@ -2108,50 +2094,54 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       gl.disable(gl.BLEND);
     }
   };
-  /* safety net: any exception or a blank (all-black) frame switches to the classic 2D renderer for good,
-     so the player can never be left staring at a black screen */
+  /* safety net: the game is 3D only, so a failed frame never switches renderer — it rebuilds the GL state (a few tries)
+     and, if the device really cannot do WebGL, says so instead of showing an empty screen */
   let errN = 0,
-    chk = 0;
-  function bail() {
+    tries = 0;
+  function fatal() {
     API.on = false;
     API.dead = true;
-    if (cv3) cv3.style.display = "none";
-    setTimeout(() => typeof resize === "function" && resize(), 0); // the 2D layer goes back to full resolution
+    const w = document.getElementById("wrap");
+    if (!w || document.getElementById("glFatal")) return;
+    const d = document.createElement("div");
+    d.id = "glFatal";
+    d.style.cssText =
+      "position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:#fff;font:600 15px/1.5 system-ui,sans-serif;background:#0b1030";
+    d.textContent =
+      LANG === "uz"
+        ? "3D grafika (WebGL) bu qurilmada ishlamayapti. Brauzerni yangilang yoki boshqa brauzerda oching."
+        : LANG === "ja"
+          ? "この端末では3Dグラフィックス(WebGL)が使えません。ブラウザを更新するか、別のブラウザで開いてください。"
+          : "3D graphics (WebGL) is not working on this device. Update your browser or open the game in another one.";
+    w.appendChild(d);
   }
-  function blank() {
-    const px = new Uint8Array(4);
-    let lit = 0;
-    for (const [fx, fy] of [
-      [0.5, 0.5],
-      [0.25, 0.6],
-      [0.75, 0.6],
-      [0.5, 0.2],
-      [0.5, 0.9],
-    ]) {
-      gl.readPixels(
-        Math.floor(cv3.width * fx),
-        Math.floor(cv3.height * fy),
-        1,
-        1,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        px,
-      );
-      if (px[0] + px[1] + px[2] > 24) lit++;
+  function rebuild() {
+    if (++tries > 3) return fatal();
+    try {
+      SBUF.clear();
+      const old = cv3;
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      if (init()) {
+        API.size(API.gw, API.gh);
+        errN = 0;
+        API.on = true;
+      } else fatal();
+    } catch (e) {
+      fatal();
     }
-    return lit === 0;
   }
   API.render = function (dx, dy) {
     if (!API.on) return;
     try {
       renderInner(dx, dy);
-      if (API.on && chk < 4 && ++chk >= 2 && blank()) bail();
+      errN = 0;
     } catch (e) {
-      if (++errN >= 3) bail();
+      if (++errN >= 3) rebuild();
     }
   };
   API.stats = () => ({ nv, ni, max: MAXV });
   if (init()) API.on = true;
+  else fatal();
   return API;
 })();
 const PIXEL_BUDGET = COARSE
@@ -2164,8 +2154,6 @@ function setQuality(l) {
   Q.flat = l >= 2;
   Q.dpr = [2, 1.5, 1, 0.75][Math.min(l, 3)];
   Q.maxP = [140, 70, 40, 24][Math.min(l, 3)] >> (CFG.lowmem ? 1 : 0);
-  skyKey = "";
-  gndKey = "";
   buildWeather();
   resize();
 }
@@ -2211,27 +2199,6 @@ const halo = (x, y, w, h, r, c) => {
   ctx.drawImage(glowSprite(c), cx - d / 2, cy - d / 2, d, d);
   ctx.globalAlpha = 1;
 };
-let hazPat = null;
-function hazardPattern() {
-  if (!hazPat) {
-    const cv = document.createElement("canvas");
-    cv.width = cv.height = 16;
-    const g = cv.getContext("2d"),
-      im = g.createImageData(16, 16);
-    for (let y = 0; y < 16; y++)
-      for (let x = 0; x < 16; x++) {
-        const i = (y * 16 + x) * 4,
-          dark = (x + y) % 16 < 8;
-        im.data[i] = dark ? 23 : 255;
-        im.data[i + 1] = dark ? 23 : 194;
-        im.data[i + 2] = dark ? 31 : 26;
-        im.data[i + 3] = 255;
-      }
-    g.putImageData(im, 0, 0);
-    hazPat = ctx.createPattern(cv, "repeat");
-  }
-  return hazPat;
-}
 
 function resize() {
   const cw = Math.max(200, wrap.clientWidth),
@@ -2268,7 +2235,7 @@ function resize() {
      (two full-resolution layers are what makes a phone's compositor and GPU run hot) */
   let ow = nw,
     oh = nh;
-  if (GL3.on && COARSE) {
+  if (COARSE) {
     const k = Math.min(1, 1.2 / DPR);
     ow = Math.max(1, Math.round(nw * k));
     oh = Math.max(1, Math.round(nh * k));
@@ -2289,7 +2256,6 @@ function resize() {
     });
     items.forEach((i) => (i.y += dy));
     player.y += dy;
-    skyKey = "";
   }
 }
 
@@ -2759,7 +2725,6 @@ let maxLives = 1,
   fuel = 0,
   flying = false,
   jumpHeld = false,
-  sq = 0,
   zoom = 1,
   freeze = 0,
   hbT = 0,
@@ -2767,9 +2732,7 @@ let maxLives = 1,
   shopOpen = false,
   curPanel = "shop",
   screenFn = null;
-let prefetched = -1,
-  extraGap = 0,
-  cleanT = 0,
+let cleanT = 0,
   boardT = 0,
   chaseX = -120,
   trainHint = false;
@@ -2782,30 +2745,19 @@ let spawnPx = 0,
   runDist = 0,
   runPhase = 0,
   landT = 0,
-  prevLm = 0,
-  fadeT = 0,
-  prevA = null,
   acc = 0,
   rafAvg = 16.7,
   skipDraw = false;
 let shoutO = { text: "", t: 0, max: 1, c: "#fff" },
   flash = { c: "#fff", a: 0 };
 let fx, obstacles, items, particles, pops, stars, layers;
-let obstacleTimer,
-  nextObstacle,
-  itemTimer,
+let itemTimer,
   nextItem,
   lastT = 0;
 let duckKey = false,
   duckPtr = false,
   duckBtn = false;
 let cur = { ...THEMES[0] };
-let skyKey = "",
-  skyG = null,
-  gndKey = "",
-  gndG = null;
-let fpsAcc = 0,
-  fpsN = 0;
 
 const player = {
   x: 120,
@@ -2836,16 +2788,6 @@ const mix = (c1, c2, t) => {
   );
 };
 
-function makeLayer(n, hmin, hmax, wmin, wmax, mul, shade, windows) {
-  const L = { mul, shade, windows, hmin, hmax, wmin, wmax, b: [] };
-  let x = 0;
-  for (let i = 0; i < n; i++) {
-    const w = rnd(wmin, wmax);
-    L.b.push({ x, w, h: rnd(hmin, hmax), seed: Math.random() * 99 });
-    x += w + rnd(4, 16);
-  }
-  return L;
-}
 function buildWorld() {
   stars = Array.from({ length: COARSE ? 45 : 75 }, () => ({
     x: rnd(0, W),
@@ -2860,9 +2802,7 @@ function buildWorld() {
     w: rnd(70, 150),
     s: rnd(0.02, 0.06),
   }));
-  artFor(cur.city || "tash");
   lm = { city: cur.city || "tash", x: W * 0.55 };
-  decor = [];
   farOff = midOff = gndOff = 0;
   buildWeather();
 }
@@ -2940,9 +2880,7 @@ function startMusic() {
 /* ============ CITIES · WEATHER · PROGRESSION ============ */
 let clouds = [],
   lm = { city: "tash", x: 400 },
-  decor = [],
-  wx = [],
-  decorGap = 200;
+  wx = [];
 let toastO = { text: "", t: 0, max: 1 };
 const toastQ = [];
 let turbo = 0,
@@ -3287,25 +3225,12 @@ function useTurbo() {
 }
 
 /* ---- scenery: real Uzbek skylines pre-rendered in art.js ---- */
-let ART = null,
-  farOff = 0,
+const TW_ = 1200, // scenery wrap lengths (world units)
+  GW_ = 160;
+let farOff = 0,
   midOff = 0,
   gndOff = 0,
   birds = [];
-const ARTOPT = { coarse: COARSE };
-function artFor(city) {
-  const c = Art.peek(city);
-  if (c) {
-    ART = c;
-    return c;
-  }
-  if (!ART || !ART.far.width) {
-    ART = Art.get(city, ARTOPT);
-    return ART;
-  } // first paint only
-  Art.getAsync(city, ARTOPT); // otherwise build quietly in the background
-  return ART;
-}
 function buildWeather() {
   const n = Q.level >= 2 ? 0 : Q.level === 1 ? 24 : COARSE ? 32 : 45;
   wx = Array.from({ length: n }, () => ({
@@ -3321,9 +3246,9 @@ function buildWeather() {
   }));
 }
 function moveScenery(d, f = 1) {
-  farOff = (farOff + d * 0.1) % Art.TW;
-  midOff = (midOff + d * 0.3) % Art.TW;
-  gndOff = (gndOff + d) % Art.GW;
+  farOff = (farOff + d * 0.1) % TW_;
+  midOff = (midOff + d * 0.3) % TW_;
+  gndOff = (gndOff + d) % GW_;
   for (const c of clouds) {
     c.x -= d * c.s;
     if (c.x + c.w < 0) {
@@ -3332,8 +3257,7 @@ function moveScenery(d, f = 1) {
     }
   }
   lm.x -= d * 0.18;
-  prevLm -= d * 0.18;
-  if (ART && lm.x < -ART.lmW * 0.9) lm.x = W + rnd(450, 900);
+  if (lm.x < -700) lm.x = W + rnd(450, 900);
   for (const b of birds) {
     b.x -= d * 0.12 + b.s * f;
     if (b.x < -10) {
@@ -3369,71 +3293,6 @@ function moveScenery(d, f = 1) {
       }
     }
   }
-}
-function drawSkyBody() {
-  const b = cur.body || [0.84, 0.22, 26, "#fff"];
-  const bx = W * b[0],
-    by = Math.min(b[1] * H, groundY - 30),
-    r = b[2] * Math.max(1, UI * 0.8);
-  ctx.fillStyle = b[3];
-  ctx.globalAlpha = 0.1;
-  ctx.beginPath();
-  ctx.arc(bx, by, r * 2.4, 0, 7);
-  ctx.fill();
-  ctx.globalAlpha = 0.22;
-  ctx.beginPath();
-  ctx.arc(bx, by, r * 1.5, 0, 7);
-  ctx.fill();
-  ctx.globalAlpha = 0.92;
-  ctx.beginPath();
-  ctx.arc(bx, by, r, 0, 7);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-}
-const CLOUDSP = [null, null];
-function cloudSprite(night) {
-  // a cloud is painted once; every frame it is a single drawImage
-  const k = night ? 1 : 0;
-  if (!CLOUDSP[k]) {
-    const cv = document.createElement("canvas");
-    cv.width = 160;
-    cv.height = 48;
-    const g = cv.getContext("2d"),
-      w = 100,
-      cx = 80,
-      cy = 28;
-    g.fillStyle = night ? "#9fb0ff" : "#fff3e0";
-    g.beginPath();
-    g.ellipse(cx, cy, w * 0.5, w * 0.12, 0, 0, 7);
-    g.ellipse(cx + w * 0.25, cy - w * 0.06, w * 0.3, w * 0.1, 0, 0, 7);
-    g.ellipse(cx - w * 0.25, cy - w * 0.03, w * 0.28, w * 0.09, 0, 0, 7);
-    g.fill();
-    CLOUDSP[k] = cv;
-  }
-  return CLOUDSP[k];
-}
-function drawClouds() {
-  const sp = cloudSprite(!!cur.night);
-  ctx.globalAlpha = cur.night ? 0.06 : 0.13;
-  for (const c of clouds) {
-    const k = c.w / 100;
-    if (c.x + 0.8 * c.w < 0 || c.x - 0.8 * c.w > W) continue; // off-screen clouds cost nothing
-    ctx.drawImage(sp, c.x - 80 * k, c.y - 28 * k, 160 * k, 48 * k);
-  }
-  ctx.globalAlpha = 1;
-}
-function drawBirds() {
-  if (cur.night) return;
-  ctx.strokeStyle = "rgba(25,20,45,.6)";
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  for (const b of birds) {
-    const f = Math.sin(frame * 0.25 + b.ph) * 3;
-    ctx.moveTo(b.x - 5, b.y + f * 0.3);
-    ctx.quadraticCurveTo(b.x - 2, b.y - 3 - f, b.x, b.y);
-    ctx.quadraticCurveTo(b.x + 2, b.y - 3 - f, b.x + 5, b.y + f * 0.3);
-  }
-  ctx.stroke();
 }
 function drawWeather() {
   if (!wx.length || Q.level >= 2) return;
@@ -3545,7 +3404,7 @@ function renderMedals() {
     LEVELS.map((L, i) => {
       const got = (prog.stars[i + 1] || 0) > 0,
         th = THUMBS[THEMES[L.theme].city];
-      return `<div class="card-pc ${got ? "" : "lock"}" style="${th ? `background-image:url(${th})` : ""}"><span>${got ? L.name : "???"}</span></div>`;
+      return `<div class="card-pc ${got ? "" : "lock"}" style="${th ? `background-image:${th}` : ""}"><span>${got ? L.name : "???"}</span></div>`;
     }).join("") +
     `</div>`;
   const fmtT = (ms) => {
@@ -3640,139 +3499,6 @@ function openBox(x, y) {
     zoom = 1.05;
   }
 }
-function drawDamas2D(o) {
-  const x = o.x,
-    y = o.y,
-    w = o.w,
-    h = o.h;
-  ctx.fillStyle = "#eef2f8";
-  rr(x, y + 14, w, h - 20, 5);
-  ctx.fill();
-  rr(x + 8, y, w - 12, 22, 5);
-  ctx.fill();
-  ctx.fillStyle = "#3b4f66";
-  ctx.fillRect(x + 12, y + 5, w - 22, 11);
-  ctx.fillStyle = "#2f6fd1";
-  ctx.fillRect(x, y + 27, w, 3);
-  ctx.fillStyle = "#ffe98a";
-  ctx.fillRect(x - 1, y + 28, 4, 5);
-  ctx.fillStyle = "#e23";
-  ctx.fillRect(x + w - 2, y + 26, 3, 5);
-  ctx.fillStyle = "#ffc21a";
-  ctx.fillRect(x + w / 2 - 6, y - 3, 12, 3);
-  ctx.fillStyle = "#15151c";
-  for (const wx of [x + 17, x + w - 17]) {
-    ctx.beginPath();
-    ctx.arc(wx, y + h - 6, 7, 0, 7);
-    ctx.fill();
-  }
-}
-function drawTrain(o) {
-  if (o.v === "damas") return drawDamas2D(o);
-  // metro car: its roof is a platform you can run on
-  ctx.fillStyle = "#2f6fd1";
-  rr(o.x, o.y, o.w, o.h, 6);
-  ctx.fill();
-  ctx.fillStyle = "#e8eefc";
-  ctx.fillRect(o.x, o.y + o.h - 16, o.w, 4);
-  ctx.fillStyle = "#9fd0ff";
-  for (let wx = o.x + 20; wx < o.x + o.w - 22; wx += 26) {
-    rr(wx, o.y + 11, 17, 14, 3);
-    ctx.fill();
-  }
-  ctx.fillStyle = "#1b3a7a";
-  rr(o.x, o.y + 5, 13, o.h - 11, 4);
-  ctx.fill();
-  ctx.fillStyle = "#fff7b0";
-  ctx.beginPath();
-  ctx.arc(o.x + 5, o.y + o.h - 9, 3, 0, 7);
-  ctx.fill();
-  ctx.fillStyle = "#0e1124";
-  ctx.fillRect(o.x + 10, o.y + o.h - 3, o.w - 20, 3);
-  ctx.fillStyle = "#cfe3ff";
-  ctx.fillRect(o.x + 3, o.y, o.w - 6, 3);
-  ctx.strokeStyle = "rgba(255,255,255,.85)";
-  ctx.lineWidth = 1.4;
-  rr(o.x, o.y, o.w, o.h, 6);
-  ctx.stroke();
-}
-function drawBoard() {
-  if (boardT <= 0 || state === "ready") return;
-  if (boardT < 2000 && Math.floor(frame / 4) % 2) return;
-  const p = player,
-    bx = p.x - 5,
-    by = p.y + p.h - 2;
-  halo(bx, by, p.w + 10, 6, 0, "#53f7ff");
-  ctx.fillStyle = "#53f7ff";
-  rr(bx, by, p.w + 10, 5, 2.5);
-  ctx.fill();
-  ctx.fillStyle = "#12307a";
-  ctx.beginPath();
-  ctx.arc(bx + 7, by + 6, 2.6, 0, 7);
-  ctx.arc(bx + p.w + 3, by + 6, 2.6, 0, 7);
-  ctx.fill();
-}
-function drawChaser() {
-  // the guard and his dog (the closer they are, the fewer lives you have)
-  if (state === "ready" || chaseX < -70) return;
-  const G = guardSheet(),
-    D = dogSheet(),
-    gy = groundY,
-    gx = chaseX + 26;
-  const close = lives === 1 || state === "over" || state === "revive";
-  halo(chaseX - 8, gy - 56, 80, 56, 0, "#ff3b5c");
-  const caught = state === "over" || state === "revive";
-  ctx.fillStyle = "rgba(0,0,0,.32)";
-  ctx.beginPath();
-  ctx.ellipse(gx + 4, gy + 3, 22, 4.2, 0, 0, 7);
-  ctx.fill(); // ground shadows
-  if (lives < maxLives || caught) {
-    ctx.beginPath();
-    ctx.ellipse(gx + 40, gy + 3, 24, 3.6, 0, 0, 7);
-    ctx.fill();
-  }
-  if (caught && bustT > 150) {
-    // the officer swings: leans in hard, then back, once per bonk
-    const ph =
-        Math.max(0, (bustT - BUST_FIRST + BUST_EVERY * 0.7) % BUST_EVERY) /
-        BUST_EVERY,
-      swing = Math.sin(Math.min(1, ph * 1.15) * Math.PI);
-    ctx.save();
-    ctx.translate(gx + 6, gy);
-    ctx.rotate(0.03 + swing * (G.swing === undefined ? 0.42 : 0.2));
-    ctx.translate(-gx - 6, -gy);
-    ctx.drawImage(
-      G.f[G.swing === undefined ? 0 : G.swing],
-      gx - G.fx * CPS,
-      gy - G.fy * CPS,
-      G.w * CPS,
-      G.h * CPS,
-    );
-    ctx.restore();
-  } else
-    ctx.drawImage(
-      G.f[Math.floor((frame * 0.42 * (G.n || 8)) / 8) % (G.n || 8)],
-      gx - G.fx * CPS,
-      gy - G.fy * CPS,
-      G.w * CPS,
-      G.h * CPS,
-    );
-  if (lives < maxLives || caught) {
-    const dn = D.n || 8,
-      ds = D.snarl === undefined ? 8 : D.snarl;
-    const di = caught
-      ? ds + (Math.floor(bustT / 70) % dn)
-      : (Math.floor((frame * 0.55 * dn) / 8) % dn) + (close ? ds : 0);
-    const hop = caught ? Math.abs(Math.sin(bustT / 110)) * 14 * CPS : 0; // the dog jumps at the runner
-    ctx.drawImage(
-      D.f[di],
-      gx + (caught ? 36 : 34) - D.fx * CPS,
-      gy - hop - D.fy * CPS,
-      D.w * CPS,
-      D.h * CPS,
-    );
-  }
-}
 
 /* ============ HELPERS ============ */
 const duck = () => duckKey || duckPtr || duckBtn;
@@ -3786,10 +3512,6 @@ const hit = (a, b, pad = 0) =>
 const rr = (x, y, w, h, r) => {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
-};
-const skinColors = () => {
-  const s = SKINS.find((k) => k.id === skin) || SKINS[0];
-  return [s.a || cur.a, s.b || cur.b];
 };
 
 const PPOOL = [];
@@ -4033,7 +3755,6 @@ function startJump(n) {
     n === 1 ? "#53f7ff" : "#ff4fd8",
     n === 1 ? 8 : 6,
   );
-  sq = -0.3;
   n === 1 ? sfx.jump() : sfx.jump2();
 }
 function tryJump() {
@@ -4408,19 +4129,8 @@ function updateGame(delta) {
   cur.body = T.body;
   cur.night = T.night;
   if (cur.city !== T.city) {
-    prevA = ART;
-    prevLm = lm.x;
-    fadeT = 1;
     cur.city = T.city;
     lm = { city: T.city, x: W + 420 };
-    decor = [];
-  }
-  if (!lvl && score % 500 > 380) {
-    const nz = (Math.floor(score / 500) + 1) % 4;
-    if (prefetched !== nz) {
-      prefetched = nz;
-      Art.getAsync(THEMES[nz].city, ARTOPT);
-    }
   }
   if (cur.wx === "rain" && Math.random() < 0.0025)
     flash = { c: "#cfe0ff", a: 0.2 };
@@ -4480,7 +4190,6 @@ function updateGame(delta) {
   if (p.y + p.h >= floorY) {
     if (!p.grounded && p.vy > 3) {
       burst(p.x + p.w / 2, floorY, "#a78bfa", 5);
-      sq = Math.min(0.45, p.vy / 30);
       landT = 110;
     }
     p.y = floorY - p.h;
@@ -4504,7 +4213,6 @@ function updateGame(delta) {
     );
   if (p.grounded && fuel < fuelMax())
     fuel = Math.min(fuelMax(), fuel + delta * 1.4);
-  sq *= Math.pow(0.82, f);
 
   // stop spawning near the finish line so the last stretch is clear
   const spawning = lvl ? (lvl.len - dist) * PX_M > W * 0.95 : true;
@@ -4519,7 +4227,6 @@ function updateGame(delta) {
     skill = Math.max(0.15, Math.min(1, skill + (hitFlag ? -0.14 : 0.07)));
     hitFlag = false;
   }
-  if (fadeT > 0) fadeT = Math.max(0, fadeT - delta / 1800);
   itemTimer += delta;
   if (spawning && itemTimer >= nextItem) {
     spawnPower();
@@ -4738,7 +4445,6 @@ function updateParticles(delta) {
   }
   zoom = 1 + (zoom - 1) * Math.pow(0.9, f);
   shoutO.t = Math.max(0, shoutO.t - delta);
-  if (state !== "play") sq *= Math.pow(0.82, f);
 }
 
 const hudEl = {
@@ -4775,211 +4481,21 @@ function updateHUD() {
 }
 
 /* ============ DRAW ============ */
-function drawCity(A, lmx, a) {
-  const sc = Math.max(1, Math.min(1.5, groundY / 292)),
-    tw = Art.TW * sc;
-  const fx0 = -(farOff * sc),
-    mx0 = -(midOff * sc),
-    fh = Art.FAR_H * sc,
-    mh = Art.MID_H * sc;
-  if (a < 1) ctx.globalAlpha = a;
-  ctx.drawImage(A.far, fx0, groundY - fh, tw, fh);
-  if (fx0 + tw < W) ctx.drawImage(A.far, fx0 + tw, groundY - fh, tw, fh);
-  const ls = Math.min(1.45, (groundY - 14) / A.lmH),
-    lw = A.lmW * ls,
-    lh = A.lmH * ls;
-  if (lmx + lw / 2 > 0 && lmx - lw / 2 < W)
-    ctx.drawImage(A.lm, lmx - lw / 2, groundY - lh, lw, lh);
-  ctx.drawImage(A.mid, mx0, groundY - mh, tw, mh);
-  if (mx0 + tw < W) ctx.drawImage(A.mid, mx0 + tw, groundY - mh, tw, mh);
-  ctx.fillStyle = A.gBase;
-  ctx.fillRect(-20, groundY, W + 40, H - groundY + 24);
-  for (let x = -(gndOff % Art.GW); x < W + Art.GW; x += Art.GW)
-    ctx.drawImage(A.gnd, x, groundY, Art.GW, Art.GH);
-  if (a < 1) ctx.globalAlpha = 1;
-}
-function drawBackground() {
-  const A = artFor(cur.city || "tash");
-  const key = cur.top + cur.bot + groundY + Q.flat;
-  if (key !== skyKey) {
-    skyKey = key;
-    if (Q.flat) skyG = cur.top;
-    else {
-      const g = ctx.createLinearGradient(0, 0, 0, groundY);
-      g.addColorStop(0, cur.top);
-      g.addColorStop(0.6, mix(cur.top, cur.bot, 0.5));
-      g.addColorStop(1, cur.bot);
-      skyG = g;
-    }
-  }
-  ctx.fillStyle = skyG;
-  ctx.fillRect(-20, -20, W + 40, H + 40);
-  if (cur.night) {
-    ctx.fillStyle = "#c7edff";
-    for (const s of stars) {
-      ctx.globalAlpha = s.a;
-      ctx.fillRect(s.x, s.y, s.s, s.s);
-    }
-    ctx.globalAlpha = 1;
-  }
-  if (FX.blur && speed >= 8 && Q.level < 2 && state === "play") {
-    ctx.strokeStyle = "#fff";
-    ctx.globalAlpha = 0.1;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    const n = Math.min(10, Math.floor((speed - 7) * 3));
-    for (let i = 0; i < n; i++) {
-      const x = W - ((frame * speed * 2.5 + i * 137) % (W + 140)),
-        y = 14 + ((i * 53.7) % (groundY - 40));
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 30 + speed * 4, y);
-    }
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
-  drawSkyBody();
-  if (Q.level < 2 && FX.bg) {
-    drawClouds();
-    drawBirds();
-  }
-  drawCity(A, lm.x, 1);
-  if (fadeT > 0 && prevA && prevA !== A && prevA.far.width)
-    drawCity(prevA, prevLm, fadeT); // smooth city-to-city transition
-  ctx.fillStyle = "rgba(255,255,255,.16)";
-  ctx.fillRect(-20, groundY, W + 40, 2);
-}
 
 // on-screen sprite scale: set in resize() (bigger on small / portrait phones); hitboxes stay the same                          // on-screen sprite scale (hitboxes stay the same)
-const CSC = COARSE ? 1.5 : 2; // sprite density (phones use less memory)
-let RUN = null,
-  RUN_SKIN = "",
-  GRD = null,
-  DOGS = null,
-  COINSP = null;
-const BADGES = {},
-  OBST = {},
-  HEARTS = {};
-/* real PNG characters (sprites.js) are used when enabled and loaded; otherwise the painted ones from chars.js */
-const IMG =
-  typeof Sprites !== "undefined" ? Sprites : { get: () => null, preload() {} }; // sprites.js missing? the game still runs with the painted characters
-const RIGX = typeof Rig !== "undefined" ? Rig : null; // rig.js: realistic skeleton characters (falls back to pictures / painted ones if it is missing)
-const rigTry = (fn) => {
-  try {
-    return fn();
-  } catch (e) {
-    return null;
-  }
-};
-const runnerSheet = () =>
-  (RIGX && rigTry(() => RIGX.runner(skin, CSC))) ||
-  IMG.get("runner", skin, CSC) ||
-  (!RUN || RUN_SKIN !== skin
-    ? ((RUN = Chars.runner(skin, CSC)), (RUN_SKIN = skin), RUN)
-    : RUN);
-const badgeOf = (k) =>
-  BADGES[k] || (BADGES[k] = Chars.badge(POWER[k].icon, POWER[k].color, CSC));
-const heartSprite = (f) => HEARTS[f] || (HEARTS[f] = Chars.heart(f, CSC));
-const obstSprite = (v) => OBST[v] || (OBST[v] = Chars.obstacle(v, CSC));
-const coinSheet = () =>
-  COINSP ||
-  (COINSP = (RIGX && rigTry(() => RIGX.coins(CSC))) || Chars.coins(CSC));
-const guardSheet = () =>
-  (RIGX && rigTry(() => RIGX.guard(CSC))) ||
-  IMG.get("guard", "default", CSC) ||
-  GRD ||
-  (GRD = Chars.guard(CSC));
-const dogSheet = () =>
-  (RIGX && rigTry(() => RIGX.dog(CSC))) ||
-  IMG.get("dog", "default", CSC) ||
-  DOGS ||
-  (DOGS = Chars.dogs(CSC));
-IMG.preload(); // start loading the image characters while the menu is shown
-function skinGlow() {
-  const sk = SKINS.find((k) => k.id === skin) || SKINS[0];
-  return sk.b || cur.b;
-}
-function playerFrame() {
-  // rig: 0-11 stride · 12 jump · 13 fall · 14 land · 15 slide · 16 hit  (painted: 0-7 · 8 · 9 · 10 · 11 · 12)
-  const R = runnerSheet(),
-    n = R.n || 8,
-    F = R.n ? R : { jump: 8, fall: 9, land: 10, duck: 11, hit: 12 };
-  if (state === "over" || state === "revive") return F.hit;
-  const p = player;
-  if (!p.grounded) return flying || p.vy < -1 ? F.jump : F.fall;
-  if (landT > 0) return F.land;
-  if (p.h < 40) return F.duck;
-  return Math.floor((runPhase * n) / 8) % n;
-}
 function drawPlayer() {
-  const p = player,
-    R = runnerSheet(),
-    pb = skinGlow();
-  const sy = p.grounded ? p.y + p.h : groundY,
-    hg = Math.max(0, sy - (p.y + p.h));
-  const g3 = GL3.on;
-  if (FX.shadow && !g3) {
-    ctx.fillStyle = "rgba(0,0,0,.3)";
-    ctx.beginPath();
-    ctx.ellipse(
-      p.x + p.w / 2,
-      sy + 3,
-      Math.max(10, 26 - hg * 0.07),
-      5,
-      0,
-      0,
-      7,
-    );
-    ctx.fill();
-  }
-  if (FX.charFx && !Q.flat && state !== "over" && !g3) {
-    // wet-road reflection: one flipped, faded copy of the runner sprite mirrored about the ground line (cheap depth cue)
-    ctx.save();
-    ctx.globalAlpha = 0.17;
-    ctx.translate(p.x + p.w / 2, sy);
-    ctx.scale(1, -0.5);
-    ctx.drawImage(
-      R.f[playerFrame()],
-      -R.fx * PS,
-      -R.fy * PS - hg,
-      R.w * PS,
-      R.h * PS,
-    );
-    ctx.restore();
-  }
+  /* the hero, its shadow and the hover-board are 3D models (GL3); this draws only the 2D effects around it */
+  const p = player;
   ctx.save();
   ctx.translate(p.x + p.w / 2, p.y + p.h);
-  ctx.scale(1 + sq * 0.5, 1 - sq * 0.5); // squash & stretch
-  if ((state === "over" || state === "revive") && bustT > 0) {
-    // being bonked: the runner wobbles and squashes with every hit
-    const since = (bustT - BUST_FIRST) % BUST_EVERY,
-      kick = bustT >= BUST_FIRST ? Math.max(0, 1 - since / 150) : 0;
-    ctx.rotate(Math.sin(bustT / 55) * 0.05 * (0.4 + kick) - kick * 0.08);
-    ctx.scale(1 + kick * 0.1, 1 - kick * 0.12);
-  }
-  ctx.globalAlpha = invul > 0 && Math.floor(frame / 3) % 2 ? 0.35 : 1;
-  if (!g3) {
-    if (FX.charFx) halo(-p.w / 2, -p.h, p.w, p.h, 8, pb);
-    if (FX.charFx) glow(pb, 20);
-    ctx.drawImage(
-      R.f[playerFrame()],
-      -R.fx * PS,
-      -R.fy * PS,
-      R.w * PS,
-      R.h * PS,
-    );
-  }
-  noGlow();
-  ctx.globalAlpha = 1;
   if (shield) {
     ctx.strokeStyle = "#53f7ff";
     ctx.lineWidth = 2;
-    glow("#53f7ff", 16);
     ctx.globalAlpha = 0.6 + Math.sin(frame * 0.2) * 0.25;
     ctx.beginPath();
     ctx.ellipse(0, -p.h / 2, 34, p.h / 2 + 12, 0, 0, 7);
     ctx.stroke();
     ctx.globalAlpha = 1;
-    noGlow();
   }
   ctx.restore();
   if ((state === "over" || state === "revive") && bustT > BUST_FIRST - 80) {
@@ -4997,7 +4513,6 @@ function drawPlayer() {
       );
     }
   }
-  if (!g3) drawBoard();
   drawFuelBar();
   if (FX.charFx) {
     drawPet();
@@ -5022,145 +4537,6 @@ function drawFuelBar() {
   }
 }
 
-function stripes(x, y, w, h, c1, c2, sw) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
-  ctx.fillStyle = c1;
-  ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = c2;
-  for (let k = -h; k < w + h; k += sw * 2) {
-    ctx.beginPath();
-    ctx.moveTo(x + k, y + h);
-    ctx.lineTo(x + k + sw, y + h);
-    ctx.lineTo(x + k + sw + h, y);
-    ctx.lineTo(x + k + h, y);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-function drawObstacles() {
-  const blink = Math.floor(frame / 14) % 2;
-  for (const o of obstacles) {
-    if (o.t === "pit") {
-      ctx.fillStyle = "#02030a";
-      ctx.fillRect(o.x, groundY - 1, o.w, H - groundY + 24);
-      stripes(o.x - 6, groundY - 1, 6, 26, "#ffc21a", "#17171f", 5);
-      stripes(o.x + o.w, groundY - 1, 6, 26, "#ffc21a", "#17171f", 5);
-      continue;
-    }
-    if (o.t === "train") {
-      drawTrain(o);
-      continue;
-    }
-    halo(o.x, o.y, o.w, o.h, 0, "#ff3b5c");
-    glow("#ff3b5c", 14);
-    if (o.t === "block") {
-      ctx.drawImage(obstSprite(o.v || "hazard"), o.x, o.y, o.w, o.h);
-      noGlow();
-      if (o.v !== "cones") {
-        ctx.fillStyle = blink ? "#ff3b3b" : "#7a1a1a";
-        ctx.beginPath();
-        ctx.arc(o.x + o.w / 2, o.y - 4, 3.2, 0, 7);
-        ctx.fill();
-      }
-    } else if (o.t === "drone") {
-      ctx.fillStyle = "#3a1226";
-      rr(o.x, o.y, o.w, o.h, 11);
-      ctx.fill();
-      noGlow();
-      ctx.strokeStyle = "#ff3b5c";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = "#12040a";
-      rr(o.x + 7, o.y + 8, o.w - 14, 8, 4);
-      ctx.fill();
-      ctx.fillStyle = "#ff3b3b";
-      ctx.fillRect(
-        o.x + o.w / 2 - 3 + Math.sin(frame * 0.2) * 9,
-        o.y + 10,
-        6,
-        4,
-      );
-      ctx.strokeStyle = "#ffd0c0";
-      ctx.lineWidth = 2;
-      const s = Math.sin(frame * 1.2) * 12;
-      ctx.beginPath();
-      ctx.moveTo(o.x + o.w / 2 - s, o.y - 4);
-      ctx.lineTo(o.x + o.w / 2 + s, o.y - 4);
-      ctx.stroke();
-      ctx.fillStyle = blink ? "#ff3b3b" : "#7a1a1a";
-      ctx.beginPath();
-      ctx.arc(o.x + 5, o.y + 3, 2.4, 0, 7);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = "#ff5a3c";
-      rr(o.x, o.y, o.w, o.h, 8);
-      ctx.fill();
-      noGlow();
-      ctx.fillStyle = "#ffd08a";
-      rr(o.x + 6, o.y + 4, o.w - 12, o.h - 8, 4);
-      ctx.fill();
-      ctx.fillStyle = "#ffb36b";
-      ctx.globalAlpha = 0.55;
-      ctx.fillRect(o.x + o.w, o.y + 4, 16 + Math.sin(frame) * 4, 8);
-      ctx.globalAlpha = 1;
-    }
-    noGlow();
-  }
-}
-
-function drawItems() {
-  const CN = coinSheet();
-  for (const it of items) {
-    if (it.k === "coin" && it.ct) {
-      const fr = coinTypeSheets()[it.ct],
-        sz = it.ct === 3 ? 40 : 34;
-      if (FX.coinGlow)
-        halo(
-          it.x - it.r,
-          it.y - it.r,
-          it.r * 2,
-          it.r * 2,
-          0,
-          COIN_T[it.ct].col,
-        );
-      ctx.drawImage(
-        fr[
-          Math.floor(frame * (it.ct === 2 ? 0.26 : 0.18) + it.x * 0.05) %
-            fr.length
-        ],
-        it.x - sz / 2,
-        it.y - sz / 2,
-        sz,
-        sz,
-      );
-    } else if (it.k === "coin") {
-      if (FX.coinGlow)
-        halo(it.x - it.r, it.y - it.r, it.r * 2, it.r * 2, 0, "#ffd84f");
-      ctx.drawImage(
-        CN.n[Math.floor(frame * 0.18 + it.x * 0.05) % CN.n.length],
-        it.x - 13,
-        it.y - 13,
-        26,
-        26,
-      );
-    } else {
-      const bob = Math.sin(frame * 0.1 + it.x) * 3;
-      if (FX.coinGlow)
-        halo(
-          it.x - it.r,
-          it.y - it.r + bob,
-          it.r * 2,
-          it.r * 2,
-          0,
-          POWER[it.k].color,
-        );
-      ctx.drawImage(badgeOf(it.k), it.x - 19, it.y + bob - 19, 38, 38);
-    }
-  }
-}
 function drawParticles() {
   for (const q of particles) {
     ctx.globalAlpha = Math.max(0, q.life);
@@ -5384,13 +4760,11 @@ function drawHUD() {
     ctx.fillStyle = "rgba(10,14,34,.75)";
     rr(x, m - 4 * u, bw, bh, 8 * u);
     ctx.fill();
-    ctx.drawImage(
-      badgeOf(k),
-      x + bw / 2 - 12 * u,
-      m - 4 * u + 2 * u,
-      24 * u,
-      24 * u,
-    );
+    ctx.font = `${Math.round(17 * u)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(P.icon, x + bw / 2, m - 4 * u + 14 * u);
     ctx.fillStyle = P.color;
     ctx.fillRect(
       x + 5 * u,
@@ -5465,41 +4839,6 @@ function drawHUD() {
 }
 
 /* ============ CINEMATIC LAYER (colour grade, vignette, bloom, speed lines, BUSTED) ============ */
-let VIG = null,
-  VIGK = "",
-  BLM = null;
-function gradeSprite() {
-  // one small canvas, stretched over the screen: warm sky, cool ground, dark corners
-  const k = Math.round(W) + "x" + Math.round(H);
-  if (VIGK !== k) {
-    VIGK = k;
-    const cv = document.createElement("canvas");
-    cv.width = 128;
-    cv.height = Math.max(40, Math.round((128 * H) / W));
-    const g = cv.getContext("2d"),
-      r = Math.hypot(cv.width, cv.height) / 2;
-    const lg = g.createLinearGradient(0, 0, 0, cv.height);
-    lg.addColorStop(0, "rgba(255,150,70,.15)");
-    lg.addColorStop(0.55, "rgba(255,150,70,0)");
-    lg.addColorStop(1, "rgba(30,110,150,.17)");
-    g.fillStyle = lg;
-    g.fillRect(0, 0, cv.width, cv.height);
-    const gr = g.createRadialGradient(
-      cv.width / 2,
-      cv.height * 0.55,
-      r * 0.34,
-      cv.width / 2,
-      cv.height * 0.55,
-      r * 1.02,
-    );
-    gr.addColorStop(0, "rgba(8,6,20,0)");
-    gr.addColorStop(1, "rgba(8,6,20,.58)");
-    g.fillStyle = gr;
-    g.fillRect(0, 0, cv.width, cv.height);
-    VIG = cv;
-  }
-  return VIG;
-}
 function speedLines() {
   const k = Math.min(
     1,
@@ -5520,27 +4859,6 @@ function speedLines() {
     ctx.fillRect(x, y, len, 1.3);
   }
   ctx.globalAlpha = 1;
-}
-function bloomPass() {
-  // soft glow: shrink the picture, stretch it back on top with "screen"
-  if (GL3.on || !FX.bloom || Q.level > 1 || CFG.reduce) return;
-  const bw = 160,
-    bh = Math.max(40, Math.round((bw * canvas.height) / canvas.width));
-  if (!BLM) {
-    BLM = document.createElement("canvas");
-    BLM.g = BLM.getContext("2d");
-  }
-  if (BLM.width !== bw || BLM.height !== bh) {
-    BLM.width = bw;
-    BLM.height = bh;
-  }
-  BLM.g.drawImage(canvas, 0, 0, bw, bh);
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalCompositeOperation = "screen";
-  ctx.globalAlpha = 0.2;
-  ctx.drawImage(BLM, 0, 0, canvas.width, canvas.height);
-  ctx.restore();
 }
 function drawBusted() {
   if (
@@ -5580,8 +4898,6 @@ function drawBusted() {
 }
 function drawCinema() {
   if (CFG.reduce && Q.level >= 1) return;
-  if (FX.light && !Q.flat && Q.level < 3)
-    ctx.drawImage(gradeSprite(), 0, 0, W, H);
   speedLines();
 }
 
@@ -5600,19 +4916,12 @@ function draw() {
     ctx.scale(zoom, zoom);
     ctx.translate(-W / 2, -H / 2);
   }
-  if (GL3.on) GL3.render(shx, shy); // the whole world is drawn in 3D underneath; this canvas only carries effects and HUD
-  const g3 = GL3.on; // (render() may have fallen back to 2D)
-  if (g3) ctx.clearRect(-40, -40, W + 80, H + 80);
-  else drawBackground();
+  GL3.render(shx, shy); // the whole world is drawn in 3D underneath; this canvas only carries effects and HUD
+  ctx.clearRect(-40, -40, W + 80, H + 80);
   WE_drawBack();
   drawFinish();
   drawBoss();
-  if (!g3) drawItems();
   drawParticles();
-  if (!g3) {
-    drawObstacles();
-    drawChaser();
-  }
   drawPlayer();
   WE_drawFront();
   x10Draw();
@@ -5620,7 +4929,6 @@ function draw() {
   if (FX.light) drawDark();
   ctx.restore();
   drawCinema();
-  bloomPass();
   drawBusted();
   if (flash.a > 0.01 && FX.cam && !CFG.reduce) {
     ctx.globalAlpha = flash.a;
@@ -5665,30 +4973,15 @@ function renderSkins() {
     `</div>`
   );
 }
-const THUMBS = {};
-Art.cities.forEach((c) => {
-  const v = store.get("zr_th3_" + c, null);
-  if (v) THUMBS[c] = v;
-});
-function buildThumbs() {
-  const list = Art.cities.filter((c) => !THUMBS[c]);
-  const cur0 = LEVELS[sel] ? THEMES[LEVELS[sel].theme].city : null;
-  if (cur0 && list.includes(cur0)) {
-    list.splice(list.indexOf(cur0), 1);
-    list.unshift(cur0);
-  }
-  const next = () => {
-    const c = list.shift();
-    if (!c) return;
-    Art.thumb(c, (url) => {
-      THUMBS[c] = url;
-      store.set("zr_th3_" + c, url);
-      if (state === "ready" && !shopOpen && screenFn) screenFn();
-      setTimeout(next, 40);
-    });
-  };
-  next();
-}
+/* city cards in the menu: light CSS gradients (no pre-rendered images) */
+const THUMBS = {
+  tash: "linear-gradient(180deg,#5b9bf0 0%,#bcdcff 46%,#a9d8b0 47%,#6d7482 100%)",
+  sam: "linear-gradient(180deg,#34b4c8 0%,#bfeef0 46%,#e0c68e 47%,#7a6a58 100%)",
+  bux: "linear-gradient(180deg,#e9a36a 0%,#f7d8a8 46%,#d9b27a 47%,#7d6244 100%)",
+  khi: "linear-gradient(180deg,#b88a58 0%,#e8caa0 46%,#c9a06a 47%,#6e5438 100%)",
+  tashN:
+    "linear-gradient(180deg,#26356b 0%,#6f86c8 46%,#5d7a8a 47%,#3a3f52 100%)",
+};
 function renderLevels() {
   return (
     `<div class="top-title">${t("cities.title")}</div><div class="levels">` +
@@ -5696,7 +4989,7 @@ function renderLevels() {
       const locked = i >= prog.unlocked,
         th = THUMBS[THEMES[L.theme].city];
       const bg = th
-        ? `style="background-image:linear-gradient(180deg,rgba(5,7,22,.1),rgba(5,7,22,.88)),url(${th})"`
+        ? `style="background-image:linear-gradient(180deg,rgba(5,7,22,.1),rgba(5,7,22,.88)),${th}"`
         : "";
       return `<button type="button" data-l="${i}" ${bg} class="${i === sel ? "on" : ""}${locked ? " lock" : ""}"><b>${locked ? "🔒" : i + 1}</b><span>${L.name}</span><small>${locked ? "&nbsp;" : starText(prog.stars[i + 1] || 0)}</small></button>`;
     }).join("") +
@@ -5801,7 +5094,6 @@ function resetGame() {
   cleanT = 0;
   boardT = 0;
   chaseX = -120;
-  extraGap = 0;
   spawnPx = 0;
   nextGapPx = 380;
   skill = 0.5;
@@ -5813,12 +5105,9 @@ function resetGame() {
   landT = 0;
   coyote = 0;
   jumpBuf = -1e9;
-  fadeT = 0;
-  prevA = null;
   acc = 0;
   fuel = fuelMax();
   flying = false;
-  sq = 0;
   zoom = 1;
   freeze = 0;
   flash.a = 0;
@@ -5841,14 +5130,11 @@ function resetGame() {
   banner = { text: "", sub: "", t: 0, max: 1 };
   lastZone = 0;
   cur = { ...THEMES[lvl ? lvl.theme : 0] };
-  skyKey = "";
   fx = { slow: 0, x2: 0, magnet: 0 };
   obstacles = [];
   items = [];
   particles = [];
   pops = [];
-  obstacleTimer = 0;
-  nextObstacle = 1000;
   itemTimer = 0;
   nextItem = rnd(8000, 12000);
   Object.assign(player, {
@@ -5888,8 +5174,6 @@ function startGame() {
   acc = 0;
   state = "play";
   lastT = 0;
-  fpsAcc = 0;
-  fpsN = -15;
   if (COARSE && !fsOn) setFs(true);
   if (lvl)
     banner = {
@@ -5926,8 +5210,6 @@ function resumeGame() {
   state = "play";
   lastT = 0;
   acc = 0;
-  fpsAcc = 0;
-  fpsN = -20;
   invul = Math.max(invul, 1200); // short grace after a pause
   $("overlay").classList.add("hidden");
   startMusic();
@@ -5980,8 +5262,6 @@ function doRevive() {
   acc = 0;
   state = "play";
   lastT = 0;
-  fpsAcc = 0;
-  fpsN = -20;
   invul = 2600;
   lives = 1;
   shield = true;
@@ -6144,146 +5424,6 @@ const COIN_T = [
   { id: "energy", col: "#ff4fd8", xp: 2 },
   { id: "zumary", col: "#b388ff", xp: 8 },
 ];
-let CTS = null;
-function coinTypeSheets() {
-  if (CTS) return CTS;
-  CTS = [];
-  const N = 12,
-    sz = 44,
-    c = sz / 2;
-  for (let ty = 1; ty < 4; ty++) {
-    const frames = [];
-    for (let i = 0; i < N; i++) {
-      const cv = document.createElement("canvas");
-      cv.width = cv.height = sz;
-      const g = cv.getContext("2d");
-      const ph = (i / N) * Math.PI * 2,
-        sx = Math.max(0.14, Math.abs(Math.cos(ph)));
-      g.translate(c, c);
-      if (ty === 1) {
-        // premium crystal: faceted hexagonal gem with a travelling sparkle
-        g.save();
-        g.scale(sx, 1);
-        g.beginPath();
-        for (let k = 0; k < 6; k++) {
-          const a = -Math.PI / 2 + (k * Math.PI) / 3;
-          g.lineTo(Math.cos(a) * 16, Math.sin(a) * 16);
-        }
-        g.closePath();
-        const gr = g.createLinearGradient(-14, -16, 14, 16);
-        gr.addColorStop(0, "#f2ffff");
-        gr.addColorStop(0.45, "#46d2ff");
-        gr.addColorStop(1, "#1c5fd0");
-        g.fillStyle = gr;
-        g.fill();
-        g.lineWidth = 2;
-        g.strokeStyle = "#0a3e78";
-        g.stroke();
-        g.strokeStyle = "rgba(255,255,255,.65)";
-        g.lineWidth = 1;
-        g.beginPath();
-        for (let k = 0; k < 6; k += 2) {
-          const a = -Math.PI / 2 + (k * Math.PI) / 3;
-          g.moveTo(0, 0);
-          g.lineTo(Math.cos(a) * 16, Math.sin(a) * 16);
-        }
-        g.stroke();
-        g.restore();
-        const s = 3 + 4 * Math.abs(Math.sin(ph * 1.5));
-        g.fillStyle = "#fff";
-        g.beginPath();
-        g.moveTo(-6, -8 - s);
-        g.lineTo(-4.5, -8);
-        g.lineTo(-6, -8 + s);
-        g.lineTo(-7.5, -8);
-        g.closePath();
-        g.moveTo(-6 - s, -8);
-        g.lineTo(-6, -9.5);
-        g.lineTo(-6 + s, -8);
-        g.lineTo(-6, -6.5);
-        g.closePath();
-        g.fill();
-      } else if (ty === 2) {
-        // rare energy coin: plasma orb in a spinning ring, lightning core
-        const gl = g.createRadialGradient(0, 0, 2, 0, 0, 21);
-        gl.addColorStop(0, "rgba(255,120,235,.75)");
-        gl.addColorStop(1, "rgba(255,79,216,0)");
-        g.fillStyle = gl;
-        g.fillRect(-c, -c, sz, sz);
-        const core = g.createRadialGradient(0, 0, 1, 0, 0, 11);
-        core.addColorStop(0, "#fff");
-        core.addColorStop(0.5, "#ff7ae6");
-        core.addColorStop(1, "#7a1fd1");
-        g.fillStyle = core;
-        g.beginPath();
-        g.arc(0, 0, 11, 0, 7);
-        g.fill();
-        g.lineWidth = 3;
-        g.strokeStyle = "#ff4fd8";
-        g.beginPath();
-        g.ellipse(0, 0, 16 * sx, 16, 0, 0, 7);
-        g.stroke();
-        g.lineWidth = 1.2;
-        g.strokeStyle = "#fff";
-        g.beginPath();
-        g.ellipse(0, 0, 16 * sx, 16, 0, 0.3, 2.2);
-        g.stroke();
-        g.fillStyle = "#fff";
-        g.beginPath();
-        g.moveTo(2, -9);
-        g.lineTo(-5, 1);
-        g.lineTo(-1, 1);
-        g.lineTo(-3, 9);
-        g.lineTo(5, -2);
-        g.lineTo(1, -2);
-        g.closePath();
-        g.fill();
-      } else {
-        // special ZUMARY coin: gold body, violet ring, engraved Z, orbiting sparks
-        g.save();
-        g.scale(sx, 1);
-        const gr = g.createLinearGradient(-16, -16, 16, 16);
-        gr.addColorStop(0, "#fff0a8");
-        gr.addColorStop(0.5, "#ffc93a");
-        gr.addColorStop(1, "#b8780a");
-        g.fillStyle = gr;
-        g.beginPath();
-        g.arc(0, 0, 17, 0, 7);
-        g.fill();
-        g.lineWidth = 3.2;
-        g.strokeStyle = "#8b5cf6";
-        g.beginPath();
-        g.arc(0, 0, 15, 0, 7);
-        g.stroke();
-        g.lineWidth = 1;
-        g.strokeStyle = "rgba(255,255,255,.7)";
-        g.beginPath();
-        g.arc(0, 0, 12, 0, 7);
-        g.stroke();
-        g.fillStyle = "#4a2a9a";
-        g.font = "800 17px Orbitron, Arial, sans-serif";
-        g.textAlign = "center";
-        g.textBaseline = "middle";
-        g.fillText("Z", 0, 1);
-        g.fillStyle = "rgba(255,255,255,.55)";
-        g.beginPath();
-        g.ellipse(-6, -8, 5, 2.2, -0.6, 0, 7);
-        g.fill();
-        g.restore();
-        g.fillStyle = "#e9dcff";
-        for (let k = 0; k < 3; k++) {
-          const a = ph + (k * Math.PI * 2) / 3;
-          g.beginPath();
-          g.arc(Math.cos(a) * 20, Math.sin(a) * 20, 1.6, 0, 7);
-          g.fill();
-        }
-      }
-      frames.push(cv);
-    }
-    CTS[ty] = frames;
-  }
-  return CTS;
-}
 const rings = [];
 function ring(x, y, col, r1 = 34) {
   if (rings.length < 10) rings.push({ x, y, r: 6, r1, col, life: 1 });
@@ -6660,14 +5800,9 @@ function advance() {
   }
   if (n === MAXN) acc = 0; // after a long stall: drop the backlog instead of fast-forwarding
 }
-let ceilQ = 0,
-  baseQ = 0,
-  goodWin = 0,
-  nextDraw = 0,
-  thermalT = 0,
+let nextDraw = 0,
   hzRing = [],
   hz = 60,
-  lastDown = -1e9,
   lastDraw = 0,
   perfOn = false,
   perfEl = null,
@@ -6697,7 +5832,7 @@ function perfTick(raw, t) {
     pf.n = pf.sum = pf.worst = pf.slow = 0;
     pf.t0 = t;
     if (perfOn)
-      perfEl.textContent = `${pf.fps} fps  avg ${pf.avg.toFixed(1)}ms  worst ${pf.wst.toFixed(0)}ms\nslow(>33ms) ${pf.slowN}  long tasks ${pf.long}\nQ${Q.level} ${gfx}${gfx === "auto" ? " (max " + ceilQ + ")" : ""}  ${canvas.width}x${canvas.height}  dpr ${DPR.toFixed(2)}\nparticles ${particles ? particles.length : 0}`;
+      perfEl.textContent = `${pf.fps} fps  avg ${pf.avg.toFixed(1)}ms  worst ${pf.wst.toFixed(0)}ms\nslow(>33ms) ${pf.slowN}  long tasks ${pf.long}\nQ${Q.level} ${gfx}  ${canvas.width}x${canvas.height}  dpr ${DPR.toFixed(2)}\nparticles ${particles ? particles.length : 0}`;
   }
 }
 function togglePerf() {
@@ -6740,8 +5875,6 @@ function loop(t) {
   } // refresh-rate probe (median of 90 frames)
   acc += Math.min(raw, 100);
   advance();
-  thermalT =
-    state === "play" ? thermalT + raw : Math.max(0, thermalT - raw * 0.5);
   if (state !== "play") {
     // menus / pause / game-over: nothing fast moves, so redraw at ~30 fps (pause: ~4 fps)
     if (
@@ -6750,14 +5883,7 @@ function loop(t) {
     )
       return;
   } else {
-    const cap =
-      FPSCAP > 0
-        ? FPSCAP
-        : (COARSE || CFG.thermal) && thermalT > (COARSE ? 60000 : 180000)
-          ? 30
-          : CFG.battery
-            ? 30
-            : 0; // thermal-friendly: after 3 min of play the draw rate drops to 30
+    const cap = FPSCAP > 0 ? FPSCAP : CFG.battery ? 30 : 0; // fixed: nothing here changes by itself while you play
     if (cap > 0) {
       const dt = 1000 / cap;
       if (t < nextDraw - 1.5) return;
@@ -6768,36 +5894,6 @@ function loop(t) {
     } // auto on 90/120 Hz screens: simulate every frame, draw every other one
   }
   lastDraw = t;
-  if (state === "play" && ++fpsN > 0) {
-    // adaptive quality: lowers fast when slow, raises slowly when the device has headroom
-    fpsAcc += Math.min(raw, 50); // one random hitch must not count as "slow device"
-    if (fpsN >= 20) {
-      // judge every 20 frames
-      const avg = fpsAcc / fpsN;
-      if (CFG.adaptive !== false && avg > 21 && Q.level < 3) {
-        const from = Q.level;
-        setQuality(Math.min(3, Q.level + (avg > 34 ? 2 : 1))); // very slow → skip a level
-        ceilQ = Math.max(ceilQ, from + 1);
-        goodWin = 0;
-        lastDown = t; // never climb back to a level that just failed
-        if (COARSE) store.set("zr_q", Q.level); // next launch starts at the level this phone can handle
-      } else if (
-        CFG.adaptive !== false &&
-        avg < (rafAvg < 11.5 ? 11 : 18) &&
-        Q.level > Math.max(ceilQ, baseQ, FLOOR) &&
-        t - lastDown > 15000
-      ) {
-        if (++goodWin >= 10) {
-          setQuality(Q.level - 1);
-          goodWin = 0;
-          lastDown = t - 8000;
-          if (COARSE) store.set("zr_q", Q.level);
-        } // ~3.5 s of clear headroom
-      } else goodWin = 0;
-      fpsAcc = 0;
-      fpsN = 0;
-    }
-  }
   if (state !== "pause" || !document.hidden) draw();
 }
 window.ZR = {
@@ -7228,18 +6324,7 @@ const GFX_LVL = { ultra: 0, high: 1, medium: 2, low: 3 };
 function applyGfx() {
   const fixed =
     gfx === "custom" ? Math.max(0, Math.min(3, CFG.cq | 0)) : GFX_LVL[gfx];
-  baseQ = fixed !== undefined ? fixed : COARSE ? 1 : 0; // best level adaptive quality may climb back to
-  ceilQ = 0;
-  setQuality(
-    fixed !== undefined
-      ? fixed
-      : COARSE
-        ? Math.max(
-            1,
-            Math.min(3, CFG.autoopt === false ? 1 : store.get("zr_q", 1) | 0),
-          )
-        : 1,
-  );
+  setQuality(fixed !== undefined ? fixed : 1); // fixed level: quality never changes by itself while you play
   gfxLabel();
 }
 $("gfxButton").addEventListener("click", () => {
@@ -7271,26 +6356,3 @@ applyGfx();
 resetGame();
 showReady();
 requestAnimationFrame(loop);
-{
-  const warm = [
-    () => runnerSheet(),
-    () => coinSheet(),
-    () => guardSheet(),
-    () => dogSheet(),
-    () => Object.keys(POWER).forEach(badgeOf),
-    () => {
-      heartSprite(true);
-      heartSprite(false);
-    },
-    () => ["hazard", "crate", "cones"].forEach(obstSprite),
-  ];
-  const run = () => {
-    const f = warm.shift();
-    if (f) {
-      f();
-      setTimeout(run, 30);
-    }
-  };
-  setTimeout(run, 120);
-}
-setTimeout(buildThumbs, 150);
