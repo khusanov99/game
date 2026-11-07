@@ -253,7 +253,7 @@ function* genChunk(ci) {
     zB = zA + CH,
     th = themeAt(zA + CH / 2),
     ch = { ci, zA, zB, b: {}, meshes: [] };
-  const pl = plazaOf(ci);
+  const pl = secChunk(ci) === 1 ? -1 : plazaOf(ci);
   if (pl >= 0) {
     /* rebuilt landmark plaza */
     ch.sec = 10 + pl;

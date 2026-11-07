@@ -156,7 +156,7 @@ const starStr = (r) => "★".repeat(r) + "☆".repeat(5 - r);
 const ratingNow = () => clamp(5 - CR.hits - (CR.tLeft < 0 ? 1 : 0), 1, 5);
 function storyUpdate() {
   const k = Math.floor(pz / THEME_LEN);
-  if (k !== ST.k) {
+  if (k !== ST.k && !(CR.st === "carry" && CR.story)) {
     const th = themeAt(k * THEME_LEN + 1);
     ST = { k, th, state: "pending", z0: k * THEME_LEN, z1: (k + 1) * THEME_LEN };
     storyCard = { t: 5, title: cityName(th).toUpperCase() + " · " + T("qTitle"), sub: questName(th) };
@@ -166,7 +166,7 @@ function courTouch(o) {
   o.got = true;
   if (o.k === "pkg") {
     const story = !!o.story,
-      dist = story ? clamp(ST.z1 - 40 - pz, 450, 800) : 750 + rnd(0, 300),
+      dist = 3000,
       l = (Math.random() * 3) | 0;
     CR.st = "carry";
     CR.pkg = null;
@@ -259,6 +259,10 @@ function courUpdate(dt) {
     }
   } else {
     CR.tLeft -= dt;
+    if (CR.drop && CR.drop.z - pz < 150 && (CR.clr = (CR.clr || 0) - dt) < 0) {
+      CR.clr = 0.4;
+      courClear();
+    }
     if (CR.drop && !CR.drop.got && CR.drop.z < pz - 3) {
       if (CR.story) {
         ST.state = "fail";
