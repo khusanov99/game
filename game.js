@@ -1712,6 +1712,45 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
               k % 2 ? [1, 0.76, 0.1] : [0.09, 0.09, 0.12],
               0.3,
             );
+      } else if (o.t === "train" && o.v === "damas") {
+        const w = o.w,
+          wh = [0.93, 0.95, 0.98],
+          gl_ = [0.2, 0.3, 0.42];
+        box(T(X, Y, 0), w, 22, 40, 17, wh, 0.25); // lower body
+        box(T(X + w * 0.07, Y, 0), w * 0.82, 15, 38, 35.5, wh, 0.25); // cabin
+        box(T(X, Y, -20.4), w + 0.6, 3.4, 0.8, 21, [0.16, 0.42, 0.86], 0.3); // blue stripe
+        box(T(X + w * 0.07, Y, -19.6), w * 0.7, 9, 1.4, 36, gl_, 0.5); // side windows
+        box(T(X - w / 2 + 0.6, Y, 0), 1.6, 10, 30, 34, gl_, 0.5); // windscreen
+        box(T(X - w / 2 - 0.4, Y, 0), 1.6, 8, 34, 12, [0.2, 0.22, 0.26], 0.2); // grille
+        for (const zz of [-13, 13])
+          box(T(X - w / 2 - 0.8, Y, zz), 1.8, 5, 6, 18, [1, 0.95, 0.65], 1); // headlights
+        for (const zz of [-13, 13])
+          box(
+            T(X + w / 2 + 0.5, Y, zz),
+            1.6,
+            5,
+            5,
+            18,
+            [0.95, 0.15, 0.12],
+            0.9,
+          ); // tail lights
+        box(T(X, Y, 0), 12, 3, 7, 44.5, [1, 0.78, 0.1], 0.9); // taxi lamp
+        for (const wx of [-w / 2 + 17, w / 2 - 17]) {
+          cyl(
+            J(T(X + wx, Y + 7, -21), 0, 0, 0, 0, 0, PI / 2),
+            7.5,
+            6,
+            K.dark,
+            0.1,
+          );
+          cyl(
+            J(T(X + wx, Y + 7, -24.2), 0, 0, 0, 0, 0, PI / 2),
+            3.4,
+            1,
+            [0.78, 0.8, 0.85],
+            0.4,
+          );
+        }
       } else if (o.t === "train") {
         const bd = T(X, Y, 0);
         box(bd, o.w, o.h - 8, 46, (o.h - 8) / 2 + 6, [0.18, 0.43, 0.82], 0.15);
@@ -2396,7 +2435,7 @@ const LEVELS = [
     max: 9.5,
     gap: 1.15,
     theme: 1,
-    types: ["block", "drone", "double", "train"],
+    types: ["block", "drone", "double", "train", "damas"],
     coins: 35,
   },
   {
@@ -2411,7 +2450,7 @@ const LEVELS = [
     max: 10.5,
     gap: 1.1,
     theme: 2,
-    types: ["block", "drone", "pit", "train"],
+    types: ["block", "drone", "pit", "train", "damas"],
     coins: 45,
     g: 0.4,
     jump: [-10.8, -9.5],
@@ -2428,7 +2467,7 @@ const LEVELS = [
     max: 11.5,
     gap: 1.05,
     theme: 4,
-    types: ["block", "drone", "pit", "double", "train"],
+    types: ["block", "drone", "pit", "double", "train", "damas"],
     coins: 50,
     dark: true,
   },
@@ -2444,7 +2483,7 @@ const LEVELS = [
     max: 12,
     gap: 1.7,
     theme: 5,
-    types: ["block", "pit", "drone", "train"],
+    types: ["block", "pit", "drone", "train", "damas"],
     coins: 60,
     boss: true,
   },
@@ -3531,7 +3570,35 @@ function openBox(x, y) {
     zoom = 1.05;
   }
 }
+function drawDamas2D(o) {
+  const x = o.x,
+    y = o.y,
+    w = o.w,
+    h = o.h;
+  ctx.fillStyle = "#eef2f8";
+  rr(x, y + 14, w, h - 20, 5);
+  ctx.fill();
+  rr(x + 8, y, w - 12, 22, 5);
+  ctx.fill();
+  ctx.fillStyle = "#3b4f66";
+  ctx.fillRect(x + 12, y + 5, w - 22, 11);
+  ctx.fillStyle = "#2f6fd1";
+  ctx.fillRect(x, y + 27, w, 3);
+  ctx.fillStyle = "#ffe98a";
+  ctx.fillRect(x - 1, y + 28, 4, 5);
+  ctx.fillStyle = "#e23";
+  ctx.fillRect(x + w - 2, y + 26, 3, 5);
+  ctx.fillStyle = "#ffc21a";
+  ctx.fillRect(x + w / 2 - 6, y - 3, 12, 3);
+  ctx.fillStyle = "#15151c";
+  for (const wx of [x + 17, x + w - 17]) {
+    ctx.beginPath();
+    ctx.arc(wx, y + h - 6, 7, 0, 7);
+    ctx.fill();
+  }
+}
 function drawTrain(o) {
+  if (o.v === "damas") return drawDamas2D(o);
   // metro car: its roof is a platform you can run on
   ctx.fillStyle = "#2f6fd1";
   rr(o.x, o.y, o.w, o.h, 6);
@@ -3686,8 +3753,8 @@ function endlessTypes() {
     : score < 250
       ? ["block", "block", "drone"]
       : score < 400
-        ? ["block", "drone", "train", "block"]
-        : ["block", "drone", "train", "double", "pit"];
+        ? ["block", "drone", "train", "block", "damas"]
+        : ["block", "drone", "train", "double", "pit", "damas", "damas"];
 }
 function mkBlock(off) {
   // returns the end offset (px) of what it placed
@@ -3785,11 +3852,33 @@ function mkTrain(off) {
   }
   return off + w;
 }
+/* Damas van: the classic Uzbek micro-van. Behaves like a metro car (its roof is a platform) but is short, a bit
+   faster than the road and honks when it enters the screen. */
+function mkDamas(off) {
+  const w = rnd(80, 92),
+    h = 44,
+    sx = W + 20 + off;
+  obstacles.push({
+    t: "train",
+    v: "damas",
+    x: sx,
+    y: groundY - h,
+    w,
+    h,
+    passed: false,
+    c: "#e9eef5",
+    sp: 1.1,
+  });
+  for (let i = 0; i < 3; i++)
+    items.push(mkCoin(sx + 20 + i * 22, groundY - h - 18));
+  return off + w;
+}
 function spawnPattern() {
   // returns the length (px) of the pattern that was placed
   const types = lvl ? lvl.types : endlessTypes(),
     kind = types[Math.floor(Math.random() * types.length)];
   const jg = Math.max(4, speed) * 60 * 0.72 + 70; // room to land, react, and jump or duck again
+  if (kind === "damas") return mkDamas(0);
   if (kind === "train") return mkTrain(0);
   if (kind === "pit") return mkPit(0);
   if (kind === "drone") {
@@ -3926,6 +4015,7 @@ function scrollWorld(d, f = 1) {
 
 function hurt(o) {
   const p = player;
+  x10Hit();
   if (boardT > 0) {
     // the hoverboard takes the hit
     boardT = 0;
@@ -3992,6 +4082,199 @@ function hurt(o) {
   return true;
 }
 
+/* ============ EXTRA FEATURES (light-weight) ============
+   1 Damas van · 2 Golden Rush (15 coins in a row = x2 score) · 3 checkpoint heal every 500 m · 4 250 m fireworks bonus
+   5 "new record" call-out · 6 jump / landing dust · 7 speed lines · 8 combo magnet (every 25 combo)
+   9 clean-run shield (30 s without a hit) · 10 roof-rider bonus on a Damas · 11 honk + off-screen warning */
+const T3 = (en, uz, ja) => (LANG === "uz" ? uz : LANG === "ja" ? ja : en);
+const X10 = {
+  run: 0,
+  km: 0,
+  best0: 0,
+  rec: false,
+  magK: 0,
+  clean: 0,
+  roof: 0,
+  roofT: 0,
+  g: true,
+  air: 0,
+};
+function x10Reset() {
+  Object.assign(X10, {
+    run: 0,
+    km: 0,
+    best0: meta.bestScore | 0,
+    rec: false,
+    magK: 0,
+    clean: 0,
+    roof: 0,
+    roofT: 0,
+    g: true,
+    air: 0,
+  });
+}
+function x10Hit() {
+  X10.run = 0;
+  X10.clean = 0;
+}
+function x10Coin() {
+  if (++X10.run === 15) {
+    fx.x2 = Math.max(fx.x2, 6000);
+    shout(
+      T3("GOLDEN RUSH! ×2", "OLTIN YUGURISH! ×2", "ゴールデンラッシュ！×2"),
+      "#ffd84f",
+      1500,
+    );
+    flash = { c: "#ffd84f", a: 0.18 };
+    burst(player.x + 17, player.y, "#ffd84f", 24);
+    [784, 988, 1175, 1568].forEach((f, i) =>
+      setTimeout(() => beep(f, 0.1, "triangle", 0.05), i * 60),
+    );
+    X10.run = 0;
+  }
+}
+function x10Update(delta) {
+  if (state !== "play") return;
+  const p = player;
+  /* jump / landing dust */
+  if (X10.g && !p.grounded) burst(p.x + 17, p.y + p.h, "#e8eef7", 4);
+  if (!X10.g && p.grounded && X10.air > 14)
+    burst(p.x + 17, p.y + p.h, "#e8eef7", 6);
+  X10.air = p.grounded ? 0 : X10.air + 1;
+  X10.g = p.grounded;
+  /* milestones */
+  const km = Math.floor(dist / 250);
+  if (km > X10.km) {
+    X10.km = km;
+    const g = 100 * mult();
+    score += g;
+    burst(player.x + 40, player.y - 20, "#ff4fd8", 12);
+    burst(player.x + 40, player.y - 20, "#53f7ff", 12);
+    burst(player.x + 40, player.y - 20, "#ffd84f", 12);
+    pop(p.x + 30, p.y - 40, "+" + g, "#ffd84f");
+    shout(Math.floor(dist) + " m!", "#9ff", 1100);
+    if (km % 2 === 0) {
+      if (lives < maxLives) {
+        lives++;
+        toast(
+          T3(
+            "Checkpoint: +1 life",
+            "Nazorat nuqtasi: +1 jon",
+            "チェックポイント：ライフ+1",
+          ),
+        );
+      } else if (!shield) {
+        shield = true;
+        toast(
+          T3(
+            "Checkpoint: shield",
+            "Nazorat nuqtasi: qalqon",
+            "チェックポイント：シールド",
+          ),
+        );
+      }
+      beep(880, 0.12, "triangle", 0.05);
+    }
+  }
+  /* new personal record */
+  if (!X10.rec && X10.best0 >= 150 && score > X10.best0) {
+    X10.rec = true;
+    shout(T3("NEW RECORD!", "YANGI REKORD!", "新記録！"), "#ff4fd8", 1600);
+    burst(player.x + 20, player.y - 10, "#ff4fd8", 26);
+    vib(25);
+  }
+  /* combo magnet */
+  const mk = Math.floor(combo / 25);
+  if (mk > X10.magK) {
+    fx.magnet = Math.max(fx.magnet, 4000);
+    shout(
+      T3("COMBO MAGNET!", "KOMBO MAGNIT!", "コンボマグネット！"),
+      "#53f7ff",
+      1200,
+    );
+  }
+  X10.magK = mk;
+  /* clean run */
+  X10.clean += delta;
+  if (X10.clean > 30000) {
+    X10.clean = 0;
+    if (!shield) {
+      shield = true;
+      shout(
+        T3(
+          "CLEAN RUN: SHIELD!",
+          "TOZA YUGURISH: QALQON!",
+          "ノーミス：シールド！",
+        ),
+        "#9fd0ff",
+        1300,
+      );
+    }
+  }
+  /* roof rider + honk */
+  const pcx = p.x + p.w / 2;
+  let riding = false;
+  for (const o of obstacles) {
+    if (o.v !== "damas") continue;
+    if (!o.honk && o.x < W + 40 && o.x > 0) {
+      o.honk = true;
+      beep(420, 0.12, "square", 0.04);
+      setTimeout(() => beep(520, 0.16, "square", 0.04), 130);
+    }
+    if (p.grounded && pcx > o.x && pcx < o.x + o.w && p.y + p.h <= o.y + 2)
+      riding = true;
+  }
+  if (riding) {
+    X10.roofT += delta;
+    if (X10.roofT > 500) {
+      X10.roofT = 0;
+      const g = 10 * mult();
+      score += g;
+      pop(p.x + 20, p.y - 26, T3("ROOF +", "TOM +", "屋根 +") + g, "#ffe98a");
+    }
+  } else X10.roofT = 0;
+}
+function x10Draw() {
+  const fast =
+    (speed > 8.5 || turboT > 0) &&
+    FX.particles &&
+    !CFG.reduce &&
+    state === "play";
+  if (fast) {
+    ctx.strokeStyle =
+      turboT > 0 ? "rgba(120,240,255,.5)" : "rgba(255,255,255,.3)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < 9; i++) {
+      const x = W + 100 - ((frame * (16 + i * 4) + i * 211) % (W + 220)),
+        y = 40 + ((i * 97) % Math.max(60, groundY - 80));
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 36 + i * 5, y);
+    }
+    ctx.stroke();
+  }
+  for (const o of obstacles)
+    if (
+      o.v === "damas" &&
+      o.x > W - 10 &&
+      o.x < W + 420 &&
+      Math.floor(frame / 8) % 2
+    ) {
+      const x = W - 24,
+        y = groundY - 62;
+      ctx.fillStyle = "#ffc21a";
+      ctx.beginPath();
+      ctx.moveTo(x, y - 16);
+      ctx.lineTo(x + 16, y + 12);
+      ctx.lineTo(x - 16, y + 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#17171f";
+      ctx.font = "700 15px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("!", x, y + 9);
+    }
+}
 function updateGame(delta) {
   const f = Math.min(delta / 16.67, 2);
   frame += f;
@@ -4003,6 +4286,7 @@ function updateGame(delta) {
   invul = Math.max(0, invul - delta);
   if (boardT > 0) boardT -= delta;
   cleanT += delta;
+  x10Update(delta);
   if (cleanT > 14000 && lives < maxLives) {
     lives++;
     cleanT = 0;
@@ -5261,6 +5545,7 @@ function draw() {
   }
   drawPlayer();
   WE_drawFront();
+  x10Draw();
   if (FX.env) drawWeather();
   if (FX.light) drawDark();
   ctx.restore();
@@ -5439,6 +5724,7 @@ function resetGame() {
   lvl = mode === "campaign" ? LEVELS[sel] : null;
   dist = 0;
   hits = 0;
+  x10Reset();
   maxLives = (lvl ? 3 : 2) + up.life;
   lives = maxLives;
   shotTimer = 1500;
@@ -5952,6 +6238,7 @@ function coinCollect(it) {
     mAdd("rare", 1);
     meta.xp += ty.xp;
   }
+  x10Coin();
   const g = 25 * mult() * cv;
   score += g;
   pop(it.x, it.y, "+" + g, ty.col);
