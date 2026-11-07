@@ -87,7 +87,7 @@ function drawCourierObj(o, ca) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.depthMask(false);
-    draw(PKGM.halo, Tp(o.x, o.y + bob, o.z - 0.2), HALOT, { emis: 1, alpha: 0.55 + 0.25 * Math.sin(ca * 5) });
+    draw(PKGM.halo, Tp(o.x, o.y + bob, o.z - 0.2), HALOT, { emis: 1, alpha: 0.55 + 0.25 * Math.sin(ca * 5), tint: o.story ? [0.35, 1.0, 1.3] : [1, 1, 1] });
     gl.depthMask(true);
     gl.disable(gl.BLEND);
     return;

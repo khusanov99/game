@@ -45,7 +45,7 @@ function update(dt) {
         (scoot > 0 ? 2 : 0));
     speed = Math.min(34, speed + dt * 0.22);
     pz += vEff * dt;
-    S.dist = pz;
+    S.dist = pz - startZ;
     runPh += dt * (6.2 + vEff * 0.19);
     px += (LX[lane] - px) * Math.min(1, dt * 13);
     tilt = lerp(
@@ -203,6 +203,7 @@ function update(dt) {
     if (shakeT > 0) shakeT -= dt;
     if (stumbleT > 0) stumbleT -= dt;
     courUpdate(dt);
+    if (storyCard.t > 0) storyCard.t -= dt;
     evUpdate();
     rushK = lerp(rushK, RUNEV.on && RUNEV.cur === "rush" ? 1 : 0, Math.min(1, dt * 2.5));
     nightK = lerp(nightK, RUNEV.on && RUNEV.cur === "night" ? 1 : 0, Math.min(1, dt * 1.2));

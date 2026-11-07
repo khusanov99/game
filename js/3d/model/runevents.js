@@ -16,7 +16,7 @@ let rushK = 0,
 function evReset() {
   RUNEV.cur = null;
   RUNEV.on = false;
-  RUNEV.next = 520;
+  RUNEV.next = startZ + 520;
   RUNEV.last = RUNEV.prev = "";
   RUNEV.done = 0;
   rushK = nightK = 0;

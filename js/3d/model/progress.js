@@ -97,12 +97,13 @@ function bank() {
 const missionText = (q) => T("m_" + q.id).replace("{n}", q.t);
 
 function reset() {
-  pz = 0;
+  startZ = jrStart * THEME_LEN;
+  pz = startZ;
   px = 0;
   py = 0;
   vy = 0;
   lane = 1;
-  speed = SPEED0;
+  speed = SPEED0 + Math.min(8, jrStart * 1.6);
   slideT = 0;
   tilt = 0;
   coinsGot = 0;
@@ -116,7 +117,7 @@ function reset() {
   objs = [];
   while (sparks.length) SPARK_POOL.push(sparks.pop());
   floaties = [];
-  nextSpawn = 55;
+  nextSpawn = startZ + 55;
   RUNSEED = (Math.random() * 1e9) | 0;
   courReset();
   evReset();
@@ -127,7 +128,7 @@ function reset() {
   chainT = 0;
   mag = shield = turbo = dbl = jet = padB = 0;
   jetK = 0;
-  lastTheme = 0;
+  lastTheme = themeAt(startZ);
   dash = 0;
   energy = 60;
   scoot = 0;
@@ -146,13 +147,13 @@ function reset() {
   floorY = lastFloor = 0;
   revived = false;
   heli = null;
-  nextHeli = 650;
+  nextHeli = startZ + 650;
   lit = 0;
   bankedCoins = 0;
   S = newStats();
   B0 = newStats();
   B0.coinsRunBase = 0;
   B0.xpGiven = 0;
-  resetCity(0);
-  ensureCity(0, 1e9);
+  resetCity(startZ);
+  ensureCity(startZ, 1e9);
 }

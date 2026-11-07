@@ -12,6 +12,7 @@ function showOv(title, sub, row, btn, canRevive) {
   achBtn.style.display = "none";
   gfxBtn.style.display = "none";
   cityBtn.style.display = "none";
+  jrBtn.style.display = "none";
   $("oTitle").textContent = title;
   $("oSub").innerHTML = sub;
   $("oRow").innerHTML = row;
@@ -28,6 +29,7 @@ function missionHtml() {
 }
 function menu() {
   ovMode = "menu";
+  jrStart = 0;
   showOv(
     T("title"),
     T("sub"),
@@ -38,6 +40,8 @@ function menu() {
   );
   gfxBtn.style.display = "block";
   gfxLabel();
+  jrBtn.style.display = "block";
+  jrBtn.textContent = T("jrBtn") + "  " + jrCount() + "/" + QUEST.length;
   cityBtn.style.display = "block";
   cityBtn.textContent = T("cityBtn") + "  " + cityCount() + "/" + CITY.length;
   achBtn.style.display = "block";
@@ -69,6 +73,15 @@ function cityOv() {
     T("back2"),
     false,
   );
+}
+function jrOv() {
+  ovMode = "jr";
+  const rows = QUEST.map((q, i) => {
+    const ok = jrUnlocked(i),
+      b = jr.best[i];
+    return `<div style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;font:600 11px Inter,sans-serif;padding:6px 0;color:${ok ? "#c8cdf0" : "#6b7299"}"><span><b>${b > 0 ? "✔ " : ok ? "📍 " : "🔒 "}${cityName(i)}</b><br><span style="font-weight:500;color:#8c93b8">${ok ? questName(i) : T("jrLocked")}</span>${b > 0 ? `<br><span style="color:#ffd84f">${starStr(b)}</span>` : ""}</span>${ok ? `<button type="button" data-j="${i}" style="width:auto;padding:8px 12px;font-size:11px;background:linear-gradient(90deg,#7fe6ff,#5b8cff);color:#04122a">${T("jrGo")}</button>` : ""}</div>`;
+  }).join("");
+  showOv(T("jrTitle"), T("jrHint"), rows, T("back2"), false);
 }
 function achOv() {
   ovMode = "ach";
@@ -119,7 +132,7 @@ function endGame() {
   state = "over";
   ovMode = "over";
   LT.runs++;
-  LT.best = Math.max(LT.best, Math.floor(pz));
+  LT.best = Math.max(LT.best, Math.floor(pz - startZ));
   saveLT();
   checkAch();
   bustT = 0;
@@ -138,7 +151,8 @@ function endGame() {
         )
         .join("") +
       (lvlMsg ? `<br><b style="color:#ffd84f">${lvlMsg}</b>` : "") +
-      (CR.n ? `<br><b style="color:#7ffcb0">📦 ${T("cDelivSum")}: ${CR.n}  (+${CR.earned})</b>` : "");
+      (CR.n ? `<br><b style="color:#7ffcb0">📦 ${T("cDelivSum")}: ${CR.n}  (+${CR.earned})</b>` : "") +
+      (LT.rateN ? `<br><b style="color:#ffd84f">${T("rating")}: ${starStr(Math.round(LT.rateSum / LT.rateN))}</b>` : "");
     showOv(
       T("busted"),
       T("caught") +
@@ -173,7 +187,7 @@ rvBtn.addEventListener("click", () => {
 });
 $("go").addEventListener("click", () => {
   if (ovMode === "pause") setPause(false);
-  else if (ovMode === "ach" || ovMode === "city") menu();
+  else if (ovMode === "ach" || ovMode === "city" || ovMode === "jr") menu();
   else start();
 });
 rsBtn.addEventListener("click", () => {
@@ -185,6 +199,15 @@ rsBtn.addEventListener("click", () => {
 });
 achBtn.addEventListener("click", achOv);
 cityBtn.addEventListener("click", cityOv);
+jrBtn.addEventListener("click", jrOv);
+$("oRow").addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-j]");
+  if (!b || ovMode !== "jr") return;
+  const i = +b.dataset.j;
+  if (!jrUnlocked(i)) return;
+  jrStart = i;
+  start();
+});
 $("oRow").addEventListener("click", (e) => {
   const b = e.target.closest && e.target.closest("[data-b]");
   if (!b || ovMode !== "city") return;

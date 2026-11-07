@@ -83,6 +83,12 @@ gfxBtn.type = "button";
 gfxBtn.style.cssText =
   "display:none;background:rgba(83,247,255,.08);color:#7fe6ff;border:1px solid rgba(83,247,255,.3);font-size:12px;padding:12px";
 $("go").after(gfxBtn);
+const jrBtn = document.createElement("button");
+jrBtn.id = "jrb";
+jrBtn.type = "button";
+jrBtn.style.cssText =
+  "display:none;background:rgba(127,230,255,.1);color:#7fe6ff;border:1px solid rgba(127,230,255,.4);font-size:12px;padding:12px";
+$("go").after(jrBtn);
 const cityBtn = document.createElement("button");
 cityBtn.id = "cityb";
 cityBtn.type = "button";

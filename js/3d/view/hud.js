@@ -137,6 +137,30 @@ function drawHUD(vp) {
     hx.font = fnt(800, 11);
     hx.fillText("ZUMARY"[i], m + i * 21 * u + 9 * u, ly + 9.5 * u);
   }
+  if (state === "play" && storyCard.t > 0) {
+    /* story card: chapter banner at the start of every city and when a quest ends */
+    const a = clamp(Math.min(storyCard.t, 5 - 0) / 0.6, 0, 1) * clamp(storyCard.t / 0.5, 0, 1),
+      cw = Math.min(W - 2 * m, 420 * u),
+      cx0 = W / 2 - cw / 2,
+      cy0 = H * 0.3;
+    hx.save();
+    hx.globalAlpha = Math.min(1, a);
+    hx.fillStyle = "rgba(8,10,26,.62)";
+    hx.beginPath();
+    hx.roundRect(cx0, cy0, cw, 58 * u, 12 * u);
+    hx.fill();
+    hx.strokeStyle = "rgba(127,230,255,.5)";
+    hx.lineWidth = 1.5;
+    hx.stroke();
+    hx.textAlign = "center";
+    hx.fillStyle = "#7fe6ff";
+    hx.font = fnt(800, 11);
+    hx.fillText(storyCard.title, W / 2, cy0 + 19 * u, cw - 16 * u);
+    hx.fillStyle = "#fff";
+    hx.font = `600 ${Math.round(13 * u)}px Inter, 'Hiragino Sans', sans-serif`;
+    hx.fillText(storyCard.sub, W / 2, cy0 + 41 * u, cw - 16 * u);
+    hx.restore();
+  }
   if (state === "play") {
     /* courier panel + police heat (top centre, under the pause button) */
     const cx = W / 2,
@@ -148,7 +172,19 @@ function drawHUD(vp) {
       const dxl = CR.drop.x - px,
         arrow = dxl > 1.1 ? "◀" : dxl < -1.1 ? "▶" : "▲",
         d = Math.max(0, Math.round(CR.drop.z - pz));
-      txt = "🎁 " + T("cDest") + " " + d + " " + T("m") + "  " + arrow + "  ⏱ " + Math.max(0, CR.tLeft).toFixed(0) + "s";
+      txt =
+        (CR.story ? "⭐ " : "🎁 ") +
+        T("cDest") +
+        " " +
+        d +
+        " " +
+        T("m") +
+        "  " +
+        arrow +
+        "  ⏱ " +
+        Math.max(0, CR.tLeft).toFixed(0) +
+        "s  " +
+        starStr(ratingNow());
       col = CR.tLeft < 0 ? "#ff9a6b" : CR.tLeft < 5 ? "#ffd84f" : "#7ffcb0";
     } else {
       txt = "🎁 " + T("cFind") + (CR.n ? "  ·  ✔ " + CR.n : "");

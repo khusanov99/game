@@ -73,6 +73,7 @@ function hurt(o) {
   hits++;
   hitT = 8;
   RUNEV.hit = true;
+  if (CR.st === "carry") CR.hits++;
   heat = Math.min(95, heat + 25);
   invul = 1.4;
   shakeT = 0.45;
@@ -110,7 +111,7 @@ function pickCoin(o) {
   chain = chainT > 0 ? chain + 1 : 1;
   chainT = 1.5;
   mult = Math.min(6, 1 + Math.floor(chain / 8));
-  bonus += (o.gem ? 50 : 10) * mult * m;
+  bonus += (o.gem ? 35 : 7) * mult * m;
   coinHud = 0.25;
   energy = Math.min(100, energy + (o.gem ? 8 : 2.5));
   sfx.coin();
