@@ -1856,12 +1856,16 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         Y = groundY - it.y;
       if (X < -W * 0.7 - 40 || X > W * 0.7 + 40) continue;
       if (it.k === "coin") {
-        const cc = it.ct ? C(COIN_T[it.ct].col) : C("#ffd84f"),
-          r = it.ct === 3 ? 18 : it.ct ? 14 : 13,
+        const cc = it.ct ? C(COIN_T[it.ct].col) : [1, 0.68, 0.06],
+          r = (it.ct === 3 ? 22 : it.ct ? 18 : 17) * Math.max(1, UI * 0.8),
           sp = frame * (it.ct === 2 ? 0.26 : 0.18) * 0.5 + it.x * 0.03;
         const cd = J(T(X, Y, 0), 0, 0, 0, PI / 2, sp);
-        cyl(cd, r, 4, mulc(cc, 0.82), 0.5);
-        cyl(J(cd, 0, 0.9, 0), r * 0.7, 4.6, cc, 0.95);
+        /* dark-bronze rim + saturated, self-lit faces: reads clearly against the bright daylight city */
+        cyl(cd, r * 1.2, 4.2, mulc(cc, 0.32), 0.1);
+        cyl(J(cd, 0, 1.6, 0), r * 0.94, 3.4, cc, 1);
+        cyl(J(cd, 0, -1.6, 0), r * 0.94, 3.4, cc, 1);
+        cyl(J(cd, 0, 2.2, 0), r * 0.5, 3.4, mulc(cc, 1.15), 1);
+        cyl(J(cd, 0, -2.2, 0), r * 0.5, 3.4, mulc(cc, 1.15), 1);
       } else {
         const bob = Math.sin(frame * 0.1 + it.x) * 3,
           pc = C(POWER[it.k].color),
