@@ -539,7 +539,21 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, IB.byteLength, gl.DYNAMIC_DRAW);
       cv3.addEventListener("webglcontextlost", (e) => {
         e.preventDefault();
-        API.on = false;
+        API.on = false; // the classic 2D renderer takes over at once (no black frame)
+        cv3.style.visibility = "hidden";
+      });
+      cv3.addEventListener("webglcontextrestored", () => {
+        try {
+          SBUF.clear();
+          const old = cv3;
+          if (old.parentNode) old.parentNode.removeChild(old);
+          if (init() && !API.dead) {
+            API.size(canvas.width, canvas.height);
+            API.on = true;
+          }
+        } catch (e) {
+          API.on = false;
+        }
       });
       canvas.parentNode.insertBefore(cv3, canvas);
       return true;
@@ -1554,8 +1568,13 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
   }
 
   /* ================= PER-FRAME ================= */
-  API.render = function (dx, dy) {
+  const renderInner = function (dx, dy) {
     if (!API.on) return;
+    if (gl.isContextLost()) {
+      API.on = false;
+      return;
+    }
+    API.size(canvas.width, canvas.height);
     const asp = W / H,
       fov =
         (18 * (PI / 180)) /
@@ -1640,7 +1659,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       road = mixc(GA.road, GB.road, kT),
       side = mixc(GA.side, GB.side, kT),
       plain = mixc(GA.plain, GB.plain, kT);
-    box(T(0, 0, -10), 9000, 20, 170, -10, road, 0.04);
+    box(T(0, 0, -155), 9000, 20, 460, -10, road, 0.04);
     box(T(0, 0, 85), 9000, 6, 70, -3 + 6, side, 0.05);
     box(T(0, 0, 1300), 9000, 4, 2500, -2, mixc(plain, bot, 0.25), 0);
     box(T(0, 0.3, 48), 9000, 1.2, 4, 0, mixc(side, [0.5, 0.5, 0.5], 0.4), 0); // kerb
@@ -1986,6 +2005,47 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       gl.drawElements(gl.TRIANGLES, ni - worldI, gl.UNSIGNED_SHORT, worldI * 2);
       gl.depthMask(true);
       gl.disable(gl.BLEND);
+    }
+  };
+  /* safety net: any exception or a blank (all-black) frame switches to the classic 2D renderer for good,
+     so the player can never be left staring at a black screen */
+  let errN = 0,
+    chk = 0;
+  function bail() {
+    API.on = false;
+    API.dead = true;
+    if (cv3) cv3.style.display = "none";
+  }
+  function blank() {
+    const px = new Uint8Array(4);
+    let lit = 0;
+    for (const [fx, fy] of [
+      [0.5, 0.5],
+      [0.25, 0.6],
+      [0.75, 0.6],
+      [0.5, 0.2],
+      [0.5, 0.9],
+    ]) {
+      gl.readPixels(
+        Math.floor(cv3.width * fx),
+        Math.floor(cv3.height * fy),
+        1,
+        1,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        px,
+      );
+      if (px[0] + px[1] + px[2] > 24) lit++;
+    }
+    return lit === 0;
+  }
+  API.render = function (dx, dy) {
+    if (!API.on) return;
+    try {
+      renderInner(dx, dy);
+      if (API.on && chk < 4 && ++chk >= 2 && blank()) bail();
+    } catch (e) {
+      if (++errN >= 3) bail();
     }
   };
   API.stats = () => ({ nv, ni, max: MAXV });
@@ -2574,6 +2634,7 @@ const sfx = {
 /* ============ STATE ============ */
 let state = "ready"; // ready | play | pause | over
 let score, speed, frame, coins, combo, shake, invul, shield, banner, lastZone;
+let airT = 0;
 let lvl = null,
   dist = 0,
   lives = 1,
@@ -4174,6 +4235,17 @@ function updateGame(delta) {
       }
     }
   }
+  /* air-time bonus: a long, high jump pays out when you land (cheap: one counter, one pop-up) */
+  if (p.grounded) {
+    if (airT > 46 && state === "play") {
+      const g = Math.min(80, Math.round(airT / 4) * 2) * mult();
+      score += g;
+      turboAdd(6);
+      pop(p.x + 20, p.y - 30, "AIR +" + g, "#9ff");
+      beep(740, 0.06, "triangle", 0.035);
+    }
+    airT = 0;
+  } else airT += f;
   compactInPlace(obstacles, (o) => o.x + o.w > -10);
 
   for (const it of items) {
@@ -5170,11 +5242,10 @@ function draw() {
     ctx.scale(zoom, zoom);
     ctx.translate(-W / 2, -H / 2);
   }
-  const g3 = GL3.on;
-  if (g3) {
-    GL3.render(shx, shy); // the whole world is drawn in 3D underneath; this canvas only carries effects and HUD
-    ctx.clearRect(-40, -40, W + 80, H + 80);
-  } else drawBackground();
+  if (GL3.on) GL3.render(shx, shy); // the whole world is drawn in 3D underneath; this canvas only carries effects and HUD
+  const g3 = GL3.on; // (render() may have fallen back to 2D)
+  if (g3) ctx.clearRect(-40, -40, W + 80, H + 80);
+  else drawBackground();
   WE_drawBack();
   drawFinish();
   drawBoss();
@@ -6727,27 +6798,64 @@ async function toggleFs() {
   resetInputs();
   const on = !fsOn;
   setFs(on);
+  const el = shell,
+    req = el.requestFullscreen || el.webkitRequestFullscreen,
+    ex = document.exitFullscreen || document.webkitExitFullscreen,
+    cur = document.fullscreenElement || document.webkitFullscreenElement;
   try {
     if (on) {
-      if (shell.requestFullscreen)
-        await shell.requestFullscreen({ navigationUI: "hide" });
+      if (req) await req.call(el, { navigationUI: "hide" });
       if (COARSE && screen.orientation && screen.orientation.lock) {
         try {
           await screen.orientation.lock("landscape");
         } catch (x) {}
       }
     } else {
-      if (document.fullscreenElement) await document.exitFullscreen();
+      if (cur && ex) await ex.call(document);
       if (screen.orientation && screen.orientation.unlock)
         screen.orientation.unlock();
     }
-  } catch (x) {}
+  } catch (x) {} // no native fullscreen (iPhone) or denied: the CSS full-screen layout stays on
+  resize();
+  requestAnimationFrame(resize);
+  setTimeout(resize, 350);
+}
+function onFsChange() {
+  const cur = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!cur && fsOn && nativeFs) setFs(false);
+  nativeFs = !!cur;
   resize();
 }
-document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement && fsOn) setFs(false);
-  resize();
-});
+let nativeFs = false;
+document.addEventListener("fullscreenchange", onFsChange);
+document.addEventListener("webkitfullscreenchange", onFsChange);
+/* a second full-screen button that sits on top of the start menu, so full screen never has to be reached
+   through (or after) the menu sheet that covers the page on phones */
+{
+  const ov = $("overlay");
+  if (ov) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = "fsMenuBtn";
+    b.setAttribute("aria-label", "Full screen");
+    b.textContent = "⛶";
+    b.style.cssText =
+      "position:absolute;z-index:60;top:calc(env(safe-area-inset-top,0px) + 10px);right:calc(env(safe-area-inset-right,0px) + 10px);width:44px;height:44px;border-radius:12px;border:1px solid rgba(120,240,255,.5);background:rgba(8,12,30,.78);color:#8ff;font-size:22px;line-height:1;cursor:pointer;display:none";
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleFs();
+    });
+    ov.appendChild(b);
+    const sync = () => {
+      b.style.display = ov.classList.contains("hidden") ? "none" : "block";
+    };
+    new MutationObserver(sync).observe(ov, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    sync();
+  }
+}
 
 /* ============ GRAPHICS ============ */
 const GFX = ["auto", "ultra", "high", "medium", "low", "custom"];
