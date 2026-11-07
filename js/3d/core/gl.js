@@ -5,7 +5,8 @@ let gl = null;
 try {
   gl =
     cv.getContext("webgl", {
-      antialias: !COARSE,
+      /* 4x MSAA costs 40%+ of the frame time on integrated GPUs and phones: only when the player picks GRAPHICS: HIGH (applies after a reload) */
+      antialias: !COARSE && store.get("zr3_gfx", "auto") === "high",
       alpha: false,
       depth: true,
       powerPreference: "high-performance",

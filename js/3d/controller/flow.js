@@ -102,7 +102,7 @@ function menu() {
   dailyOff();
   showOv(
     T("title"),
-    T("sub"),
+    T("sub") + (SOFTGL ? "<br><b style='color:#ffb35c;font-size:11px'>⚠ " + T("swWarn") + "</b>" : ""),
     `<div class="pill"><small>${T("best")}</small>${best}</div><div class="pill"><small>${T("level")}</small>${lvlOf(XP)}</div><div class="pill"><small>${T("coins")}</small><span class="coin"></span>${wallet}</div>` +
       missionHtml(),
     T("play"),
