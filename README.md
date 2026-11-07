@@ -131,3 +131,17 @@ Not done in this pass: redesign of the 2D cities and of the robot characters, se
 - **Systems**: energy meter, coin-rush milestones (10/25/50/100), multiplier ×6, new power-ups (scooter, slow-mo), new missions (flip/dash/scoot), 10 achievements with rewards and an achievements screen, camera effects (dash FOV kick, landing dip, lane roll, slow-mo, hit-stop).
 - **Devices**: touch swipes, keyboard (arrows/WASD/Space), gamepad, safe-area insets, UI scale clamp, landscape/portrait/tablet/desktop layouts.
 - **Honest limits**: tested only in headless Chromium (SwiftShader) at several viewport sizes; no real iPhone/Android/gamepad hardware testing, so FPS on real devices is not guaranteed. Art is stylised procedural geometry, not artist-made.
+
+## v6 — chasers, showcase, jetpack fix, MVC-style split (3D game)
+
+- **Jetpack coins**: the camera rises while flying, the coin wave follows the lane you were in (smooth sine path), coins that already passed are no longer drawn through the camera, and pick-up radius is wider while flying.
+- **New chasers**: **Alp**, a heavy crimson steppe warrior-bot (conical helmet, ram-horn pauldrons, cape, glowing lance), and **Bo'ri**, a robotic wolf (bronze collar, plume tail). They replace the old police robot and dog.
+- **Pre-game showcase**: before START the hero idles on a Registan-star podium (breathing, blinking, waving) while a 16 s looping camera does a reveal, a full orbit and a pull-back; Alp and Bo'ri stalk in from the far end of the street. START blends the showcase camera into the gameplay camera (0.9 s, 1.2 s of grace).
+- **Small gameplay additions**: +150 and a banner when you enter the next city, red danger vignette when the hunters are close.
+- **Architecture** (`js/3d/`, classic scripts, no build step; load order is the order in `city3d.html`):
+  - `core/` engine: util, i18n, gl, math, shaders, geometry, textures, draw
+  - `model/` data and rules: themes, state, progress (missions/XP), world (spawning), achievements, events, update (simulation step)
+  - `view/` rendering: city-builder, character-batch, chaser, hero, environment, showcase, render, hud
+  - `controller/` input and flow: audio, input (touch / mouse / keyboard / gamepad), flow (screens), loop, main (boot), api (`ZR3D` test hooks)
+  - Honest note: the files share one global lexical scope (a pragmatic split of the former single closure), so this is an MVC-*inspired* separation by responsibility, not isolated modules with explicit imports. Turning it into ES modules with an explicit state object would be the next step.
+- **Limits**: still tested only in headless Chromium (SwiftShader); no real phone / tablet / gamepad run; art is procedural geometry.

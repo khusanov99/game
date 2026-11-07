@@ -37,6 +37,10 @@
   .card{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
   @media (max-height:520px){.card{padding:12px 16px}h1{font-size:22px}.sub{margin:4px 0 8px;font-size:12px}.row{margin:6px 0}button,a.btn{padding:10px;margin-top:6px}}
   @media (min-width:900px){.card{width:min(460px,100%)}}
+  /* pre-game showcase: the hero stays visible, the menu becomes a bottom sheet (or a side panel on wide screens) */
+  .ov.show{align-items:flex-end;background:linear-gradient(180deg,rgba(7,8,22,0) 38%,rgba(7,8,22,.78) 100%)}
+  .ov.show .card{max-height:46dvh;background:rgba(10,12,30,.58)}
+  @media (min-aspect-ratio:13/10){.ov.show{align-items:center;justify-content:flex-end;background:linear-gradient(90deg,rgba(7,8,22,0) 45%,rgba(7,8,22,.72) 100%)}.ov.show .card{width:min(400px,40vw);max-height:calc(100dvh - 24px)}}
 </style>
 </head>
 <body>
@@ -56,6 +60,35 @@
 </div>
 <script src="./rig.js"></script>
 <script src="./facades.js"></script>
-<script src="./city3d.js"></script>
+<!-- 3D game, split by responsibility: core (engine) -> model (state, rules) -> view (rendering) -> controller (input, flow). Order matters. -->
+<script src="./js/3d/core/util.js"></script>
+<script src="./js/3d/core/i18n.js"></script>
+<script src="./js/3d/core/gl.js"></script>
+<script src="./js/3d/core/math.js"></script>
+<script src="./js/3d/core/shaders.js"></script>
+<script src="./js/3d/core/geometry.js"></script>
+<script src="./js/3d/core/textures.js"></script>
+<script src="./js/3d/core/draw.js"></script>
+<script src="./js/3d/model/themes.js"></script>
+<script src="./js/3d/view/city-builder.js"></script>
+<script src="./js/3d/view/character-batch.js"></script>
+<script src="./js/3d/view/chaser.js"></script>
+<script src="./js/3d/view/hero.js"></script>
+<script src="./js/3d/model/state.js"></script>
+<script src="./js/3d/model/progress.js"></script>
+<script src="./js/3d/model/world.js"></script>
+<script src="./js/3d/controller/audio.js"></script>
+<script src="./js/3d/model/achievements.js"></script>
+<script src="./js/3d/controller/input.js"></script>
+<script src="./js/3d/model/events.js"></script>
+<script src="./js/3d/model/update.js"></script>
+<script src="./js/3d/view/environment.js"></script>
+<script src="./js/3d/view/showcase.js"></script>
+<script src="./js/3d/view/render.js"></script>
+<script src="./js/3d/view/hud.js"></script>
+<script src="./js/3d/controller/flow.js"></script>
+<script src="./js/3d/controller/loop.js"></script>
+<script src="./js/3d/controller/main.js"></script>
+<script src="./js/3d/controller/api.js"></script>
 </body>
 </html>
