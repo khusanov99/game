@@ -371,8 +371,14 @@ function* genChunk(ci) {
         ])
           sb.sph(sd * 7.2 + dx, dy + 0.9, z + 10, r, r * 0.85, r, 6, 8, c);
       }
-      if (kit && Math.random() < 0.55) addParkedCar(ch, sd, z + rnd(4, 15));
+      if (kit && Math.random() < 0.55) {
+        const pz2 = z + rnd(4, 15);
+        if (!inTraffic(sd, pz2)) addParkedCar(ch, sd, pz2);
+      }
+      if (kit && z % 40 !== 0 && Math.random() < 0.22)
+        addStall(ch, sd, z + rnd(3, 6));
     }
+  slPopulate(ch, th);
   for (const k of Object.keys(ch.b)) {
     const e = ch.b[k];
     if (e.b.i.length) ch.meshes.push({ m: e.b.mesh(), tex: e.tex, mat: e.mat });
@@ -467,5 +473,6 @@ function resetCity(z) {
   PEND = null;
   for (const ch of CHUNKS.values()) ch.meshes.forEach((x) => freeMesh(x.m));
   CHUNKS.clear();
+  TRAFFIC[-1].length = TRAFFIC[1].length = 0;
   CUR[0] = CUR[1] = z - 40;
 }

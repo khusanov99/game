@@ -100,6 +100,7 @@ function render() {
     if (ch.zB < pz - 30 || ch.zA > pz + FAR) continue;
     for (const x of ch.meshes) draw(x.m, IDM, x.tex, x.mat || MAT0);
   }
+  drawStreetLife();
   const ca = performance.now() / 380,
     blink = Math.floor(performance.now() / 260) % 2;
   for (const o of objs) {
