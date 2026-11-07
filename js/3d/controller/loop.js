@@ -36,10 +36,12 @@ function deviceTier() {
   if (DEV.ios && DEV.mem >= 4) t = 0;
   if (DEV.low) t = 2;
   if (/mali-4|adreno \(tm\) [23]\d\d|powervr sgx/i.test(r)) t = 2;
-  if (/swiftshader|llvmpipe|software/i.test(r)) t = 3;
-  return [1, 0.8, 0.62, 0.5][t];
+  SOFTGL = /swiftshader|llvmpipe|software|basic render|microsoft basic/i.test(r);
+  if (SOFTGL) t = 3;
+  return [1, 0.8, 0.62, 0.4][t];
 }
-let tier0 = 1;
+let tier0 = 1,
+  SOFTGL = false; // the browser draws WebGL on the CPU (graphics acceleration off / blocked driver): everything is ~10-50x slower
 function applyGfx() {
   gGrace = 90;
   tier0 = deviceTier();
@@ -65,8 +67,26 @@ function setRes(v) {
   FAR = FARS[qual];
   resize();
 }
+let rawT = 0,
+  rawMin = 1e9,
+  rawN = 0,
+  hzRaw = 16.7,
+  skipN = 0;
 function frame(ts) {
   requestAnimationFrame(frame);
+  /* 90/120/144/240 Hz screens: draw every 2nd/4th refresh instead, so the game runs at 60-72 fps and does not burn double the CPU/GPU */
+  if (rawT) {
+    const r = ts - rawT;
+    if (r > 3 && r < rawMin) rawMin = r;
+    if (++rawN >= 240) {
+      hzRaw = clamp(rawMin, 4, 34);
+      rawMin = 1e9;
+      rawN = 0;
+    }
+  }
+  rawT = ts;
+  const div = hzRaw < 12.5 ? Math.max(1, Math.floor(16.7 / hzRaw + 0.15)) : 1;
+  if (div > 1 && ++skipN % div) return;
   if (!lastT) {
     lastT = ts;
     return;
@@ -94,8 +114,8 @@ function frame(ts) {
       gAcc = 0;
       gN = 0;
       now = performance.now();
-      if (avg > slowT && resScale > 0.5 && now - lastChg > 900) {
-        setRes(Math.max(0.5, resScale * (avg > slowT * 1.5 ? 0.78 : 0.9)));
+      if (avg > slowT && resScale > (SOFTGL ? 0.3 : 0.5) && now - lastChg > 900) {
+        setRes(Math.max(SOFTGL ? 0.3 : 0.5, resScale * (avg > slowT * 1.5 ? 0.78 : 0.9)));
         gGrace = 20;
         lastChg = now;
         lastDown = now;
@@ -127,4 +147,5 @@ function frame(ts) {
   if (!paused && resumeCd <= 0) update(dt * (slow > 0 ? 0.62 : 1));
   syncUi();
   render();
+  warmTick(dt);
 }

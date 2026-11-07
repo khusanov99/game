@@ -121,9 +121,10 @@ function update(dt) {
       const sc = secAt(pz + 4);
       const stn = sc === 1 ? stationOf(Math.floor((pz + 4) / CH)) : -1;
       if (stn !== lastStn) {
+        if (stn < 0) lastSpeak = -1;
         if (stn >= 0 && pz > 50) {
           floatText("🚇 " + STN[stn].n, "#9fd8ff");
-          stationChime(STN[stn].n);
+          stationChime(STN[stn].n, stn);
         }
         lastStn = stn;
       }

@@ -39,13 +39,13 @@ varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec2 vT;
 void main(){
 vec4 t = texture2D(uTex, vT); if (t.a < uCut) discard;
 vec3 base = t.rgb * vC * uTint;
-vec3 n = normalize(vN); vec3 v = normalize(uCam - vW);
+vec3 n = normalize(vN); vec3 cv = uCam - vW; float dist = length(cv); vec3 v = cv / dist;
 float d = max(dot(n, uSun), 0.0); vec3 amb = mix(uGnd, uSky, n.y * 0.5 + 0.5);
 vec3 col = base * (amb + uSunCol * d);
-vec3 h = normalize(uSun + v); col += uSpec * pow(max(dot(n, h), 0.0), 40.0) * uSunCol;
-col += uRim * pow(1.0 - max(dot(n, v), 0.0), 3.0) * uRimCol;
+if (uSpec > 0.0) { float s = max(dot(n, normalize(uSun + v)), 0.0); float s2 = s * s, s4 = s2 * s2, s8 = s4 * s4, s16 = s8 * s8; col += uSpec * (s16 * s16 * s8) * uSunCol; } /* = pow(s, 40.0) */
+if (uRim > 0.0) { float r = 1.0 - max(dot(n, v), 0.0); col += uRim * (r * r * r) * uRimCol; }
 col = mix(col, base * 1.25, uEmis);
-float dist = length(uCam - vW); float f = 1.0 - exp(-pow(dist * uFogK, 1.7));
+float f = 1.0 - exp(-pow(dist * uFogK, 1.7));
 col = mix(col, uFog, clamp(f, 0.0, 1.0));
 gl_FragColor = vec4(col, t.a * uAlpha);
 }`,
@@ -59,8 +59,8 @@ uniform vec3 uTop, uMid, uLow, uSun, uSunCol, uF, uR, uU; uniform vec2 uTan; var
 void main(){
 vec3 ray = normalize(uF + uR * vQ.x * uTan.x + uU * vQ.y * uTan.y); float h = ray.y;
 vec3 c = mix(uLow, uMid, smoothstep(0.0, 0.22, h)); c = mix(c, uTop, smoothstep(0.18, 0.75, h)); if (h < 0.0) c = uLow;
-c += 0.025 * sin(h * 55.0 + ray.x * 6.0) * (1.0 - smoothstep(0.0, 0.5, h));
-float s = max(dot(ray, uSun), 0.0); c += uSunCol * (pow(s, 900.0) * 1.6 + pow(s, 22.0) * 0.4 + pow(s, 4.0) * 0.12);
+if (h < 0.5) c += 0.025 * sin(h * 55.0 + ray.x * 6.0) * (1.0 - smoothstep(0.0, 0.5, h));
+float s = max(dot(ray, uSun), 0.0); if (s > 0.3) c += uSunCol * (pow(s, 900.0) * 1.6 + pow(s, 22.0) * 0.4 + pow(s, 4.0) * 0.12);
 gl_FragColor = vec4(c, 1.0);
 }`,
   ["aP"],
