@@ -960,8 +960,8 @@ kbd {
   }
   .canvas-wrap {
     /* taller play area on phones: the world is drawn bigger (see resize() in game.js) */
-    height: clamp(300px, 46vh, 500px);
-    height: clamp(300px, 46svh, 500px);
+    height: clamp(320px, 54vh, 560px);
+    height: clamp(320px, 54svh, 560px);
     aspect-ratio: auto;
   }
   /* menu becomes a full-screen sheet so everything fits */

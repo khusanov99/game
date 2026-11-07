@@ -1713,42 +1713,96 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
               0.3,
             );
       } else if (o.t === "train" && o.v === "damas") {
+        /* Chevrolet / Daewoo Damas Deluxe micro-van: grey nose with round headlights, black bumper with amber
+           indicators, tall cabin with a sloping windscreen, three side windows, orange + black rear stripe */
         const w = o.w,
-          wh = [0.93, 0.95, 0.98],
-          gl_ = [0.2, 0.3, 0.42];
-        box(T(X, Y, 0), w, 22, 40, 17, wh, 0.25); // lower body
-        box(T(X + w * 0.07, Y, 0), w * 0.82, 15, 38, 35.5, wh, 0.25); // cabin
-        box(T(X, Y, -20.4), w + 0.6, 3.4, 0.8, 21, [0.16, 0.42, 0.86], 0.3); // blue stripe
-        box(T(X + w * 0.07, Y, -19.6), w * 0.7, 9, 1.4, 36, gl_, 0.5); // side windows
-        box(T(X - w / 2 + 0.6, Y, 0), 1.6, 10, 30, 34, gl_, 0.5); // windscreen
-        box(T(X - w / 2 - 0.4, Y, 0), 1.6, 8, 34, 12, [0.2, 0.22, 0.26], 0.2); // grille
-        for (const zz of [-13, 13])
-          box(T(X - w / 2 - 0.8, Y, zz), 1.8, 5, 6, 18, [1, 0.95, 0.65], 1); // headlights
-        for (const zz of [-13, 13])
-          box(
-            T(X + w / 2 + 0.5, Y, zz),
-            1.6,
-            5,
-            5,
-            18,
-            [0.95, 0.15, 0.12],
-            0.9,
-          ); // tail lights
-        box(T(X, Y, 0), 12, 3, 7, 44.5, [1, 0.78, 0.1], 0.9); // taxi lamp
-        for (const wx of [-w / 2 + 17, w / 2 - 17]) {
+          x0 = -w / 2,
+          wh = [0.95, 0.96, 0.98],
+          gr = [0.76, 0.79, 0.83],
+          gl_ = [0.12, 0.17, 0.24],
+          bk = [0.09, 0.09, 0.1],
+          at = (u, y, z) => T(X + u, Y + y, z);
+        box(at(6, 0, 0), w - 12, 22, 40, 21, wh, 0.28); // lower body
+        box(at(x0 + 6, 0, 0), 12, 17, 39, 21.5, gr, 0.3); // nose / bonnet (grey)
+        box(at(x0 + 6, 0, 0), 12.4, 3, 40, 29.5, wh, 0.25); // bonnet lip
+        box(at(x0 - 0.8, 0, 0), 4, 8, 43, 12, bk, 0.1); // bumper
+        for (const z of [-17.5, 17.5])
+          box(at(x0 - 2.5, 0, z), 1.2, 3.2, 5, 11.5, [1, 0.58, 0.1], 0.9); // amber indicators
+        box(at(x0 - 1.1, 0, 0), 0.8, 2, 20, 9, [0.2, 0.2, 0.22], 0.1); // lower grille
+        for (const z of [-13.5, 13.5]) {
+          box(at(x0 - 0.2, 0, z), 1.4, 7.5, 10, 22.5, [0.88, 0.92, 0.96], 0.85); // headlights
+          box(at(x0 - 0.2, 0, z), 1.6, 8.5, 11, 22.5, [0.5, 0.53, 0.58], 0.3);
+        }
+        box(at(x0 + 5, 0, -19.8), 6, 7, 1, 22.5, [0.88, 0.92, 0.96], 0.85); // wrap-around light (side)
+        box(at(x0 - 0.5, 0, 0), 1, 3, 7, 22.5, [0.95, 0.78, 0.3], 0.6); // bowtie badge
+        /* cabin */
+        box(at(10, 0, 0), w - 20, 15, 38, 39.5, wh, 0.28); // upper body
+        box(at(8, 0, 0), w - 30, 2.2, 35, 48.2, wh, 0.32); // domed roof
+        box(at(x0 + 16, 0, 0), 8, 16, 34, 38, gl_, 0.3); // interior seen through the cut-away
+        box(
+          J(at(x0 + 15, 38, 0), 0, 0, 0, 0, 0, 1.01),
+          19,
+          1.6,
+          34,
+          0,
+          [0.2, 0.3, 0.4],
+          0.55,
+        ); // slanted windscreen
+        for (const [a, b] of [
+          [x0 + 14, x0 + 36],
+          [x0 + 38, x0 + w * 0.62],
+          [x0 + w * 0.64, w / 2 - 3],
+        ])
+          box(at((a + b) / 2, 0, -19.4), b - a, 10.5, 0.8, 39, gl_, 0.42); // side windows
+        box(at(x0 + 37, 0, -19.9), 1.2, 22, 0.7, 28, [0.55, 0.57, 0.6], 0.2); // door shut-line
+        box(
+          at(x0 + w * 0.63, 0, -19.9),
+          1.2,
+          22,
+          0.7,
+          28,
+          [0.55, 0.57, 0.6],
+          0.2,
+        );
+        box(at(x0 + 33, 0, -20.2), 2.4, 1.2, 0.8, 27, bk, 0.2); // door handle
+        box(at(x0 + 12, 0, -23), 2.5, 7, 3.2, 36, bk, 0.1); // mirror
+        /* rear-side stripe: orange over black */
+        box(
+          at(w * 0.22, 0, -20.1),
+          w * 0.5,
+          3.4,
+          0.7,
+          27.5,
+          [0.93, 0.42, 0.12],
+          0.45,
+        );
+        box(at(w * 0.22 + 2, 0, -20.1), w * 0.46, 2.2, 0.7, 23.6, bk, 0.2);
+        box(at(w / 2 + 0.4, 0, -12), 1.4, 8, 5, 30, [0.9, 0.12, 0.1], 0.9); // tail lights
+        box(at(w / 2 + 0.4, 0, 12), 1.4, 8, 5, 30, [0.9, 0.12, 0.1], 0.9);
+        box(at(w / 2 + 0.2, 0, 0), 1.2, 4.5, 14, 14, bk, 0.1); // rear bumper
+        /* wheels with silver hub-caps */
+        for (const wx of [x0 + 22, w / 2 - 20]) {
+          box(at(wx, 0, -20.4), 21, 3.2, 1.2, 19.5, bk, 0.1); // wheel arch
           cyl(
-            J(T(X + wx, Y + 7, -21), 0, 0, 0, 0, 0, PI / 2),
-            7.5,
-            6,
-            K.dark,
-            0.1,
+            J(at(wx, 9.5, -19.5), 0, 0, 0, PI / 2, 0, 0),
+            9.5,
+            7,
+            [0.07, 0.07, 0.08],
+            0.08,
           );
           cyl(
-            J(T(X + wx, Y + 7, -24.2), 0, 0, 0, 0, 0, PI / 2),
-            3.4,
+            J(at(wx, 9.5, -25.5), 0, 0, 0, PI / 2, 0, 0),
+            6.2,
+            3,
+            [0.9, 0.92, 0.96],
+            0.8,
+          );
+          cyl(
+            J(at(wx, 9.5, -27.5), 0, 0, 0, PI / 2, 0, 0),
+            1.6,
             1,
-            [0.78, 0.8, 0.85],
-            0.4,
+            [0.55, 0.58, 0.62],
+            0.3,
           );
         }
       } else if (o.t === "train") {
@@ -2096,7 +2150,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
   return API;
 })();
 const PIXEL_BUDGET = COARSE
-  ? [560000, 400000, 280000, 190000]
+  ? [900000, 650000, 420000, 260000]
   : [1500000, 1100000, 800000, 500000]; // canvas pixels per quality level
 function setQuality(l) {
   l = Math.max(l, FLOOR);
@@ -2178,8 +2232,8 @@ function resize() {
   const cw = Math.max(200, wrap.clientWidth),
     ch = Math.max(140, wrap.clientHeight);
   const oldG = groundY;
-  /* phones held upright: a narrower world (440 instead of 560 units) draws the city, obstacles and hero ~30% larger */
-  const minW = COARSE && window.innerHeight > window.innerWidth ? 440 : 560;
+  /* phones held upright: a narrower world (400 instead of 560 units) draws the city, obstacles and hero ~40% larger */
+  const minW = COARSE && window.innerHeight > window.innerWidth ? 400 : 560;
   let s = ch / 350,
     w = cw / s;
   if (w < minW) {
@@ -2212,7 +2266,7 @@ function resize() {
   if (GL3.size) GL3.size(nw, nh);
   ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
   if (COARSE) ctx.imageSmoothingQuality = "low";
-  player.x = Math.round(Math.min(190, Math.max(125, W * 0.19)));
+  player.x = Math.round(W < 500 ? 96 : Math.min(190, Math.max(125, W * 0.19))); // hero sits further left in the narrow phone world (more room to react)
   const dy = groundY - oldG;
   if (dy && obstacles) {
     obstacles.forEach((o) => {
@@ -3857,8 +3911,8 @@ function mkTrain(off) {
 /* Damas van: the classic Uzbek micro-van. Behaves like a metro car (its roof is a platform) but is short, a bit
    faster than the road and honks when it enters the screen. */
 function mkDamas(off) {
-  const w = rnd(80, 92),
-    h = 44,
+  const w = rnd(98, 108),
+    h = 48,
     sx = W + 20 + off;
   obstacles.push({
     t: "train",
