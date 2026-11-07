@@ -30,11 +30,21 @@ function drawHUD(vp) {
     hx.fillRect(p[0], p[1], 3.2 * u, 3.2 * u);
   }
   hx.globalAlpha = 1;
-  if (rainA > 0.05 && qual < 2 && state !== "ready") {
+  if (snowA > 0.05 && state !== "ready") {
+    hx.fillStyle = "rgba(255,255,255," + 0.85 * snowA + ")";
+    const n = qual < 2 ? 70 : qual < 3 ? 45 : 26;
+    for (let i = 0; i < n; i++) {
+      const sz = (1.6 + (i % 3)) * u,
+        x = ((i * 97.3 + 31) % W) + Math.sin(tNow / 700 + i) * 14 * u,
+        y = ((i * 53.1 + tNow * (0.05 + (i % 4) * 0.018)) % (H + 20)) - 10;
+      hx.fillRect(x, y, sz, sz);
+    }
+  }
+  if (rainA > 0.05 && qual < 3 && state !== "ready") {
     hx.strokeStyle = "rgba(200,220,255," + 0.32 * rainA + ")";
     hx.lineWidth = 1;
     hx.beginPath();
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0, n = qual < 2 ? 70 : 34; i < n; i++) {
       const x = (i * 83.7 + 13) % W,
         y = ((i * 47.3 + tNow * (0.9 + (i % 5) * 0.12)) % (H + 40)) - 20;
       hx.moveTo(x, y);
@@ -126,6 +136,100 @@ function drawHUD(vp) {
     hx.textAlign = "center";
     hx.font = fnt(800, 11);
     hx.fillText("ZUMARY"[i], m + i * 21 * u + 9 * u, ly + 9.5 * u);
+  }
+  if (state === "play" && storyCard.t > 0) {
+    /* story card: chapter banner at the start of every city and when a quest ends */
+    const a = clamp(Math.min(storyCard.t, 5 - 0) / 0.6, 0, 1) * clamp(storyCard.t / 0.5, 0, 1),
+      cw = Math.min(W - 2 * m, 420 * u),
+      cx0 = W / 2 - cw / 2,
+      cy0 = H * 0.3;
+    hx.save();
+    hx.globalAlpha = Math.min(1, a);
+    hx.fillStyle = "rgba(8,10,26,.62)";
+    hx.beginPath();
+    hx.roundRect(cx0, cy0, cw, 58 * u, 12 * u);
+    hx.fill();
+    hx.strokeStyle = "rgba(127,230,255,.5)";
+    hx.lineWidth = 1.5;
+    hx.stroke();
+    hx.textAlign = "center";
+    hx.fillStyle = "#7fe6ff";
+    hx.font = fnt(800, 11);
+    hx.fillText(storyCard.title, W / 2, cy0 + 19 * u, cw - 16 * u);
+    hx.fillStyle = "#fff";
+    hx.font = `600 ${Math.round(13 * u)}px Inter, 'Hiragino Sans', sans-serif`;
+    hx.fillText(storyCard.sub, W / 2, cy0 + 41 * u, cw - 16 * u);
+    hx.restore();
+  }
+  if (state === "play") {
+    /* courier panel + police heat (top centre, under the pause button) */
+    const cx = W / 2,
+      cy = m + 44 * u;
+    hx.textAlign = "center";
+    hx.font = fnt(700, 10);
+    let txt, col;
+    if (CR.st === "carry" && CR.drop) {
+      const dxl = CR.drop.x - px,
+        arrow = dxl > 1.1 ? "◀" : dxl < -1.1 ? "▶" : "▲",
+        d = Math.max(0, Math.round(CR.drop.z - pz));
+      txt =
+        (CR.story ? "⭐ " : "") +
+        (ITEM_EMO[CR.item] || "🎁") +
+        " " +
+        (CU[CR.cust] ? CU[CR.cust].e + " " : "") +
+        T("cDest") +
+        " " +
+        d +
+        " " +
+        T("m") +
+        "  " +
+        arrow +
+        "  ⏱ " +
+        Math.max(0, CR.tLeft).toFixed(0) +
+        "s  " +
+        starStr(ratingNow());
+      col = CR.tLeft < 0 ? "#ff9a6b" : CR.tLeft < 5 ? "#ffd84f" : "#7ffcb0";
+    } else {
+      txt = "🎁 " + T("cFind") + (CR.n ? "  ·  ✔ " + CR.n : "");
+      col = "#ffe9a8";
+    }
+    const tw = hx.measureText(txt).width + 22 * u;
+    hx.fillStyle = "rgba(0,0,0,.45)";
+    hx.beginPath();
+    hx.roundRect(cx - tw / 2, cy - 11 * u, tw, 22 * u, 11 * u);
+    hx.fill();
+    hx.fillStyle = col;
+    hx.fillText(txt, cx, cy + 1);
+    if (RUNEV.on && RUNEV.cur) {
+      const left = Math.max(0, Math.round(RUNEV.z1 - pz)),
+        et = "⚡ " + evName(RUNEV.cur) + "  " + left + " " + T("m"),
+        ew = hx.measureText(et).width + 20 * u,
+        ey = cy + (heat > 12 ? 52 : 34) * u;
+      hx.fillStyle = "rgba(0,0,0,.45)";
+      hx.beginPath();
+      hx.roundRect(cx - ew / 2, ey - 10 * u, ew, 20 * u, 10 * u);
+      hx.fill();
+      hx.fillStyle = EVDEF[RUNEV.cur].col;
+      hx.fillText(et, cx, ey + 1);
+    }
+    if (heat > 12) {
+      const bw = 120 * u,
+        by = cy + 18 * u,
+        k = clamp(heat / 100, 0, 1),
+        fl = heat > 70 && Math.floor(tNow / 160) % 2;
+      hx.fillStyle = "rgba(0,0,0,.5)";
+      hx.beginPath();
+      hx.roundRect(cx - bw / 2, by, bw, 6 * u, 3 * u);
+      hx.fill();
+      hx.fillStyle = fl ? "#3d7bff" : k > 0.6 ? "#ff4d5e" : "#ffb347";
+      hx.beginPath();
+      hx.roundRect(cx - bw / 2, by, bw * k, 6 * u, 3 * u);
+      hx.fill();
+      hx.font = fnt(600, 8);
+      hx.fillStyle = "rgba(255,255,255,.75)";
+      hx.fillText("🚔 " + T("cHeat"), cx, by + 15 * u);
+    }
+    hx.textAlign = "left";
   }
   {
     const ey = ly + 26 * u,

@@ -1,7 +1,10 @@
 /* model/state.js — Mutable game state (position, speed, timers, power-ups, camera effects). */
 "use strict";
 /* ---------- game state ---------- */
-const LX = [-2.2, 0, 2.2],
+let startZ = 0, // journey: the run starts at the beginning of this city's block
+  jrStart = 0,
+  RUNSEED = (Math.random() * 1e9) | 0; // new every run: city order, section positions, weather
+const LX = [2.2, 0, -2.2],
   SPEED0 = 15;
 let state = "ready",
   pz = 0,
@@ -51,6 +54,8 @@ let bonus = 0,
   nextHeli = 650,
   lit = 0,
   rainA = 0,
+  snowA = 0,
+  fogA = 0,
   bankedCoins = 0,
   doneMsgs = [],
   lvlMsg = "";
@@ -88,8 +93,9 @@ const newStats = () => ({
   flip: 0,
   dash: 0,
   scoot: 0,
+  deliv: 0,
 });
 let S = newStats(),
   B0 = newStats();
 const look = () => Rig.LOOKS[skin] || Rig.LOOKS.default;
-const scoreNow = () => Math.floor(pz) + bonus;
+const scoreNow = () => Math.floor(pz - startZ) + bonus;

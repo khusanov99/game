@@ -89,13 +89,11 @@ Opening `index.html` directly also works. A local server is better because it ma
 - The Japanese texts were written by the assistant. A native speaker should review them.
 - The characters and scenery are drawn in code, not taken from photos or sprite artwork. They are stylised, not photo-real or GTA-grade 3D art.
 
-## City Run (city.html)
+## City Run 3D (city3d.html)
 
-Subway-Surfers-style mode: the camera is behind the robot, running down the middle of an Uzbek city street (Tashkent → Samarkand → Bukhara → Khiva) on 3 lanes. Swipe left/right to change lane, up to jump, down to slide (keys: arrows / WASD, P pause, M mute). Collect spinning patterned coins (gold gems = 5). Two hits and the police robot + hound catch you. Coins go to the same wallet as the main game. Pseudo-3D on plain Canvas 2D, no libraries. Not tested on real phones — only headless Chromium.
+Subway-Surfers-style mode: the camera is behind the robot, running down an Uzbek city street (Tashkent → Samarkand → Bukhara → Khiva) on 3 lanes. Swipe or arrows/WASD to move, up to jump, down to slide (P pause, M mute). The old 2.5D `city.html` version has been removed.
 
-### City Run 3D (city3d.html)
-
-Real 3D version (WebGL, own tiny engine — no libraries): perspective buildings with lighting and fog, 3D robot built from jointed parts, 3D coins, parked cars, lamps and trees. Falls back to city.html if WebGL is missing. Uses facades.js (procedural Uzbek facade textures).
+Real 3D version (WebGL, own tiny engine — no libraries): perspective buildings with lighting and fog, 3D robot built from jointed parts, 3D coins, parked cars, lamps and trees. Falls back to the main game (index.html) if WebGL is missing. Uses facades.js (procedural Uzbek facade textures).
 
 **City Run 3D — v2 (performance + features)**
 
@@ -158,7 +156,7 @@ Done (2D main game, tested in headless Chromium only):
 - **Burgut** (chaser): compact hawk-bot, dark steel + crimson, hooked bronze beak, red LED visor, crest with a police beacon, folded blade-wings, talon feet, shock lance.
 - **Bo'ri** (the dog): a small robotic wolf pup with big ears, bronze collar, plume tail and red LED eyes.
 - Scale: hero and Burgut share the same height; Bo'ri is about half of it. 3D hit-box was tightened to match (standing 1.62, sliding 0.7) and the gameplay camera moved slightly closer.
-- Where: 3D in `js/3d/view/hero.js` and `js/3d/view/chaser.js`; 2D side view and back view in `rig.js` (same API and frame indices as before, so `game.js` / `city.js` are unchanged). The old painted fallbacks in `chars.js` / `sprites.js` are only used if `Rig` fails to load and still show the previous look.
+- Where: 3D in `js/3d/view/hero.js` and `js/3d/view/chaser.js`; 2D side view and back view in `rig.js` (same API and frame indices as before, so `game.js` is unchanged). The old painted fallbacks in `chars.js` / `sprites.js` are only used if `Rig` fails to load and still show the previous look.
 - Performance: the 3D hero is ~60 batched primitives (down from ~150); the busiest 3D frame measured ~8.8k of 16k character vertices. 2D robots are still pre-rendered once into small canvases.
 - Still only checked in headless Chromium; not on a real phone. The main-game chaser sprite was verified in the sprite sheet but I did not capture it in a live chase frame.
 
@@ -170,3 +168,12 @@ Done (2D main game, tested in headless Chromium only):
 ## v8b — 3D models baked into the 2D game
 
 The 2D game keeps its gameplay, camera and controls, but its hero and chasers are now renders of the real 3D models: `tools/bake.py` renders `js/3d/view/hero.js` and `chaser.js` from the side (3/4 turned toward the camera) with the 3D engine and writes `assets/baked/*.png` (hero in 4 skins, box-bot guard, ball-bot dog). `rig.js` loads them and falls back to the procedural figures until they arrive (or if a file is missing). Re-run `python3 tools/bake.py` after changing a model. Obstacles, coins and scenery in the 2D game are still the original 2D art.
+
+## City Run 3D — performance notes
+
+- **FPS monitor:** open `city3d.html?fps=1` (or press F3). Shows fps, frame times, quality tier, resolution, draw calls, device class and GPU name.
+- **Graphics setting:** menu / pause → "GRAPHICS: AUTO / HIGH / MEDIUM / LOW" (saved). AUTO picks a start tier by device (desktop, iPhone/iPad, Android, low-end Android) and adapts the render resolution; the governor measures against the screen's own refresh rate, so a 30 Hz power-saver screen is not treated as "slow", and it gives quality back when the device keeps up.
+- **Pixel budget per device:** desktop 2.6 MP, iPhone/iPad 1.5 MP, Android 0.95 MP, low-end Android 0.6 MP. Texture size is capped at 512 px on touch / low-end devices.
+- **Pooling:** the matrix pool (700) and the spark pool; obstacle list is compacted in place.
+- **Not done:** GPU texture compression (ASTC/ETC2/S3TC). All textures are generated at runtime from canvas, so there is nothing to pre-compress; mip-maps, anisotropy and size caps are used instead.
+- Only tested in headless Chromium (software GPU). Not verified on real iPhone/Android.

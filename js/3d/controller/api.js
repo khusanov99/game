@@ -54,6 +54,9 @@ window.ZR3D = {
     god = true;
   },
   give: (t) => givePow(t),
+  get courier() {
+    return { CR, heat, city: cityBuilt, ev: RUNEV, seed: RUNSEED };
+  },
   jumpNow: jump,
   slideNow: slide,
   spawnAt: (fn) => fn,

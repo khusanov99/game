@@ -253,6 +253,21 @@ function* genChunk(ci) {
     zB = zA + CH,
     th = themeAt(zA + CH / 2),
     ch = { ci, zA, zB, b: {}, meshes: [] };
+  const pl = secChunk(ci) === 1 ? -1 : plazaOf(ci);
+  if (pl >= 0) {
+    /* rebuilt landmark plaza */
+    ch.sec = 10 + pl;
+    ch.b = null;
+    CUR[0] = CUR[1] = zB;
+    return ch;
+  }
+  if (secChunk(ci)) {
+    /* special section (metro / tim / wall / fields): drawn from shared meshes, no city to build */
+    ch.sec = secChunk(ci);
+    ch.b = null;
+    CUR[0] = CUR[1] = zB;
+    return ch;
+  }
   for (let s = 0; s < 2; s++) {
     const sd = s ? 1 : -1;
     while (CUR[s] < zB) {
@@ -346,6 +361,17 @@ function* genChunk(ci) {
       lb.tex = null;
       lb.mat = { emis: 1 };
       lb.b.sph(sd * 4.25, 5.0, z, 0.26, 0.14, 0.26, 5, 8, [1, 0.9, 0.6]);
+      (ch.halo || (ch.halo = new B())).quad(
+        [
+          [sd * 4.25 - 2.2, 7.2, z - 0.4],
+          [sd * 4.25 + 2.2, 7.2, z - 0.4],
+          [sd * 4.25 + 2.2, 2.8, z - 0.4],
+          [sd * 4.25 - 2.2, 2.8, z - 0.4],
+        ],
+        [0, 0, -1],
+        [[0, 0], [1, 0], [1, 1], [0, 1]],
+        [1, 0.9, 0.65],
+      );
       if (kit && THEMES[th].mount && z % 20 === 0) {
         for (const dx of [-0.2, 0.2])
           sb.sph(
@@ -371,13 +397,23 @@ function* genChunk(ci) {
         ])
           sb.sph(sd * 7.2 + dx, dy + 0.9, z + 10, r, r * 0.85, r, 6, 8, c);
       }
-      if (kit && Math.random() < 0.55) addParkedCar(ch, sd, z + rnd(4, 15));
+      if (kit && Math.random() < 0.55) {
+        const pz2 = z + rnd(4, 15);
+        if (!inTraffic(sd, pz2)) addParkedCar(ch, sd, pz2);
+      }
+      if (kit && z % 40 !== 0 && Math.random() < 0.22)
+        addStall(ch, sd, z + rnd(3, 6));
     }
+  slPopulate(ch, th);
   for (const k of Object.keys(ch.b)) {
     const e = ch.b[k];
     if (e.b.i.length) ch.meshes.push({ m: e.b.mesh(), tex: e.tex, mat: e.mat });
   }
   ch.b = null;
+  if (ch.halo) {
+    ch.haloM = ch.halo.mesh();
+    ch.halo = null;
+  }
   return ch;
 }
 function addMinaretMaybe(ch, sd, z, th) {
@@ -467,5 +503,6 @@ function resetCity(z) {
   PEND = null;
   for (const ch of CHUNKS.values()) ch.meshes.forEach((x) => freeMesh(x.m));
   CHUNKS.clear();
+  TRAFFIC[-1].length = TRAFFIC[1].length = 0;
   CUR[0] = CUR[1] = z - 40;
 }

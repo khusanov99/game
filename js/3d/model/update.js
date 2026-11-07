@@ -24,21 +24,45 @@ function landed(v) {
   flipT = 0;
 }
 const DASHC = ["#53f7ff", "#ffe27a", "#ff4fd8"];
+let lastMetro = 0,
+  lastStn = -1,
+  forkMul = 1,
+  lastFork = false,
+  forkWarned = false;
+function sparksTick(dt) {
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i];
+    s.l -= dt;
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.z += s.vz * dt;
+    s.vy -= 9 * dt;
+    if (s.l <= 0) {
+      /* swap-remove + recycle: no splice shifting, no garbage */
+      sparks[i] = sparks[sparks.length - 1];
+      sparks.pop();
+      SPARK_POOL.push(s);
+    }
+  }
+}
 function update(dt) {
   if (hitStop > 0) {
     hitStop -= dt;
     return;
   }
   if (state === "play") {
+    forkMul = lerp(forkMul, forkAt(pz) ? (px > 1.1 ? 1.25 : px < -1.1 ? 0.8 : 1) : 1, Math.min(1, dt * 4));
     const vEff =
-      speed +
+      forkMul *
+      (1 + 0.22 * rushK) *
+      (speed +
       (turbo > 0 ? 12 : 0) +
       (padB > 0 ? 7 : 0) +
       (dash > 0 ? 16 : 0) +
-      (scoot > 0 ? 2 : 0);
+        (scoot > 0 ? 2 : 0));
     speed = Math.min(34, speed + dt * 0.22);
     pz += vEff * dt;
-    S.dist = pz;
+    S.dist = pz - startZ;
     runPh += dt * (6.2 + vEff * 0.19);
     px += (LX[lane] - px) * Math.min(1, dt * 13);
     tilt = lerp(
@@ -92,6 +116,44 @@ function update(dt) {
           camDip = -0.2;
         }
       }
+    }
+    {
+      const sc = secAt(pz + 4);
+      const stn = sc === 1 ? stationOf(Math.floor((pz + 4) / CH)) : -1;
+      if (stn !== lastStn) {
+        if (stn >= 0 && pz > 50) {
+          floatText("🚇 " + STN[stn].n, "#9fd8ff");
+          stationChime(STN[stn].n);
+        }
+        lastStn = stn;
+      }
+      if (sc !== lastMetro) {
+        const prev = lastMetro;
+        lastMetro = sc;
+        if (pz > 50 && sc) {
+          if (sc !== 1) floatText(SEC_NAME[sc], "#7fe6ff");
+          sfx.zumary();
+        } else if (pz > 50 && prev) {
+          bonus += 100;
+          floatText(SEC_NAME[prev] + " +100", "#ffe27a");
+        }
+      }
+    }
+    {
+      const inF = forkAt(pz + 2),
+        aF = forkAhead(pz);
+      if (inF !== lastFork) {
+        lastFork = inF;
+        if (pz > 50 && !inF) {
+          bonus += 50;
+          floatText(px > 1.1 ? "TEZ YO'L +50" : px < -1.1 ? "TANGA YO'LI +50" : "YO'L +50", "#ffe27a");
+        }
+      }
+      if (aF && !inF && aF[0] - pz < 95 && aF[0] - pz > 85 && !forkWarned) {
+        forkWarned = true;
+        floatText("CHORRAHA: ⇦ TEZ  |  TANGA ⇨", "#ff9a3c");
+      }
+      if (!aF || aF[0] - pz > 96) forkWarned = false;
     }
     jetK = lerp(jetK, jet > 0 ? 1 : 0, Math.min(1, dt * 3));
     wingK = lerp(
@@ -165,8 +227,13 @@ function update(dt) {
     }
     if (shakeT > 0) shakeT -= dt;
     if (stumbleT > 0) stumbleT -= dt;
-    gap = lerp(gap, hits > 0 ? 4.4 : 11, Math.min(1, dt * 1.6));
-    while (nextSpawn < pz + 150) spawn();
+    courUpdate(dt);
+    if (storyCard.t > 0) storyCard.t -= dt;
+    sr(evUpdate);
+    rushK = lerp(rushK, RUNEV.on && RUNEV.cur === "rush" ? 1 : 0, Math.min(1, dt * 2.5));
+    nightK = lerp(nightK, RUNEV.on && RUNEV.cur === "night" ? 1 : 0, Math.min(1, dt * 1.2));
+    gap = lerp(gap, hits > 0 ? 4.4 : 11 - 5.5 * clamp((heat - 45) / 55, 0, 1), Math.min(1, dt * 1.6));
+    while (nextSpawn < pz + 150) sr(spawn);
     if (!heli && pz > nextHeli) {
       heli = { t: 0, dur: 11, ph: Math.random() * 6, x: 0 };
       nextHeli = pz + rnd(1200, 1800);
@@ -230,6 +297,15 @@ function update(dt) {
         }
         continue;
       }
+      if (k === "pkg" || k === "drop") {
+        if (
+          Math.abs(o.z - pz) < 1.3 &&
+          Math.abs(o.x - px) < (k === "drop" ? 1.3 : 1.0) &&
+          (k === "drop" || (o.y > py - 0.4 && o.y < top + 0.5))
+        )
+          courTouch(o);
+        continue;
+      }
       if (k === "pad") {
         if (
           o.z < pz + 0.5 &&
@@ -267,9 +343,13 @@ function update(dt) {
           closeCall();
       }
     }
-    objs = objs.filter(
-      (o) => !o.got && !o.dead && o.z + (o.len || 0) > pz - 15,
-    );
+    /* in-place compaction (no new array every frame) */
+    let w = 0;
+    for (let i = 0; i < objs.length; i++) {
+      const o = objs[i];
+      if (!o.got && !o.dead && o.z + (o.len || 0) > pz - 15) objs[w++] = o;
+    }
+    objs.length = w;
   } else if (state === "over") {
     bustT += dt;
     px += (LX[lane] - px) * Math.min(1, dt * 10);
@@ -284,15 +364,7 @@ function update(dt) {
     pz += 4 * dt;
   }
   if (coinHud > 0) coinHud -= dt;
-  for (let i = sparks.length - 1; i >= 0; i--) {
-    const s = sparks[i];
-    s.l -= dt;
-    s.x += s.vx * dt;
-    s.y += s.vy * dt;
-    s.z += s.vz * dt;
-    s.vy -= 9 * dt;
-    if (s.l <= 0) sparks.splice(i, 1);
-  }
+  sparksTick(dt);
   for (let i = floaties.length - 1; i >= 0; i--) {
     floaties[i].l -= dt;
     if (floaties[i].l <= 0) floaties.splice(i, 1);

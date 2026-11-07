@@ -14,18 +14,20 @@ function floatText(text, c) {
   floaties.push({ text, c, l: 1.4 });
   if (floaties.length > 4) floaties.shift();
 }
+const SPARK_POOL = []; // recycled spark objects
 function burst(x, y, z, n, c, sp) {
-  for (let i = 0; i < n && sparks.length < 90; i++)
-    sparks.push({
-      x,
-      y,
-      z,
-      vx: rnd(-sp, sp),
-      vy: rnd(0, sp * 1.4),
-      vz: rnd(-sp * 0.5, sp * 0.5),
-      l: rnd(0.4, 0.8),
-      c,
-    });
+  for (let i = 0; i < n && sparks.length < 90; i++) {
+    const s = SPARK_POOL.pop() || {};
+    s.x = x;
+    s.y = y;
+    s.z = z;
+    s.vx = rnd(-sp, sp);
+    s.vy = rnd(0, sp * 1.4);
+    s.vz = rnd(-sp * 0.5, sp * 0.5);
+    s.l = rnd(0.4, 0.8);
+    s.c = c;
+    sparks.push(s);
+  }
 }
 function smash(o) {
   if (o.dead) return;
@@ -70,6 +72,9 @@ function hurt(o) {
   trick = false;
   hits++;
   hitT = 8;
+  RUNEV.hit = true;
+  if (CR.st === "carry") CR.hits++;
+  heat = Math.min(95, heat + 25);
   invul = 1.4;
   shakeT = 0.45;
   sfx.hit();
@@ -94,12 +99,19 @@ function pickCoin(o) {
     m = dbl > 0 ? 2 : 1;
   coinsGot += v * m;
   LT.coins += v * m;
+  heat = Math.max(0, heat - (o.gem ? 3 : 0.7));
+  coinFrac += v * m * (cityMul() - 1); // rebuilt city: permanent coin bonus
+  while (coinFrac >= 1) {
+    coinFrac--;
+    coinsGot++;
+    LT.coins++;
+  }
   const c0 = chain,
     m0 = mult;
   chain = chainT > 0 ? chain + 1 : 1;
   chainT = 1.5;
   mult = Math.min(6, 1 + Math.floor(chain / 8));
-  bonus += (o.gem ? 50 : 10) * mult * m;
+  bonus += (o.gem ? 35 : 7) * mult * m;
   coinHud = 0.25;
   energy = Math.min(100, energy + (o.gem ? 8 : 2.5));
   sfx.coin();

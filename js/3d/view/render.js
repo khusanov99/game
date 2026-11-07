@@ -50,7 +50,10 @@ function render() {
   const P = M4.persp(fyv, asp, 0.3, 450),
     V = M4.look(CAM, tgt, [Math.sin(camRoll), Math.cos(camRoll), 0]);
   VP = M4.mul(P, V);
-  FOGK = (1 / (qual >= 2 ? 120 : 160)) * (TH.fogK || 1);
+  FOGK =
+    (1 / (qual >= 2 ? 120 : 160)) *
+    (TH.fogK || 1) *
+    (1 + 2.4 * fogA + 0.5 * rainA + 0.7 * snowA);
   gl.disable(gl.DEPTH_TEST);
   gl.useProgram(SKY.p);
   const su = SKY.u,
@@ -86,20 +89,36 @@ function render() {
   useMain();
   const z0 = Math.floor((pz - 60) / 40) * 40,
     rt = (cross) => ROADS[cross] || (ROADS[cross] = mkRoadTex(cross)),
-    wet = rainA > 0.3 ? 0.9 : 0.1;
+    wet = 0.1 + 0.85 * rainA,
+    rtint = [
+      lerp(1.15 - 0.2 * rainA, 1.8, snowA),
+      lerp(1.12 - 0.2 * rainA, 1.85, snowA),
+      lerp(1.1 - 0.16 * rainA, 1.95, snowA),
+    ];
   for (let z = z0; z < pz + FAR; z += 40) {
     const M = Tp(0, 0, z);
     draw(ROADM, M, rt(Math.round(z / 40) % 5 === 0 ? 1 : 0), {
-      emis: 0.1,
-      tint: [1.15, 1.12, 1.1],
+      emis: 0.1 + 0.1 * snowA,
+      tint: rtint,
       spec: wet,
     });
-    draw(SIDEM, M, sidewalkTex(), { emis: 0.15, tint: [1.1, 1.08, 1.05] });
+    const sk = secAt(z + 20);
+    if (sk !== 3 && sk !== 4)
+      draw(SIDEM, M, sidewalkTex(), {
+        emis: 0.15,
+        tint: [1.1 + 0.8 * snowA, 1.08 + 0.85 * snowA, 1.05 + 0.95 * snowA],
+      });
   }
   for (const ch of CHUNKS.values()) {
     if (ch.zB < pz - 30 || ch.zA > pz + FAR) continue;
+    if (ch.sec) {
+      drawSection(ch);
+      continue;
+    }
     for (const x of ch.meshes) draw(x.m, IDM, x.tex, x.mat || MAT0);
   }
+  drawStreetLife();
+  drawFork();
   const ca = performance.now() / 380,
     blink = Math.floor(performance.now() / 260) % 2;
   for (const o of objs) {
@@ -116,8 +135,14 @@ function render() {
       draw(obMesh("gate"), Tp(o.x, 0, o.z + 0.3), STRIPE, { emis: 0.3 });
     else if (k === "cone")
       draw(obMesh("cone"), Tp(o.x, 0, o.z + 0.4), null, { emis: 0.25 });
-    else if (k === "pit")
-      draw(obMesh("pit"), Tp(o.x, 0, o.z), null, { emis: 0.3 });
+    else if (k === "pit") {
+      const st = secAt(o.z);
+      if (st === 3 || st === 4) {
+        const pv = pitVariant(st);
+        draw(pv.b, Tp(o.x, 0, o.z), null, { emis: st === 4 ? 0.35 : 0.2, spec: st === 4 ? 0.8 : 0 });
+        if (st === 4) draw(pv.w, Tp(o.x, 0, o.z), null, { emis: 0.5, spec: 0.9, alpha: 0.6 });
+      } else draw(obMesh("pit"), Tp(o.x, 0, o.z), null, { emis: 0.3 });
+    }
     else if (k === "ramp")
       draw(obMesh("ramp"), Tp(o.x, 0, o.z), STRIPE, {
         emis: 0.3,
@@ -142,6 +167,12 @@ function render() {
         emis: 0.1,
       });
       draw(TAIL, Tp(o.x, 0, o.z - 0.01), null, { emis: 1 });
+    } else if (k === "bus" && o.fork) {
+      draw(forkWall(o.len), Tp(o.x, 0, o.z), null, { emis: 0.15, spec: 0.2 });
+    } else if (k === "bus" && o.metro) {
+      const w = metroWagon(o.len);
+      draw(w.b, Tp(o.x, 0, o.z), null, { emis: 0.22, spec: 0.5, rim: 0.3 });
+      draw(w.g, Tp(o.x, 0, o.z), null, { emis: 1 });
     } else if (k === "bus") {
       draw(busMesh(o.len), Tp(o.x, 0, o.z), null, {
         tint: o.hue,
@@ -150,7 +181,8 @@ function render() {
         emis: 0.1,
       });
       draw(TAIL, Tp(o.x, 0.4, o.z - 0.01), null, { emis: 1 });
-    } else if (k === "pow")
+    } else if (k === "pkg" || k === "drop") drawCourierObj(o, ca);
+    else if (k === "pow")
       draw(
         PICKQ,
         joint(
@@ -205,10 +237,14 @@ function render() {
     put(sphM(0.25), joint(H0, 0, -0.9, 1.2, 0), blink ? SIREN_R : SIREN_B);
     put(boxM(0.6, 0.4, 0.5), joint(H0, 0, -0.9, 1.7, 0), HELI_L);
   }
+  drawHalos();
   const air = py > floorY + 0.12,
     over = state === "over",
     root = joint(Tp(px, py, pz), 0, 0, 0, 0, heroYaw, -tilt * 0.9),
     flick = invul > 0 && !over && Math.floor(performance.now() / 70) % 2;
+  const rdt = Math.min(0.05, Math.max(0, performance.now() / 1000 - lastRN));
+  lastRN = performance.now() / 1000;
+  courAnimTick(show ? 0 : rdt);
   const fa = flipT > 0 ? flipT * flipT * (3 - 2 * flipT) * TAU : 0;
   if (show) {
     const K0 = heroMats(look());
@@ -228,6 +264,7 @@ function render() {
       fx: 0,
       fy: 0,
       land: 0,
+      bag: { pop: 0 },
       wing: show.wing,
       t: showT,
       sp: 0.3,
@@ -245,11 +282,14 @@ function render() {
       fx: flipSpin ? 0 : fa,
       fy: flipSpin ? fa : 0,
       land: landT,
+      bag: { pop: BAGPOP },
       wing: wingK,
       t: tNow,
       sp: clamp((speed - 15) / 19, 0, 1) + (dash > 0 ? 0.6 : 0),
       tilt,
     });
+  if (!show) drawItemFx(root, tNow);
+  if (!flick && !(slideT > 0 || over || stumbleT > 0.25 || dash > 0 || scoot > 0 || fa)) drawBagLabel(root);
   flushChars();
   gl.enable(gl.BLEND);
   gl.depthMask(false);

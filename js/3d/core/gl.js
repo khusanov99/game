@@ -13,8 +13,8 @@ try {
     }) || cv.getContext("experimental-webgl");
 } catch (e) {}
 if (!gl) {
-  location.replace("./city.html");
-  throw new Error("WebGL unavailable: redirecting to the 2.5D version");
+  location.replace("./index.html");
+  throw new Error("WebGL unavailable: redirecting to the main game");
 }
 const ANISO =
   gl.getExtension("EXT_texture_filter_anisotropic") ||

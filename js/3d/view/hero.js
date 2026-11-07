@@ -29,6 +29,8 @@ function heroMats(look) {
     trim: mat(A, { spec: 1, emis: 0.8 }),
     accB: { tint: mulc(A, 0.8), emis: 0.9 },
     dark: mat([0.05, 0.06, 0.1], { spec: 0.9, emis: 0.18 }),
+    bagA: mat([1, 0.5, 0.1], { spec: 0.6, emis: 0.5 }),
+    bagB: mat([0.78, 0.3, 0.05], { spec: 0.5, emis: 0.4 }),
     face: mat([0.02, 0.03, 0.07], { spec: 1, emis: 0.1 }),
     gold: mat(GOLD, { spec: 1, emis: 0.75 }),
     beak: mat([1, 0.58, 0.08], { spec: 0.8, emis: 0.62 }),
@@ -178,6 +180,16 @@ function drawHero(root, look, st) {
   pd(boxM(0.34, 0.03, 0.055), joint(tor, 0, 0.14, 0.26, -0.08), null, K.white);
   const pulse = 0.5 + 0.5 * Math.sin(t * 4);
   crown(joint(tor, 0, 0.0, 0.29, -0.08), pulse > 0.5 ? K.glow : K.white, 1);
+  // courier delivery bag: orange insulated box on the back with a lid, a glowing logo patch and shoulder straps
+  const bg = st.bag;
+  if (bg !== false) {
+    const bk = 1 + (Math.round(((bg && bg.pop) || 0) * 3) / 3) * 0.22,
+      B0 = joint(tor, 0, -0.02, -0.4, 0.05);
+    pd(boxM(0.42 * bk, 0.44 * bk, 0.26 * bk), B0, null, K.bagA);
+    pd(boxM(0.45 * bk, 0.07, 0.29 * bk), joint(B0, 0, 0.23 * bk, 0, 0), null, K.bagB);
+    pd(boxM(0.34, 0.03, 0.02), joint(B0, 0, -0.14, -0.135 * bk, 0), null, K.white);
+    for (const sx of [-0.12, 0.12]) pd(boxM(0.05, 0.38, 0.02), joint(tor, sx, 0.03, 0.288, -0.08), null, K.bagB);
+  }
   // jet nozzles (flames only while boosting) + cape
   if (st.boost)
     for (const sx of [-0.08, 0.08])

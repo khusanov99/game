@@ -77,10 +77,50 @@ achBtn.type = "button";
 achBtn.style.cssText =
   "display:none;background:rgba(255,216,79,.1);color:#ffd84f;border:1px solid rgba(255,216,79,.35);font-size:12px;padding:12px";
 $("go").after(achBtn);
+const gfxBtn = document.createElement("button");
+gfxBtn.id = "gfxb";
+gfxBtn.type = "button";
+gfxBtn.style.cssText =
+  "display:none;background:rgba(83,247,255,.08);color:#7fe6ff;border:1px solid rgba(83,247,255,.3);font-size:12px;padding:12px";
+$("go").after(gfxBtn);
+const dlBtn = document.createElement("button");
+dlBtn.id = "dlb";
+dlBtn.type = "button";
+dlBtn.style.cssText =
+  "display:none;background:rgba(255,160,60,.1);color:#ffb35c;border:1px solid rgba(255,160,60,.4);font-size:12px;padding:12px";
+$("go").after(dlBtn);
+const cuBtn = document.createElement("button");
+cuBtn.id = "cub";
+cuBtn.type = "button";
+cuBtn.style.cssText =
+  "display:none;background:rgba(255,150,200,.09);color:#ffa8d4;border:1px solid rgba(255,150,200,.35);font-size:12px;padding:12px";
+$("go").after(cuBtn);
+const jrBtn = document.createElement("button");
+jrBtn.id = "jrb";
+jrBtn.type = "button";
+jrBtn.style.cssText =
+  "display:none;background:rgba(127,230,255,.1);color:#7fe6ff;border:1px solid rgba(127,230,255,.4);font-size:12px;padding:12px";
+$("go").after(jrBtn);
+const cityBtn = document.createElement("button");
+cityBtn.id = "cityb";
+cityBtn.type = "button";
+cityBtn.style.cssText =
+  "display:none;background:rgba(127,252,176,.08);color:#7ffcb0;border:1px solid rgba(127,252,176,.32);font-size:12px;padding:12px";
+$("go").after(cityBtn);
+const GFXN = {
+  uz: ["AVTO", "YUQORI", "O'RTA", "PAST"],
+  en: ["AUTO", "HIGH", "MEDIUM", "LOW"],
+  ja: ["自動", "高", "中", "低"],
+};
+function gfxLabel() {
+  const n = (GFXN[LG] || GFXN.en)[GFX_ORDER.indexOf(gfx)];
+  gfxBtn.textContent =
+    (LG === "uz" ? "GRAFIKA: " : LG === "ja" ? "画質: " : "GRAPHICS: ") + n;
+}
 let ovMode = "menu";
 const ovOpen = () => !$("ov").classList.contains("hidden");
 function setPause(on) {
-  if (state !== "play" || paused === on) return;
+  if (state !== "play" || paused === on || talk) return;
   paused = on;
   resumeCd = 0;
   if (on) {
@@ -137,6 +177,10 @@ addEventListener("keydown", (e) => {
   if (k === "m" || k === "M") {
     muted = !muted;
     store.set("zr3d_mute", muted);
+    return;
+  }
+  if (talk) {
+    if ((k === "Enter" || k === " ") && !e.repeat) talkTap();
     return;
   }
   if (state !== "play" || paused) {
