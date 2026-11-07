@@ -6405,7 +6405,7 @@ const INTRO_CARDS = [
     ],
   ],
   INTRO_T0 = 7.0, // title ends, facts begin
-  INTRO_CARD = 2.7,
+  INTRO_CARD = 4.8,
   INTRO_LEN = INTRO_T0 + INTRO_CARDS.length * INTRO_CARD;
 function introWrap(txt, maxW) {
   const out = [];
