@@ -97,18 +97,55 @@ function pickCust(story) {
 }
 function cuTrust(c, rt) {
   const add = rt >= 5 ? 2 : rt === 4 ? 1 : 0;
-  if (!add) return;
+  if (!add) return { add: 0, ch: -1 };
   cu.t[c] += add;
   const j = cu.c[c];
+  let ch = -1,
+    g = 0;
   if (j < CU_AT.length && cu.t[c] >= CU_AT[j]) {
     cu.c[c] = j + 1;
-    const g = 100 * (j + 1);
+    ch = j;
+    g = 100 * (j + 1);
     coinsGot += g;
     LT.coins += g;
     bonus += g * 10;
-    storyCard = { t: 7, title: CU[c].e + " " + cuName(c) + "  ·  " + (j + 1) + "/" + CU_AT.length + "  +" + g, sub: cuText(c, j) };
   }
   store.set("zr3d_cu", cu);
+  return { add, ch, g };
+}
+/* ---------- delivery scene: the run freezes, the customer talks, the reward is shown ---------- */
+const THX = [
+  { uz: "Rahmat! Bu sovg'ani butun yil kutgandim!", en: "Thank you! I've waited all year for this gift!", ja: "ありがとう！一年間ずっとこのプレゼントを待ってたんだ！" },
+  { uz: "Voy, vaza butun! Registonda ko'rgazma aynan shu bilan ochiladi.", en: "The vase is intact! The Registan exhibit opens with exactly this.", ja: "花瓶は無事だ！レギスタンの展示はまさにこれで始まるの。" },
+  { uz: "Ipak yarqirayapti! Toq bugun gavjum bo'ladi, rahmat.", en: "The silk is gleaming! The dome will be busy today, thank you.", ja: "絹が輝いてる！今日のドームは賑わうぞ、ありがとう。" },
+  { uz: "Eski kalit! Ota-bobolarimiz darvozani shu bilan ochgan.", en: "The old key! Our ancestors opened this gate with it.", ja: "古い鍵だ！先祖はこれで門を開けたのよ。" },
+  { uz: "Namuna ajoyib, fabrika buyurtmani qabul qiladi!", en: "The sample is perfect, the mill will take the order!", ja: "サンプルは完璧、工場は注文を受けられるわ！" },
+  { uz: "Shirinliklar issiq! Tungi kafe bugun to'la bo'ladi.", en: "The sweets are warm! The night cafe will be packed tonight.", ja: "お菓子はまだ温かい！今夜のカフェは満員だ。" },
+];
+const GEN = {
+  hi: [
+    { uz: "Ajoyib! Hammasi butun va vaqtida keldi!", en: "Wonderful! Everything arrived intact and on time!", ja: "素晴らしい！無傷で時間通りに届いた！" },
+    { uz: "Siz haqiqiy ishonchli kuryersiz, rahmat!", en: "You're a truly reliable courier, thank you!", ja: "本当に頼れる配達員ね、ありがとう！" },
+  ],
+  mid: [
+    { uz: "Rahmat. Biroz silkinibdi, lekin yaxshi.", en: "Thanks. It got shaken a bit, but it's fine.", ja: "ありがとう。少し揺れたけど大丈夫。" },
+    { uz: "Mayli, yetib keldi. Keyingi safar ehtiyotroq bo'ling.", en: "Well, it arrived. Be more careful next time.", ja: "まあ届いたね。次はもっと気をつけて。" },
+  ],
+  lo: [
+    { uz: "Voy, qutisi ezilib ketibdi... Ehtiyot bo'lish kerak edi.", en: "Oh, the box is crushed... You should've been careful.", ja: "あらら、箱が潰れてる…もっと気をつけてよ。" },
+    { uz: "Kech qoldingiz va buzilibdi. Ko'p yulduz bera olmayman.", en: "Late and damaged. I can't give many stars.", ja: "遅いし壊れてる。星はあまりあげられないな。" },
+  ],
+};
+let talk = null;
+const lgp = (o) => o[LG] || o.en;
+function showTalk(d) {
+  /* d: {c, pages[], rt, reward, add, extra[], must} */
+  talk = d;
+  d.pi = 0;
+  d.ci = 0;
+  d.t = 0;
+  paused = true;
+  uiTalk(d);
 }
 let ST = { k: -1, state: "none" },
   storyCard = { t: 0, title: "", sub: "" };
@@ -162,30 +199,36 @@ function courTouch(o) {
   CR.streak = late || rt < 4 ? 0 : CR.streak + 1;
   heat = Math.max(0, heat - 20);
   energy = Math.min(100, energy + 15);
-  floatText(starStr(rt) + "  +" + reward, rt >= 4 ? "#7ffcb0" : rt === 3 ? "#ffe27a" : "#ffb36b");
-  sfx.zumary();
   burst(o.x, 1.5, o.z, 24, "#7ffcb0", 6);
+  let firstQ = false,
+    qDone = false;
   if (story && ST.state === "carry") {
     ST.state = "done";
-    const first = jr.best[ST.th] === 0;
+    qDone = true;
+    firstQ = jr.best[ST.th] === 0;
     jr.best[ST.th] = Math.max(jr.best[ST.th], rt);
     bonus += 600 + rt * 200;
     CR.quests = (CR.quests || 0) + 1;
-    storyCard = {
-      t: 4.5,
-      title: T("qDone") + "  " + starStr(rt),
-      sub: first && ST.th + 1 < QUEST.length ? T("qUnlock").replace("{c}", cityName(ST.th + 1)) : cityName(ST.th),
-    };
     if (!jr.done && jrCount() === QUEST.length) {
       jr.done = 1;
       bonus += 5000;
-      setTimeout(() => {
-        storyCard = { t: 7, title: T("jrEnd"), sub: T("jrEndSub") };
-      }, 4600);
     }
     store.set("zr3d_jr", jr);
   }
-  if (CR.cust >= 0) cuTrust(CR.cust, rt);
+  const tr = CR.cust >= 0 ? cuTrust(CR.cust, rt) : { add: 0, ch: -1 },
+    gen = GEN[rt >= 4 ? "hi" : rt === 3 ? "mid" : "lo"],
+    pages = [story && THX[ST.th] ? lgp(THX[ST.th]) : lgp(gen[(Math.random() * gen.length) | 0])],
+    extra = [];
+  if (tr.ch >= 0) {
+    pages.push(cuText(CR.cust, tr.ch));
+    extra.push(CU[CR.cust].e + " " + (tr.ch + 1) + "/" + CU_AT.length + "  +" + tr.g + " 🪙");
+  }
+  if (qDone) {
+    extra.push("✅ " + T("qDone"));
+    if (firstQ && ST.th + 1 < QUEST.length) extra.push("🔓 " + T("qUnlock").replace("{c}", cityName(ST.th + 1)));
+    if (jr.done === 1 && jrCount() === QUEST.length && firstQ) extra.push("🏆 " + T("jrEnd"));
+  }
+  showTalk({ c: CR.cust, pages, rt, reward, add: tr.add, extra, must: story || tr.ch >= 0 });
   CR.story = false;
   CR.st = "find";
   CR.drop = null;

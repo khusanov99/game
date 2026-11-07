@@ -119,6 +119,7 @@ function frame(ts) {
   }
   pollPad();
   if (slow > 0) slow -= dt;
+  if (talk) talkTick(dt);
   if (resumeCd > 0) resumeCd -= dt;
   if (!paused && resumeCd <= 0) update(dt * (slow > 0 ? 0.62 : 1));
   syncUi();

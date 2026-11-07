@@ -114,7 +114,7 @@ function gfxLabel() {
 let ovMode = "menu";
 const ovOpen = () => !$("ov").classList.contains("hidden");
 function setPause(on) {
-  if (state !== "play" || paused === on) return;
+  if (state !== "play" || paused === on || talk) return;
   paused = on;
   resumeCd = 0;
   if (on) {
@@ -171,6 +171,10 @@ addEventListener("keydown", (e) => {
   if (k === "m" || k === "M") {
     muted = !muted;
     store.set("zr3d_mute", muted);
+    return;
+  }
+  if (talk) {
+    if ((k === "Enter" || k === " ") && !e.repeat) talkTap();
     return;
   }
   if (state !== "play" || paused) {

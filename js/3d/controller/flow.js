@@ -7,6 +7,73 @@ rvBtn.type = "button";
 rvBtn.style.cssText =
   "background:linear-gradient(90deg,#ffd84f,#ff9a3c);display:none";
 $("go").parentNode.insertBefore(rvBtn, $("go"));
+/* ---------- delivery scene UI (DOM card over the frozen run) ---------- */
+const tkEl = document.createElement("div");
+tkEl.id = "talk";
+tkEl.style.cssText =
+  "position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(92vw,440px);z-index:30;display:none;background:rgba(10,12,30,.9);backdrop-filter:blur(8px);border:1.5px solid rgba(127,230,255,.45);border-radius:18px;padding:14px 16px;color:#fff;font:600 14px Inter,'Hiragino Sans',sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.5);cursor:pointer;user-select:none";
+document.body.appendChild(tkEl);
+function uiTalk(d) {
+  const c = CU[d.c];
+  tkEl.style.display = "block";
+  tkEl.innerHTML =
+    `<div style="display:flex;gap:12px;align-items:flex-start"><div style="font-size:38px;line-height:1">${c ? c.e : "📦"}</div><div style="flex:1;min-width:0"><div style="font:800 11px Orbitron,sans-serif;letter-spacing:1.5px;color:#7fe6ff;margin-bottom:5px">${c ? cuName(d.c) : ""}</div><div id="tkTxt" style="min-height:42px;line-height:1.4;color:#f3f5ff"></div></div></div>` +
+    `<div id="tkRw" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)"></div>` +
+    `<div id="tkGo" style="margin-top:10px;text-align:right;font:800 11px Orbitron,sans-serif;letter-spacing:1.5px;color:#7fe6ff;opacity:0">▶ ${d.must ? T("tkNext") : ""}</div>`;
+}
+function talkRewards(d) {
+  const rw = $("tkRw");
+  if (!rw || rw.dataset.on) return;
+  rw.dataset.on = 1;
+  rw.style.display = "block";
+  rw.innerHTML =
+    `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:20px;color:#ffd84f;letter-spacing:2px">${starStr(d.rt)}</span><span style="color:#ffd84f;font-weight:800">+${d.reward} 🪙</span>${d.add ? `<span style="color:#ffa8d4;font-weight:800">+${d.add} ♥</span>` : ""}</div>` +
+    d.extra.map((x) => `<div style="margin-top:5px;color:#7ffcb0;font-weight:700;font-size:12px">${x}</div>`).join("");
+  sfx.zumary();
+}
+function talkClose() {
+  if (!talk) return;
+  talk = null;
+  tkEl.style.display = "none";
+  paused = false;
+  resumeCd = 1.2;
+  invul = Math.max(invul, 2.2);
+  lastT = 0;
+}
+function talkTick(dt) {
+  const d = talk;
+  if (!d) return;
+  d.t += dt;
+  const txt = d.pages[d.pi],
+    el = $("tkTxt");
+  if (!el) return;
+  d.ci = Math.min(txt.length, d.ci + dt * 38);
+  el.textContent = txt.slice(0, Math.floor(d.ci));
+  const done = d.ci >= txt.length;
+  if (done && d.pi === 0) talkRewards(d);
+  const go = $("tkGo");
+  if (go) go.style.opacity = done && (d.must || d.pi < d.pages.length - 1) ? 1 : 0;
+  /* a regular delivery closes itself after a short beat; quests and story chapters wait for a tap */
+  if (done) {
+    d.hold = (d.hold || 0) + dt;
+    if (!d.must && d.hold > 2.4) talkClose();
+  }
+}
+function talkTap() {
+  const d = talk;
+  if (!d) return;
+  const txt = d.pages[d.pi];
+  if (d.ci < txt.length) {
+    d.ci = txt.length;
+    return;
+  }
+  d.hold = 0;
+  if (d.pi < d.pages.length - 1) {
+    d.pi++;
+    d.ci = 0;
+  } else talkClose();
+}
+tkEl.addEventListener("click", talkTap);
 function showOv(title, sub, row, btn, canRevive) {
   rsBtn.style.display = "none";
   achBtn.style.display = "none";
