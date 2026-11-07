@@ -24,6 +24,7 @@ function landed(v) {
   flipT = 0;
 }
 const DASHC = ["#53f7ff", "#ffe27a", "#ff4fd8"];
+let lastMetro = false;
 function update(dt) {
   if (hitStop > 0) {
     hitStop -= dt;
@@ -90,6 +91,19 @@ function update(dt) {
           floatText(THEMES[th].name.toUpperCase() + "  +150", "#ffe27a");
           sfx.zumary();
           camDip = -0.2;
+        }
+      }
+    }
+    {
+      const inM = metroAt(pz + 4);
+      if (inM !== lastMetro) {
+        lastMetro = inM;
+        if (pz > 50 && inM) {
+          floatText("METRO", "#7fe6ff");
+          sfx.zumary();
+        } else if (pz > 50) {
+          bonus += 100;
+          floatText("METRO +100", "#ffe27a");
         }
       }
     }

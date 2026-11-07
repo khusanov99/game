@@ -98,6 +98,18 @@ function render() {
   }
   for (const ch of CHUNKS.values()) {
     if (ch.zB < pz - 30 || ch.zA > pz + FAR) continue;
+    if (ch.metro) {
+      tunnelMeshes();
+      const M = Tp(0, 0, ch.zA);
+      draw(TUN, M, null, { emis: 0.1, tint: [0.8, 0.78, 0.82], spec: 0.1 });
+      draw(TUNG, M, null, { emis: 1 });
+      for (const z of [ch.zA, ch.zB])
+        if (metroChunk(ch.ci + (z === ch.zA ? -1 : 1)) === false) {
+          draw(PORTAL, Tp(0, 0, z), null, { emis: 0.3 });
+          draw(PORTALG, Tp(0, 0, z), null, { emis: 1 });
+        }
+      continue;
+    }
     for (const x of ch.meshes) draw(x.m, IDM, x.tex, x.mat || MAT0);
   }
   drawStreetLife();
@@ -143,6 +155,10 @@ function render() {
         emis: 0.1,
       });
       draw(TAIL, Tp(o.x, 0, o.z - 0.01), null, { emis: 1 });
+    } else if (k === "bus" && o.metro) {
+      const w = metroWagon(o.len);
+      draw(w.b, Tp(o.x, 0, o.z), null, { emis: 0.22, spec: 0.5, rim: 0.3 });
+      draw(w.g, Tp(o.x, 0, o.z), null, { emis: 1 });
     } else if (k === "bus") {
       draw(busMesh(o.len), Tp(o.x, 0, o.z), null, {
         tint: o.hue,

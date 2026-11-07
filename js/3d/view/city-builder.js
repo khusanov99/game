@@ -253,6 +253,13 @@ function* genChunk(ci) {
     zB = zA + CH,
     th = themeAt(zA + CH / 2),
     ch = { ci, zA, zB, b: {}, meshes: [] };
+  if (metroChunk(ci)) {
+    /* Metro tunnel stretch: drawn from shared tunnel meshes, no city to build */
+    ch.metro = true;
+    ch.b = null;
+    CUR[0] = CUR[1] = zB;
+    return ch;
+  }
   for (let s = 0; s < 2; s++) {
     const sd = s ? 1 : -1;
     while (CUR[s] < zB) {

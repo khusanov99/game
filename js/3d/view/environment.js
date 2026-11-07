@@ -43,5 +43,12 @@ function setEnvironment() {
     return v.map((x) => x / l);
   })();
   rainA = lerp(rainA, THEMES[envTheme].rain ? 1 : 0, 0.02);
+  const mk = metroAmt(pz); // Metro tunnel: dark, warm, lit by chandeliers
+  if (mk > 0) {
+    FOGC = mixa(FOGC, [0.06, 0.05, 0.08], mk);
+    SKYC = mixa(SKYC, [0.2, 0.19, 0.25], mk);
+    GNDC = mixa(GNDC, [0.14, 0.13, 0.16], mk);
+    SUNC = mulc(SUNC, 1 - 0.6 * mk);
+  }
 }
 const SPHM_B = BUBBLE;

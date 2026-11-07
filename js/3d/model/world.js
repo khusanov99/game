@@ -17,26 +17,28 @@ function coinLine(l, z, n, step = 2.2, y) {
 }
 const low = (l, z) => objs.push({ k: "low", x: LX[l], z, len: 0.7 }),
   gate = (l, z) => objs.push({ k: "gate", x: LX[l], z, len: 0.6 }),
-  cone = (l, z) => objs.push({ k: "cone", x: LX[l], z, len: 1.2 });
+  cone = (l, z) =>
+    objs.push({ k: metroAt(z) ? "low" : "cone", x: LX[l], z, len: metroAt(z) ? 0.7 : 1.2 });
 const pit = (l, z) => objs.push({ k: "pit", x: LX[l], z, len: 3 }),
   ramp = (l, z) => objs.push({ k: "ramp", x: LX[l], z, len: 6 }),
   pad = (l, z) => objs.push({ k: "pad", x: LX[l], z, len: 4 });
 const cart = (l, z) =>
     objs.push({
-      k: "cart",
+      k: metroAt(z) ? "gate" : "cart",
       x: LX[l],
       z,
-      len: 1.4,
-      vx: (Math.random() < 0.5 ? -1 : 1) * rnd(1.7, 2.5),
+      len: metroAt(z) ? 0.6 : 1.4,
+      vx: metroAt(z) ? 0 : (Math.random() < 0.5 ? -1 : 1) * rnd(1.7, 2.5),
     }),
   laser = (z, hi) => objs.push({ k: "laser", x: 0, z, len: 0.5, hi });
 const car = (l, z, vz) =>
   objs.push({
-    k: "car",
+    k: metroAt(z) ? "bus" : "car",
+    metro: metroAt(z),
     x: LX[l],
     z,
-    len: 4.6,
-    vz: vz || 0,
+    len: metroAt(z) ? 11 : 4.6,
+    vz: metroAt(z) ? 0 : vz || 0,
     hue: pick([
       [0.92, 0.92, 0.95],
       [0.85, 0.12, 0.16],
@@ -47,6 +49,7 @@ const car = (l, z, vz) =>
 const bus = (l, z, len) =>
   objs.push({
     k: "bus",
+    metro: metroAt(z),
     x: LX[l],
     z,
     len,
@@ -74,6 +77,33 @@ function spawn() {
     hard = clamp(pz / 2600, 0, 1),
     r = Math.random() * (pz < 350 ? 0.55 : 1);
   let used = 26;
+  if (metroAt(z + 20) && Math.random() < 0.65) {
+    /* inside the Metro tunnel: parked wagons to run over / between, turnstile gates, benches */
+    const q = Math.random();
+    if (q < 0.4) {
+      bus(L, z + 4, rnd(12, 16));
+      coinLine(o1, z, 9);
+      if (Math.random() < 0.5) coinLine(o2, z + 3, 8);
+      used = 34;
+    } else if (q < 0.7) {
+      bus(L, z + 4, rnd(10, 14));
+      bus(o1, z + 12, rnd(10, 13));
+      coinLine(o2, z, 11);
+      used = 38;
+    } else if (q < 0.85) {
+      gate(L, z + 8);
+      gate(o1, z + 8);
+      coinLine(o2, z, 8);
+      used = 22;
+    } else {
+      low(L, z + 8);
+      arc(o1, z, 9, 1.8, 1.4);
+      coinLine(o2, z + 6, 7);
+      used = 24;
+    }
+    nextSpawn = z + used + speed * rnd(0.5, 0.85) * (1.1 - hard * 0.35);
+    return;
+  }
   if (r < 0.08) {
     coinLine(L, z, 10);
     used = 26;
