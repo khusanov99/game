@@ -121,3 +121,13 @@ Done (2D main game, tested in headless Chromium only):
 - **World events** (endless + non-boss levels): energy storm (coins ×2), meteor shower (dodge telegraphed impacts, leaves crystals), city blackout (score ×1.5), magnet zone, speed zone (speed/score ×1.5). Event mission + achievement, XP bonus.
 - Already existed and kept: power-ups (magnet, shield, turbo, ×2, slow-motion, hoverboard), combo multiplier, daily missions, XP, medals.
 Not done in this pass: redesign of the 2D cities and of the robot characters, secret paths / bonus zones, city-specific missions, billboards/drones/animated signs, and the new coin types and world events in the 3D mode (3D keeps its own coins/power-ups/helicopter event).
+
+## v5 — 3D hero & feature pass (city3d.html)
+
+- **New hero "ZUMA"** (procedural geometry, no textures): a Humo-bird robot with a turquoise ribbed dome and gold finial, ikat doppi band, glowing almond eyes, chapan coat, 8-point-star chest core, four-blade wings per side, ikat scarf chain, curled-toe boots.
+- **Scooter**: run cycle stops, legs switch to a riding stance; absorbs one hit.
+- **Pause / Resume**: button, P / Esc, Start on gamepad; whole simulation and audio stop; 3-2-1 countdown on resume; auto-pause on blur.
+- **Moves**: double-jump flip/spin (trick bonus on landing), **Dash** (Shift/Z/X/E, button, X on gamepad; costs 50 energy, invulnerable, smashes obstacles).
+- **Systems**: energy meter, coin-rush milestones (10/25/50/100), multiplier ×6, new power-ups (scooter, slow-mo), new missions (flip/dash/scoot), 10 achievements with rewards and an achievements screen, camera effects (dash FOV kick, landing dip, lane roll, slow-mo, hit-stop).
+- **Devices**: touch swipes, keyboard (arrows/WASD/Space), gamepad, safe-area insets, UI scale clamp, landscape/portrait/tablet/desktop layouts.
+- **Honest limits**: tested only in headless Chromium (SwiftShader) at several viewport sizes; no real iPhone/Android/gamepad hardware testing, so FPS on real devices is not guaranteed. Art is stylised procedural geometry, not artist-made.

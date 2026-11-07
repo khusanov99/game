@@ -25,12 +25,26 @@
   button,a.btn{display:block;width:100%;margin-top:10px;padding:15px;border:0;border-radius:16px;font:800 15px Orbitron,sans-serif;letter-spacing:1.5px;color:#06121d;background:linear-gradient(90deg,var(--cyan),#8be9ff);cursor:pointer;text-decoration:none}
   a.btn.ghost{background:transparent;color:#aeb6e0;border:1px solid rgba(255,255,255,.18);font-size:12px;padding:12px}
   .coin{display:inline-block;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6b0,#f2b82a 60%,#b27208);vertical-align:-2px;margin-right:4px}
+
+  /* in-game touch / mouse buttons */
+  #pauseBtn,#dashBtn{position:fixed;display:none;width:auto;margin:0;padding:0;z-index:5;border-radius:50%;color:#eaf8ff;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #pauseBtn.on,#dashBtn.on{display:grid;place-items:center}
+  #pauseBtn{left:50%;top:max(10px,calc(env(safe-area-inset-top) + 6px));transform:translateX(-50%);width:44px;height:44px;font:800 15px Orbitron,sans-serif;letter-spacing:0;background:rgba(8,10,28,.55);border:1px solid rgba(255,255,255,.28)}
+  #pauseBtn:active{transform:translateX(-50%) scale(.94)}
+  #dashBtn{right:max(14px,env(safe-area-inset-right));bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px));width:clamp(64px,17vmin,84px);height:clamp(64px,17vmin,84px);font:800 11px Orbitron,sans-serif;letter-spacing:1px;background:radial-gradient(circle,rgba(8,10,28,.78) 58%,transparent 60%),conic-gradient(#53f7ff calc(var(--e,0)*1%),rgba(255,255,255,.18) 0);border:0;opacity:.88}
+  #dashBtn.rdy{opacity:1;box-shadow:0 0 18px rgba(83,247,255,.55)}
+  #dashBtn:active{transform:scale(.94)}
+  .card{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
+  @media (max-height:520px){.card{padding:12px 16px}h1{font-size:22px}.sub{margin:4px 0 8px;font-size:12px}.row{margin:6px 0}button,a.btn{padding:10px;margin-top:6px}}
+  @media (min-width:900px){.card{width:min(460px,100%)}}
 </style>
 </head>
 <body>
 <canvas id="c" aria-label="ZUMARY City Run 3D"></canvas>
 <canvas id="hud"></canvas>
 <div class="vig"></div>
+<button id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
+<button id="dashBtn" type="button" aria-label="Dash">DASH</button>
 <div class="ov" id="ov">
   <div class="card">
     <h1 id="oTitle"></h1>
