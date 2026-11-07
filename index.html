@@ -199,11 +199,17 @@
       <footer class="bottom-note" data-i18n="foot"></footer>
     </main>
     <script src="./i18n.js"></script>
+    <script src="./art.js"></script>
+    <script src="./chars.js"></script>
+    <script src="./rig.js"></script>
+    <script src="./sprites.js"></script>
     <script>
       /* start the game only when every file it needs was loaded; otherwise say exactly which one is missing */
       (function () {
         var need = {
             "i18n.js": typeof I18N,
+            "art.js": typeof Art,
+            "chars.js": typeof Chars,
           },
           miss = [];
         for (var k in need) if (need[k] === "undefined") miss.push(k);
