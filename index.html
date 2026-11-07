@@ -10,6 +10,17 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>ZUMARY Run</title>
+    <script>
+      /* 3D is the default experience; ?2d=1 keeps the classic 2D game, and devices without WebGL stay on 2D. */
+      (function () {
+        try {
+          if (/[?&]2d=1/.test(location.search)) return;
+          var c = document.createElement("canvas");
+          if (c.getContext("webgl") || c.getContext("experimental-webgl"))
+            location.replace("city3d.html");
+        } catch (e) {}
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap"
