@@ -209,9 +209,22 @@ function spawn0() {
     nextSpawn = z + 30;
     return;
   }
+  const ek = evAt(z + 10);
+  if (ek && !secAt(z + 20) && !forkAt(z) && plazaOf(Math.floor(z / CH)) < 0) {
+    const r2 = evSpawn(ek, z, L, o1, o2);
+    if (r2) {
+      nextSpawn = z + r2[0] + r2[1];
+      return;
+    }
+  }
   const sec = secAt(z + 20);
   if (sec && Math.random() < 0.8) {
     used = secSpawn(sec, z, L, o1, o2);
+    nextSpawn = z + used + speed * rnd(0.5, 0.85) * (1.1 - hard * 0.35);
+    return;
+  }
+  if (pz > 300 && !sec && Math.random() < 0.3) {
+    used = extraPattern(z, L, o1, o2);
     nextSpawn = z + used + speed * rnd(0.5, 0.85) * (1.1 - hard * 0.35);
     return;
   }

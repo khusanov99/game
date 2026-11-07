@@ -21,7 +21,7 @@ let envTheme = 0,
 function setEnvironment() {
   const n = THEMES.length,
     th = themeAt(pz),
-    nx = (th + 1) % n,
+    nx = themeAt(pz + THEME_LEN),
     into = ((pz % THEME_LEN) + THEME_LEN) % THEME_LEN,
     t = clamp((into - (THEME_LEN - 120)) / 120, 0, 1),
     A = THEMES[th],
@@ -69,6 +69,19 @@ function setEnvironment() {
       GNDC = mixa(GNDC, mulc(grey, 0.5), gk * 0.5);
       SUNC = mulc(SUNC, 1 - 0.55 * oc);
     }
+  }
+  if (nightK > 0.01) {
+    /* night-run event: deep blue dusk, lamps and coins stay bright */
+    FOGC = mixa(FOGC, [0.05, 0.06, 0.16], nightK * 0.85);
+    SKY.cur = {
+      top: mixa(SKY.cur.top, [0.02, 0.03, 0.12], nightK * 0.9),
+      mid: mixa(SKY.cur.mid, [0.08, 0.07, 0.25], nightK * 0.9),
+      low: mixa(SKY.cur.low, [0.28, 0.16, 0.4], nightK * 0.8),
+      sun: SKY.cur.sun,
+    };
+    SKYC = mixa(SKYC, [0.18, 0.2, 0.42], nightK * 0.8);
+    GNDC = mixa(GNDC, [0.1, 0.1, 0.22], nightK * 0.8);
+    SUNC = mulc(SUNC, 1 - 0.75 * nightK);
   }
   const mk = metroAmt(pz); // enclosed sections: dark, warm, lit by lamps
   if (mk > 0) {

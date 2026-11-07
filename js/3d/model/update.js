@@ -37,6 +37,7 @@ function update(dt) {
     forkMul = lerp(forkMul, forkAt(pz) ? (px > 1.1 ? 1.25 : px < -1.1 ? 0.8 : 1) : 1, Math.min(1, dt * 4));
     const vEff =
       forkMul *
+      (1 + 0.22 * rushK) *
       (speed +
       (turbo > 0 ? 12 : 0) +
       (padB > 0 ? 7 : 0) +
@@ -202,6 +203,9 @@ function update(dt) {
     if (shakeT > 0) shakeT -= dt;
     if (stumbleT > 0) stumbleT -= dt;
     courUpdate(dt);
+    evUpdate();
+    rushK = lerp(rushK, RUNEV.on && RUNEV.cur === "rush" ? 1 : 0, Math.min(1, dt * 2.5));
+    nightK = lerp(nightK, RUNEV.on && RUNEV.cur === "night" ? 1 : 0, Math.min(1, dt * 1.2));
     gap = lerp(gap, hits > 0 ? 4.4 : 11 - 5.5 * clamp((heat - 45) / 55, 0, 1), Math.min(1, dt * 1.6));
     while (nextSpawn < pz + 150) spawn();
     if (!heli && pz > nextHeli) {

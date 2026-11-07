@@ -294,6 +294,8 @@ Object.assign(TX.uz, {
   cityHint: "Tangani sarflab shahar yodgorliklarini tikla. Tiklangan joy yugurishda maydon bo'lib chiqadi va tanga doim ko'proq bo'ladi.",
   cDelivSum: "Yetkazildi",
   m_deliv: "{n} ta posilka yetkaz",
+  evOk: "MUKAMMAL! +200",
+  evEnd: "TUGADI +100",
 });
 Object.assign(TX.en, {
   cPick: "PARCEL PICKED UP! Deliver it",
@@ -313,6 +315,8 @@ Object.assign(TX.en, {
   cityHint: "Spend coins to rebuild landmarks. A built landmark appears as a plaza in the run and you always earn more coins.",
   cDelivSum: "Delivered",
   m_deliv: "Deliver {n} parcels",
+  evOk: "PERFECT! +200",
+  evEnd: "DONE +100",
 });
 Object.assign(TX.ja, {
   cPick: "荷物を受け取った！届けよう",
@@ -332,6 +336,8 @@ Object.assign(TX.ja, {
   cityHint: "コインで名所を再建しよう。再建した名所は広場として登場し、コインが増えます。",
   cDelivSum: "配達",
   m_deliv: "荷物を {n} 個届ける",
+  evOk: "パーフェクト！ +200",
+  evEnd: "終了 +100",
 });
 const T = (k) => TX[LG][k];
 document.documentElement.lang = LG;

@@ -55,7 +55,7 @@ window.ZR3D = {
   },
   give: (t) => givePow(t),
   get courier() {
-    return { CR, heat, city: cityBuilt };
+    return { CR, heat, city: cityBuilt, ev: RUNEV, seed: RUNSEED };
   },
   jumpNow: jump,
   slideNow: slide,

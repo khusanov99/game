@@ -72,6 +72,7 @@ function hurt(o) {
   trick = false;
   hits++;
   hitT = 8;
+  RUNEV.hit = true;
   heat = Math.min(95, heat + 25);
   invul = 1.4;
   shakeT = 0.45;

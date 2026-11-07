@@ -9,7 +9,7 @@ function wHash(n) {
 function weatherTarget(z) {
   if (z < 500) return [0, 0, 0];
   const blk = Math.floor(z / WEATHER_BLK),
-    h = wHash(blk),
+    h = wHash(blk + (RUNSEED % 997)),
     s = 0.75 + 0.25 * wHash(blk + 91);
   let w;
   if (h < 0.34) w = [0, 0, 0];

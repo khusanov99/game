@@ -25,8 +25,8 @@ function cityBuy(i) {
 function plazaOf(ci) {
   const zc = ci * CH + CH / 2,
     k = Math.floor(zc / THEME_LEN);
-  if (ci !== Math.floor((k * THEME_LEN + 640) / CH)) return -1;
-  const th = ((k % THEMES.length) + THEMES.length) % THEMES.length;
+  if (ci !== Math.floor((k * THEME_LEN + 650) / CH)) return -1;
+  const th = themeAt(zc);
   return cityBuilt[th] ? th : -1;
 }
 /* ---------- courier ---------- */

@@ -148,10 +148,10 @@ function drawHUD(vp) {
       const dxl = CR.drop.x - px,
         arrow = dxl > 1.1 ? "◀" : dxl < -1.1 ? "▶" : "▲",
         d = Math.max(0, Math.round(CR.drop.z - pz));
-      txt = "📦 " + T("cDest") + " " + d + " " + T("m") + "  " + arrow + "  ⏱ " + Math.max(0, CR.tLeft).toFixed(0) + "s";
+      txt = "🎁 " + T("cDest") + " " + d + " " + T("m") + "  " + arrow + "  ⏱ " + Math.max(0, CR.tLeft).toFixed(0) + "s";
       col = CR.tLeft < 0 ? "#ff9a6b" : CR.tLeft < 5 ? "#ffd84f" : "#7ffcb0";
     } else {
-      txt = "📦 " + T("cFind") + (CR.n ? "  ·  ✔ " + CR.n : "");
+      txt = "🎁 " + T("cFind") + (CR.n ? "  ·  ✔ " + CR.n : "");
       col = "#ffe9a8";
     }
     const tw = hx.measureText(txt).width + 22 * u;
@@ -161,6 +161,18 @@ function drawHUD(vp) {
     hx.fill();
     hx.fillStyle = col;
     hx.fillText(txt, cx, cy + 1);
+    if (RUNEV.on && RUNEV.cur) {
+      const left = Math.max(0, Math.round(RUNEV.z1 - pz)),
+        et = "⚡ " + evName(RUNEV.cur) + "  " + left + " " + T("m"),
+        ew = hx.measureText(et).width + 20 * u,
+        ey = cy + (heat > 12 ? 52 : 34) * u;
+      hx.fillStyle = "rgba(0,0,0,.45)";
+      hx.beginPath();
+      hx.roundRect(cx - ew / 2, ey - 10 * u, ew, 20 * u, 10 * u);
+      hx.fill();
+      hx.fillStyle = EVDEF[RUNEV.cur].col;
+      hx.fillText(et, cx, ey + 1);
+    }
     if (heat > 12) {
       const bw = 120 * u,
         by = cy + 18 * u,

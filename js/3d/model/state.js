@@ -1,6 +1,7 @@
 /* model/state.js — Mutable game state (position, speed, timers, power-ups, camera effects). */
 "use strict";
 /* ---------- game state ---------- */
+let RUNSEED = (Math.random() * 1e9) | 0; // new every run: city order, section positions, weather
 const LX = [2.2, 0, -2.2],
   SPEED0 = 15;
 let state = "ready",

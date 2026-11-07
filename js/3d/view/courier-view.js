@@ -2,14 +2,65 @@
 "use strict";
 let PKGM = null,
   DROPM = null;
+/* wrapping paper: polka dots, tiny gold stars, a vertical gold ribbon with a highlight */
+function paperTex() {
+  const c = mkc(128, 128),
+    g = c.getContext("2d"),
+    gr = g.createLinearGradient(0, 0, 128, 128);
+  gr.addColorStop(0, "#e0284a");
+  gr.addColorStop(1, "#9c1030");
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 128, 128);
+  g.fillStyle = "rgba(255,255,255,.88)";
+  for (let y = 0; y < 5; y++)
+    for (let x = 0; x < 5; x++) {
+      g.beginPath();
+      g.arc(14 + x * 26 + (y % 2) * 13, 12 + y * 26, 4.2, 0, 7);
+      g.fill();
+    }
+  g.fillStyle = "#ffd24a";
+  for (let y = 0; y < 4; y++)
+    for (let x = 0; x < 4; x++) {
+      const px = 27 + x * 26 + (y % 2) * 13,
+        py = 25 + y * 26;
+      g.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 ? 1.6 : 4,
+          a = (i / 10) * 6.283 - 1.57;
+        g.lineTo(px + Math.cos(a) * r, py + Math.sin(a) * r);
+      }
+      g.fill();
+    }
+  const rb = g.createLinearGradient(54, 0, 74, 0);
+  rb.addColorStop(0, "#c98f1c");
+  rb.addColorStop(0.35, "#ffe27a");
+  rb.addColorStop(0.65, "#ffd24a");
+  rb.addColorStop(1, "#c98f1c");
+  g.fillStyle = rb;
+  g.fillRect(54, 0, 20, 128);
+  return texFrom(c);
+}
 function courBuild() {
   const b = new B(),
-    g = new B();
-  b.box(0, 0, 0, 0.66, 0.5, 0.5, [0.86, 0.62, 0.3]);
-  b.box(0, 0, 0, 0.7, 0.54, 0.12, [0.85, 0.15, 0.2]);
-  b.box(0, 0, 0, 0.12, 0.54, 0.54, [0.85, 0.15, 0.2]);
-  g.box(0, 0.55, 0, 0.14, 0.14, 0.14, [1, 0.9, 0.4]);
-  PKGM = { b: b.mesh(), g: g.mesh() };
+    lid = new B(),
+    g = new B(),
+    gold = [1, 0.8, 0.28],
+    gold2 = [0.9, 0.66, 0.15];
+  b.box(0, 0.31, 0, 0.9, 0.62, 0.9, [1, 1, 1], { uv: { px: [0, 0, 1, 1], nx: [0, 0, 1, 1], pz: [0, 0, 1, 1], nz: [0, 0, 1, 1], py: [0, 0, 1, 1], ny: [0, 0, 1, 1] } });
+  lid.box(0, 0.73, 0, 0.99, 0.22, 0.99, [0.86, 0.12, 0.28]);
+  lid.box(0, 0.73, 0, 0.17, 0.235, 1.01, gold);
+  lid.box(0, 0.73, 0, 1.01, 0.235, 0.17, gold);
+  lid.box(0, 0.62, 0, 1.0, 0.04, 1.0, gold2);
+  lid.sph(0, 0.89, 0, 0.14, 0.12, 0.14, 6, 8, gold2); // bow knot
+  for (const [x, z] of [[0.24, 0], [-0.24, 0], [0, 0.24], [0, -0.24]]) {
+    lid.sph(x, 0.93, z, x ? 0.22 : 0.1, 0.13, z ? 0.22 : 0.1, 6, 8, gold);
+    lid.sph(x * 1.55, 0.9, z * 1.55, x ? 0.1 : 0.05, 0.08, z ? 0.1 : 0.05, 5, 6, gold2);
+  }
+  for (const sx of [-0.12, 0.12]) lid.box(sx, 0.64, -0.5, 0.1, 0.34, 0.03, gold2); // ribbon tails
+  for (const a of [0, 1, 2, 3]) g.box(Math.cos(a * 1.571) * 0.8, 0.5 + (a % 2) * 0.35, Math.sin(a * 1.571) * 0.8, 0.09, 0.09, 0.09, [1, 0.95, 0.6]);
+  const q = new B();
+  q.quad([[-1.3, 1.3, 0], [1.3, 1.3, 0], [1.3, -1.3, 0], [-1.3, -1.3, 0]], [0, 0, -1], QUADUV, [1, 0.85, 0.4]);
+  PKGM = { b: b.mesh(), lid: lid.mesh(), g: g.mesh(), halo: q.mesh(), tex: paperTex() };
   const d = new B(),
     dg = new B(),
     w = [0.9, 0.92, 0.95];
@@ -26,9 +77,19 @@ function courBuild() {
 function drawCourierObj(o, ca) {
   if (!PKGM) courBuild();
   if (o.k === "pkg") {
-    const M = joint(Tp(o.x, o.y + Math.sin(ca * 2 + o.z) * 0.14, o.z), 0, 0, 0, 0, ca * 1.4, 0);
-    draw(PKGM.b, M, null, { emis: 0.45, spec: 0.5 });
-    draw(PKGM.g, M, null, { emis: 1 });
+    const bob = Math.sin(ca * 2 + o.z) * 0.14,
+      sc = 1 + Math.sin(ca * 4) * 0.04,
+      M = joint(Tp(o.x, o.y - 0.45 + bob, o.z), 0, 0, 0, 0, ca * 1.3, 0);
+    draw(PKGM.b, M, PKGM.tex, { emis: 0.4, spec: 0.35, tint: [sc, sc, sc] });
+    draw(PKGM.lid, M, null, { emis: 0.45, spec: 0.7 });
+    draw(PKGM.g, joint(Tp(o.x, o.y - 0.45 + bob, o.z), 0, 0, 0, 0, -ca * 2.2, 0), null, { emis: 1 });
+    /* soft golden glow around it, so it reads from far away */
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.depthMask(false);
+    draw(PKGM.halo, Tp(o.x, o.y + bob, o.z - 0.2), HALOT, { emis: 1, alpha: 0.55 + 0.25 * Math.sin(ca * 5) });
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
     return;
   }
   const M = Tp(o.x, 0, o.z),

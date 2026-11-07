@@ -117,7 +117,9 @@ function reset() {
   while (sparks.length) SPARK_POOL.push(sparks.pop());
   floaties = [];
   nextSpawn = 55;
+  RUNSEED = (Math.random() * 1e9) | 0;
   courReset();
+  evReset();
   coinHud = 0;
   bonus = 0;
   mult = 1;

@@ -121,11 +121,30 @@ const TMAT = [
   { emis: 0.72, tint: [0.62, 0.68, 1.0] },
 ];
 const THEME_LEN = 700,
-  themeAt = (z) =>
-    ((Math.floor(z / THEME_LEN) % THEMES.length) + THEMES.length) %
-    THEMES.length,
   FS = 1.55,
   PPU = COARSE ? 24 : 36;
+/* city order: the first lap is always Tashkent → … → Neon; every later lap is a different shuffle (new each run) */
+const PERMS = {};
+function lapPerm(lap) {
+  const key = RUNSEED + ":" + lap;
+  if (PERMS[key]) return PERMS[key];
+  const a = THEMES.map((_, i) => i);
+  if (lap > 0) {
+    let s = (RUNSEED ^ Math.imul(lap, 7919)) >>> 0;
+    for (let i = a.length - 1; i > 0; i--) {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      const j = (s >>> 8) % (i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+  }
+  return (PERMS[key] = a);
+}
+function themeAt(z) {
+  const n = THEMES.length,
+    k = Math.floor(z / THEME_LEN);
+  if (k < 0) return ((k % n) + n) % n;
+  return lapPerm(Math.floor(k / n))[k % n];
+}
 const FT = {}; // facade GL textures by theme/index
 function facadeTex(th, idx) {
   const k = th + ":" + idx;
