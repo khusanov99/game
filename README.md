@@ -166,3 +166,7 @@ Done (2D main game, tested in headless Chromium only):
 
 - 3D: the hero is now a glossy white/blue duck-bot (black visor with cyan smile LEDs, headphone discs, crest, orange bill, crown chest emblem, blue cape, blue sneakers; accent colour follows the chosen skin). Chasers are a wheeled box-bot, a rolling ball-bot and a winged drone (white shells, red angry LED eyes). Procedural geometry, not artist-made.
 - 2D (`rig.js`): palettes retinted to match (white/blue hero, white/red chasers). The 2D chasers keep the earlier hawk/wolf silhouettes; only the 3D game has the box/ball/drone shapes. Tested in headless Chromium only.
+
+## v8b — 3D models baked into the 2D game
+
+The 2D game keeps its gameplay, camera and controls, but its hero and chasers are now renders of the real 3D models: `tools/bake.py` renders `js/3d/view/hero.js` and `chaser.js` from the side (3/4 turned toward the camera) with the 3D engine and writes `assets/baked/*.png` (hero in 4 skins, box-bot guard, ball-bot dog). `rig.js` loads them and falls back to the procedural figures until they arrive (or if a file is missing). Re-run `python3 tools/bake.py` after changing a model. Obstacles, coins and scenery in the 2D game are still the original 2D art.

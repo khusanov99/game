@@ -1522,10 +1522,74 @@ const Rig = (() => {
     });
   }
 
+  /* ---------- baked 3D sprites ----------
+     assets/baked/*.png are side-view renders of the real 3D models (js/3d/view/hero.js + chaser.js, see tools/bake.py).
+     Until a sheet has loaded (or if it is missing) the procedural figures above are used, so nothing ever breaks. */
+  const baked = {},
+    BAKE_SPEC = {
+      hero: {
+        w: 84,
+        h: 78,
+        fx: 42,
+        fy: 74,
+        n: 17,
+        extra: { jump: 12, fall: 13, land: 14, duck: 15, hit: 16 },
+        run: 12,
+      },
+      guard: {
+        w: 90,
+        h: 82,
+        fx: 44,
+        fy: 78,
+        n: 13,
+        extra: { swing: 12 },
+        run: 12,
+      },
+      dog: {
+        w: 96,
+        h: 58,
+        fx: 46,
+        fy: 54,
+        n: 24,
+        extra: { snarl: 12 },
+        run: 12,
+      },
+    };
+  function bakedSheet(file, kind) {
+    let b = baked[file];
+    if (!b) {
+      b = baked[file] = { sheet: null };
+      if (typeof Image === "undefined") return null;
+      const img = new Image(),
+        sp = BAKE_SPEC[kind];
+      img.onload = () => {
+        const cw = Math.round(img.width / sp.n),
+          ch = img.height;
+        const f = [];
+        for (let i = 0; i < sp.n; i++) {
+          const cv = mk(cw, ch);
+          cv.getContext("2d").drawImage(img, i * cw, 0, cw, ch, 0, 0, cw, ch);
+          f.push(cv);
+        }
+        b.sheet = Object.assign(
+          { w: sp.w, h: sp.h, fx: sp.fx, fy: sp.fy, f, n: sp.run },
+          sp.extra,
+        );
+      };
+      img.src = "assets/baked/" + file + ".png";
+    }
+    return b.sheet;
+  }
+  const runner3 = (skin, sc) =>
+      bakedSheet("hero_" + (LOOKS[skin] ? skin : "default"), "hero") ||
+      runner(skin, sc),
+    guard3 = (sc) => bakedSheet("guard", "guard") || guard(sc),
+    dog3 = (sc) => bakedSheet("dog", "dog") || dog(sc);
+
   return {
-    runner,
-    guard,
-    dog,
+    runner: runner3,
+    guard: guard3,
+    dog: dog3,
     coins,
     runnerBack,
     guardBack,

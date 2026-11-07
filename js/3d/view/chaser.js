@@ -94,8 +94,8 @@ function drawBall(root, ph, t) {
   pd(sphM(0.55, 0.95, 0.95), upright, null, CM.white);
   pd(sphM(0.57, 0.96, 0.96), R, null, CM.grey); // rolling shell band (visible spin)
   pd(sphM(0.555, 0.95, 0.95), upright, null, CM.white);
-  pd(boxM(0.7, 0.24, 0.04), joint(upright, 0, 0.05, 0.5, 0), null, CM.screen);
-  angryEyes(joint(upright, 0, 0.05, 0.54, 0), 0.14, 0.0, 0, t);
+  pd(boxM(0.46, 0.22, 0.04), joint(upright, 0, 0.05, 0.5, 0), null, CM.screen);
+  angryEyes(joint(upright, 0, 0.05, 0.54, 0), 0.1, 0.0, 0, t);
   for (const s of [-1, 1]) {
     const e = joint(upright, s * 0.55, 0.0, 0, 0, 0, (PI / 2) * s);
     pd(cylM(0.17, 0.17, 0.1), e, null, CM.red);
