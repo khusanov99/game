@@ -6339,7 +6339,192 @@ function drawCinema() {
    Before the menu: the 3D robot runs in, does a front salto, a high back-flip, a turbo dash and a spinning jump,
    then the title appears. Any tap / key skips it. Everything is drawn by the same 3D renderer (hero pose override). */
 const easeIO = (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
-const INTRO_LEN = 6.6;
+const INTRO_CARDS = [
+    [
+      "flag",
+      ["UZBEKISTAN", "O'ZBEKISTON", "ウズベキスタン"],
+      [
+        "The heart of Central Asia, where East meets West.",
+        "Markaziy Osiyoning yuragi: Sharq va G'arb uchrashgan yurt.",
+        "東と西が出会う、中央アジアの心臓部。",
+      ],
+    ],
+    [
+      "🏙️",
+      ["CAPITAL: TASHKENT", "POYTAXT: TOSHKENT", "首都：タシケント"],
+      [
+        "About 37 million people live here. Independent since 1 September 1991.",
+        "Aholisi taxminan 37 million. 1991-yil 1-sentyabrda mustaqillikka erishgan.",
+        "人口は約3700万人。1991年9月1日に独立。",
+      ],
+    ],
+    [
+      "🐪",
+      ["THE GREAT SILK ROAD", "BUYUK IPAK YO'LI", "シルクロード"],
+      [
+        "Samarkand, Bukhara and Khiva were the legendary stops of caravans between China and Europe.",
+        "Samarqand, Buxoro va Xiva Xitoy bilan Yevropa orasidagi karvonlarning afsonaviy bekatlari edi.",
+        "サマルカンド、ブハラ、ヒヴァは東西を結ぶ隊商の伝説の宿場でした。",
+      ],
+    ],
+    [
+      "🕌",
+      ["UNESCO TREASURES", "YUNESKO MEROSI", "世界遺産"],
+      [
+        "Registan's blue domes, old Bukhara and the walled Itchan Kala of Khiva are World Heritage sites.",
+        "Registonning ko'k gumbazlari, qadimiy Buxoro va Xivaning Ichan Qal'asi jahon merosi sanaladi.",
+        "レギスタンの青いドーム、古都ブハラ、城壁のヒヴァは世界遺産です。",
+      ],
+    ],
+    [
+      "🔭",
+      ["LAND OF SCIENTISTS", "OLIMLAR YURTI", "科学者の国"],
+      [
+        "Al-Khwarizmi gave the world algebra, Ulugh Beg charted the stars in Samarkand, Ibn Sina was born near Bukhara.",
+        "Al-Xorazmiy algebrani, Mirzo Ulug'bek Samarqandda yulduzlar xaritasini yaratdi, Ibn Sino Buxoro yaqinida tug'ilgan.",
+        "アル＝フワーリズミーは代数学を、ウルグ・ベクはサマルカンドで星表を、イブン・シーナーはブハラ近郊で生まれました。",
+      ],
+    ],
+    [
+      "🍚",
+      ["PLOV & HOSPITALITY", "PLOV VA MEHMONDO'STLIK", "プロフとおもてなし"],
+      [
+        "Plov is the national dish. Every guest is welcomed with hot tea and fresh non bread.",
+        "Plov milliy taom. Har bir mehmon issiq choy va yangi non bilan kutib olinadi.",
+        "プロフは国民食。お客様は熱いお茶と焼きたてのナンでもてなします。",
+      ],
+    ],
+    [
+      "🏃",
+      ["NOW — RUN!", "ENDI — YUGUR!", "さあ、走れ！"],
+      [
+        "Four legendary cities are waiting for you.",
+        "To'rtta afsonaviy shahar seni kutmoqda.",
+        "4つの伝説の都市があなたを待っています。",
+      ],
+    ],
+  ],
+  INTRO_T0 = 7.0, // title ends, facts begin
+  INTRO_CARD = 2.7,
+  INTRO_LEN = INTRO_T0 + INTRO_CARDS.length * INTRO_CARD;
+function introWrap(txt, maxW) {
+  const out = [];
+  let line = "";
+  const sep = /[\u3000-\u9fff]/.test(txt) ? "" : " ";
+  for (const w of sep ? txt.split(" ") : [...txt]) {
+    const tst = line ? line + sep + w : w;
+    if (ctx.measureText(tst).width > maxW && line) {
+      out.push(line);
+      line = w;
+    } else line = tst;
+  }
+  if (line) out.push(line);
+  return out;
+}
+function introFlag(x, y, w) {
+  const h = w * 0.5,
+    u = h / 9;
+  ctx.fillStyle = "#1eb4e6";
+  ctx.fillRect(x, y, w, u * 3);
+  ctx.fillStyle = "#ce1126";
+  ctx.fillRect(x, y + u * 3, w, u * 0.35);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(x, y + u * 3.35, w, u * 2.3);
+  ctx.fillStyle = "#ce1126";
+  ctx.fillRect(x, y + u * 5.65, w, u * 0.35);
+  ctx.fillStyle = "#1eb53a";
+  ctx.fillRect(x, y + u * 6, w, u * 3);
+  /* crescent + 12 stars on the blue band */
+  const cx = x + u * 2.2,
+    cy = y + u * 1.5;
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(cx, cy, u * 1.05, 0, 7);
+  ctx.fill();
+  ctx.fillStyle = "#1eb4e6";
+  ctx.beginPath();
+  ctx.arc(cx + u * 0.4, cy, u * 0.9, 0, 7);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  [3, 4, 5].forEach((n, r) => {
+    for (let i = 0; i < n; i++) {
+      ctx.beginPath();
+      ctx.arc(
+        x + u * (4 + r * 0.9 + i * 0.9),
+        y + u * (0.55 + r * 0.9) - 0.0,
+        u * 0.22,
+        0,
+        7,
+      );
+      ctx.fill();
+    }
+  });
+  ctx.strokeStyle = "rgba(255,255,255,.5)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+}
+function drawIntroCard(t) {
+  const i = Math.min(
+      INTRO_CARDS.length - 1,
+      Math.floor((t - INTRO_T0) / INTRO_CARD),
+    ),
+    u = (t - INTRO_T0 - i * INTRO_CARD) / INTRO_CARD,
+    a = Math.max(0, Math.min(1, u * 7, (1 - u) * 7)),
+    C = INTRO_CARDS[i],
+    L = LANG === "uz" ? 1 : LANG === "ja" ? 2 : 0,
+    pw = Math.min(W - 20, 560 * UI),
+    ph = 150 * UI,
+    px = (W - pw) / 2,
+    py = H * 0.13 + (1 - a) * 14 * UI;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.fillStyle = "rgba(6,10,32,.82)";
+  ctx.beginPath();
+  ctx.roundRect
+    ? ctx.roundRect(px, py, pw, ph, 14 * UI)
+    : ctx.rect(px, py, pw, ph);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(83,247,255,.55)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  const ix = px + 16 * UI,
+    iw = 84 * UI;
+  if (C[0] === "flag") introFlag(ix, py + ph / 2 - iw * 0.25, iw);
+  else {
+    ctx.font = `${Math.round(52 * UI)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(C[0], ix + iw / 2, py + ph / 2 + 2);
+  }
+  const tx = ix + iw + 16 * UI,
+    tw = pw - (tx - px) - 14 * UI;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#ffd84f";
+  ctx.font = `800 ${Math.round(18 * UI)}px Orbitron, 'Noto Sans JP', sans-serif`;
+  ctx.fillText(C[1][L], tx, py + 36 * UI, tw);
+  ctx.fillStyle = "#e8f1ff";
+  ctx.font = `500 ${Math.round(15 * UI)}px 'Noto Sans JP', system-ui, sans-serif`;
+  introWrap(C[2][L], tw)
+    .slice(0, 4)
+    .forEach((ln, k) => ctx.fillText(ln, tx, py + 62 * UI + k * 20 * UI));
+  /* page dots */
+  ctx.globalAlpha = 0.9;
+  INTRO_CARDS.forEach((_, k) => {
+    ctx.fillStyle = k === i ? "#53f7ff" : "rgba(255,255,255,.28)";
+    ctx.beginPath();
+    ctx.arc(
+      W / 2 + (k - (INTRO_CARDS.length - 1) / 2) * 12 * UI,
+      py + ph + 14 * UI,
+      3 * UI,
+      0,
+      7,
+    );
+    ctx.fill();
+  });
+  ctx.restore();
+}
 function introPose() {
   const t = INTRO.t,
     hx = player.x + player.w / 2 - W / 2,
@@ -6460,9 +6645,10 @@ function drawIntro() {
   ctx.fillStyle = "#05071a";
   ctx.fillRect(0, 0, W, bar);
   ctx.fillRect(0, H - bar, W, bar);
+  if (t >= INTRO_T0) drawIntroCard(t);
   const a =
     Math.min(1, Math.max(0, (t - 4.5) / 0.6)) *
-    Math.min(1, (INTRO_LEN - t) / 0.5);
+    Math.max(0, Math.min(1, (INTRO_T0 - t) / 0.5));
   if (a > 0.01) {
     ctx.save();
     ctx.globalAlpha = a;
