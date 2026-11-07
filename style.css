@@ -1657,3 +1657,65 @@ body.nohints .fact {
   color: var(--muted);
   border-color: var(--line);
 }
+
+/* city look picker (start screen + settings) */
+.lookbar {
+  margin: 0 0 10px;
+}
+.lookt {
+  font:
+    600 8px Orbitron,
+    sans-serif;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 5px;
+  text-align: left;
+}
+.lookrow {
+  display: flex;
+  gap: 5px;
+}
+.lookrow button,
+.lookchips button {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.lookrow button i,
+.lookchips button i {
+  font-style: normal;
+  font-size: 16px;
+  line-height: 1;
+}
+.lookrow button span,
+.lookchips button span {
+  font:
+    600 7px Orbitron,
+    sans-serif;
+  letter-spacing: 0.4px;
+}
+.lookrow button.on,
+.lookchips button.on {
+  color: var(--text);
+  border-color: var(--cyan);
+  background: rgba(83, 247, 255, 0.14);
+}
+.lookchips {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+  margin-top: 6px;
+}
+.lookchips + small {
+  display: none;
+}

@@ -205,7 +205,7 @@
   window.applySettings = applyAll;
 
   /* ---------- UI ---------- */
-  const openSec = { graphics: true };
+  const openSec = { look: true, graphics: true };
   function hzOptions() {
     const o = ["auto", 30];
     const h = Math.round(hz);
@@ -324,6 +324,7 @@
       ],
     };
     return [
+      ["look", "look.t", [`<div class="lookchips">${lookChips()}</div>`]],
       ["graphics", "g.graphics", [...rows.graphics, ...rows.fps]],
       ["fx", "g.fx", rows.fx],
       ["perf", "g.perf", rows.perf],
@@ -338,7 +339,7 @@
       sections()
         .map(
           ([id, title, rows]) =>
-            `<details class="set-sec" data-sec="${id}"${openSec[id] ? " open" : ""}><summary>${esc(S(title))}</summary><div class="set-body">${rows.join("")}</div></details>`,
+            `<details class="set-sec" data-sec="${id}"${openSec[id] ? " open" : ""}><summary>${esc(title === "look.t" ? t("look.t") : S(title))}</summary><div class="set-body">${rows.join("")}</div></details>`,
         )
         .join("") +
       `</div>`

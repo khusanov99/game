@@ -424,6 +424,94 @@ const GL3 = (() => {
     SBUF.clear();
   }
   /* a flat quad in NDC (sky, stars) */
+  /* ---- city looks (time of day / mood): set in Settings or on the start screen, saved in CFG.look ---- */
+  const LOOKS = {
+    day: {
+      m: 0,
+      top: [0.2, 0.46, 0.88],
+      bot: [0.76, 0.88, 0.97],
+      sun: [0.32, 0.72, -0.62],
+      sunC: [0.82, 0.76, 0.62],
+      amb: [0.56, 0.6, 0.7],
+      body: [1, 0.96, 0.78],
+      by: 0.3,
+      st: 0,
+      win: 0,
+      winC: [1, 0.82, 0.45],
+    },
+    sunset: {
+      m: 1,
+      top: [0.3, 0.2, 0.52],
+      bot: [1, 0.55, 0.28],
+      sun: [0.8, 0.3, -0.5],
+      sunC: [1, 0.6, 0.36],
+      amb: [0.5, 0.4, 0.5],
+      body: [1, 0.78, 0.45],
+      by: 0.8,
+      st: 0,
+      win: 0.4,
+      winC: [1, 0.8, 0.45],
+    },
+    dawn: {
+      m: 1,
+      top: [0.38, 0.42, 0.78],
+      bot: [1, 0.76, 0.8],
+      sun: [-0.6, 0.35, -0.6],
+      sunC: [1, 0.84, 0.78],
+      amb: [0.55, 0.52, 0.66],
+      body: [1, 0.9, 0.78],
+      by: 0.72,
+      st: 0.1,
+      win: 0.2,
+      winC: [1, 0.85, 0.55],
+    },
+    night: {
+      m: 1,
+      top: [0.015, 0.03, 0.14],
+      bot: [0.12, 0.17, 0.4],
+      sun: [-0.3, 0.7, -0.6],
+      sunC: [0.22, 0.28, 0.55],
+      amb: [0.2, 0.24, 0.42],
+      body: [0.88, 0.92, 1],
+      by: 0.22,
+      st: 0.95,
+      win: 1,
+      winC: [1, 0.82, 0.42],
+    },
+    neon: {
+      m: 1,
+      top: [0.07, 0.02, 0.22],
+      bot: [0.8, 0.1, 0.55],
+      sun: [0.4, 0.5, -0.6],
+      sunC: [0.55, 0.3, 0.95],
+      amb: [0.3, 0.22, 0.52],
+      body: [1, 0.5, 0.85],
+      by: 0.3,
+      st: 0.8,
+      win: 1,
+      winC: [0.3, 0.95, 1],
+    },
+  };
+  const LOOK_SEQ = ["day", "sunset", "night", "dawn"];
+  let LSTATE = null;
+  function lookKey() {
+    const k = (typeof CFG !== "undefined" && CFG.look) || "day";
+    return k === "auto"
+      ? LOOK_SEQ[Math.floor(performance.now() / 45000) % 4]
+      : k;
+  }
+  function lookStep() {
+    const T = LOOKS[lookKey()] || LOOKS.day;
+    if (!LSTATE) LSTATE = JSON.parse(JSON.stringify(T));
+    else
+      for (const k in T) {
+        if (Array.isArray(T[k]))
+          for (let i = 0; i < T[k].length; i++)
+            LSTATE[k][i] += (T[k][i] - LSTATE[k][i]) * 0.06;
+        else LSTATE[k] += (T[k] - LSTATE[k]) * 0.06;
+      }
+    return LSTATE;
+  }
   function ndcQuad(x0, y0, x1, y1, ca, cb, e) {
     if (nv + 4 > MAXV) return;
     const q = [
@@ -482,13 +570,14 @@ const GL3 = (() => {
   }
   const VS = `attribute vec3 aP;attribute vec3 aN;attribute vec4 aC;uniform mat4 uVP;uniform vec3 uOff;uniform float uNDC;varying vec3 vN;varying vec4 vC;varying float vD;varying float vY;
 void main(){vN=aN;vC=aC;vY=aP.y;vec4 p=uVP*vec4(aP+uOff,1.0);vD=p.w;gl_Position=uNDC>0.5?vec4(aP.xy,0.999,1.0):p;}`;
-  const FS = `precision mediump float;varying vec3 vN;varying vec4 vC;varying float vD;varying float vY;uniform vec3 uSun;uniform vec3 uSunC;uniform vec3 uAmb;uniform vec3 uFog;uniform vec2 uFogR;uniform float uAlpha;
+  const FS = `precision mediump float;varying vec3 vN;varying vec4 vC;varying float vD;varying float vY;uniform vec3 uSun;uniform vec3 uSunC;uniform vec3 uAmb;uniform vec3 uFog;uniform vec2 uFogR;uniform float uAlpha;uniform float uWin;uniform vec3 uWinC;
 void main(){vec3 n=normalize(vN);float d=max(dot(n,uSun),0.0);
 vec3 lit=vC.rgb*(uAmb+uSunC*d);
 float r=1.0-clamp(-n.z,0.0,1.0);float rim=r*r*r*0.2*step(0.0,n.y+0.6);
 float s1=max(dot(n,vec3(0.2,0.55,-0.81)),0.0);s1*=s1;float s2=s1*s1;float s3=s2*s2;float sp=s3*s2*s1*0.32;
 vec3 c=mix(lit+vec3(rim*0.9,rim*0.95,rim)+vec3(sp),vC.rgb,vC.a);
 c*=0.84+0.16*clamp(vY*0.0166,0.0,1.0);
+float wn=step(0.9,vC.a)*step(vC.r+vC.g+vC.b,0.75);c=mix(c,uWinC,wn*uWin);
 float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uFog,f*0.6),uAlpha);}`;
   function sh(t, s) {
     const o = gl.createShader(t);
@@ -532,6 +621,8 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         "uFog",
         "uFogR",
         "uAlpha",
+        "uWin",
+        "uWinC",
       ])
         U[n] = gl.getUniformLocation(prog, n);
       vbuf = gl.createBuffer();
@@ -1616,16 +1707,22 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     const kT = prevCity ? clampN((W + 420 - lm.x) / (W + 900), 0, 1) : 1,
       NA = DAY_SKY[prevCity || curCity] || DAY_SKY.tash,
       NB = DAY_SKY[curCity] || DAY_SKY.tash,
-      top = mixc(NA.top, NB.top, kT),
-      bot = mixc(NA.bot, NB.bot, kT);
-    /* sky (NDC pass): daylight gradient + sun */
+      top0 = mixc(NA.top, NB.top, kT),
+      bot0 = mixc(NA.bot, NB.bot, kT);
+    let top = top0,
+      bot = bot0;
+    const LS = lookStep();
+    top = mixc(top, LS.top, LS.m);
+    bot = mixc(bot, LS.bot, LS.m);
+    /* sky (NDC pass): gradient + sun/moon + stars */
     const gy = 1 - (2 * groundY) / H;
     ndcQuad(-1, gy, 1, 1, bot, top, 1);
     ndcQuad(-1, -1, 1, gy, bot, bot, 1);
     const b = cur.body || [0.84, 0.22, 26, "#ffffff"],
-      bc = [1, 0.96, 0.78],
+      bc = LS.body,
       bx = W * b[0],
-      by = Math.min(b[1] * H, groundY - 30),
+      by0 = Math.min(b[1] * H, groundY - 30),
+      by = by0 + (Math.min(LS.by * groundY, groundY - 30) - by0) * LS.m,
       br = Math.max(18, b[2] * 0.8) * Math.max(1, UI * 0.8);
     for (const [k, a] of [
       [2.8, 0.14],
@@ -1640,6 +1737,15 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         mixc(mixc(top, bot, clampN(by / groundY, 0, 1)), bc, a),
         1,
       );
+    if (LS.st > 0.04 && !LOD)
+      for (let i = 0; i < 40; i++) {
+        const sx = ((i * 0.6180339 + 0.13) % 1) * 2 - 1,
+          sy = 1 - ((((i * 0.3819 + 0.07) % 1) * (2 * groundY)) / H) * 0.9,
+          tw = 0.55 + 0.45 * Math.sin(frame * 0.05 + i * 1.7),
+          sr = (i % 5 === 0 ? 2.4 : 1.5) * Math.max(1, UI * 0.7),
+          c = mixc(top, [1, 1, 1], LS.st * tw);
+        ndcQuad(sx - sr / W, sy - sr / H, sx + sr / W, sy + sr / H, c, c, 1);
+      }
     const skyI = ni;
     /* world pass */
     const cx = -(dx || 0),
@@ -2288,11 +2394,12 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 40, 0);
     gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 40, 12);
     gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
-    const dim = 1;
     gl.uniformMatrix4fv(U.uVP, false, VP);
-    gl.uniform3f(U.uSun, 0.32, 0.72, -0.62);
-    gl.uniform3f(U.uSunC, 0.82 * dim, 0.76 * dim, 0.62 * dim);
-    gl.uniform3f(U.uAmb, 0.56 * dim, 0.6 * dim, 0.7 * dim);
+    gl.uniform3f(U.uSun, LS.sun[0], LS.sun[1], LS.sun[2]);
+    gl.uniform3f(U.uSunC, LS.sunC[0], LS.sunC[1], LS.sunC[2]);
+    gl.uniform3f(U.uAmb, LS.amb[0], LS.amb[1], LS.amb[2]);
+    gl.uniform3f(U.uWinC, LS.winC[0], LS.winC[1], LS.winC[2]);
+    gl.uniform1f(U.uWin, 0);
     gl.uniform3f(U.uFog, bot[0], bot[1], bot[2]);
     gl.uniform2f(U.uFogR, D + 350, D + 3000);
     gl.uniform1f(U.uAlpha, 1);
@@ -2302,6 +2409,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     gl.drawElements(gl.TRIANGLES, skyI, gl.UNSIGNED_SHORT, 0);
     gl.enable(gl.DEPTH_TEST);
     gl.uniform1f(U.uNDC, 0);
+    gl.uniform1f(U.uWin, LS.win);
     for (let i = 0; i < SQ.length; i += 2) {
       const pb = SQ[i];
       gl.bindBuffer(gl.ARRAY_BUFFER, pb.vb);
@@ -2358,7 +2466,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         gl.UNSIGNED_BYTE,
         px,
       );
-      if (px[0] + px[1] + px[2] > 24) lit++;
+      if (px[0] + px[1] + px[2] > 6) lit++;
     }
     return lit === 0;
   }
@@ -2880,6 +2988,63 @@ const CFG = Object.assign(
   store.get("zr_cfg", {}),
 );
 const saveCfg = () => store.set("zr_cfg", CFG);
+/* ---- city look (day / sunset / dawn / night / neon / auto): chosen on the start screen or in Settings ---- */
+if (!CFG.look) CFG.look = "day";
+const LOOK_IDS = ["day", "sunset", "night", "dawn", "neon", "auto"],
+  LOOK_ICO = {
+    day: "☀️",
+    sunset: "🌇",
+    night: "🌙",
+    dawn: "🌅",
+    neon: "💜",
+    auto: "🔄",
+  };
+{
+  const nm = {
+    day: ["Kun", "Day", "昼"],
+    sunset: ["Shom", "Sunset", "夕焼け"],
+    night: ["Kecha", "Night", "夜"],
+    dawn: ["Tong", "Dawn", "夜明け"],
+    neon: ["Neon", "Neon", "ネオン"],
+    auto: ["Avto", "Auto", "自動"],
+  };
+  for (const k in nm) {
+    I18N.uz["look." + k] = nm[k][0];
+    I18N.en["look." + k] = nm[k][1];
+    I18N.ja["look." + k] = nm[k][2];
+  }
+  I18N.uz["look.t"] = "SHAHAR MAVZUSI";
+  I18N.en["look.t"] = "CITY LOOK";
+  I18N.ja["look.t"] = "街のテーマ";
+}
+const lookChips = () =>
+  LOOK_IDS.map(
+    (k) =>
+      `<button type="button" data-look="${k}" class="${CFG.look === k ? "on" : ""}"><i>${LOOK_ICO[k]}</i><span data-i18n="look.${k}">${t("look." + k)}</span></button>`,
+  ).join("");
+function setLook(k) {
+  if (!LOOK_IDS.includes(k)) return;
+  CFG.look = k;
+  saveCfg();
+  document
+    .querySelectorAll("[data-look]")
+    .forEach((b) => b.classList.toggle("on", b.dataset.look === k));
+  document.body.dataset.look = k;
+  if (typeof sfx !== "undefined" && sfx.tick) sfx.tick();
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-look]");
+  if (b) setLook(b.dataset.look);
+});
+{
+  const bar = document.createElement("div");
+  bar.className = "lookbar";
+  bar.id = "lookBar";
+  bar.innerHTML = `<div class="lookt" data-i18n="look.t">${t("look.t")}</div><div class="lookrow">${lookChips()}</div>`;
+  const dbx = document.getElementById("dailyBox");
+  if (dbx && dbx.parentNode) dbx.parentNode.insertBefore(bar, dbx);
+  document.body.dataset.look = CFG.look;
+}
 function audio() {
   if (!ac) {
     ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -6111,6 +6276,8 @@ function showOverlay(icon, title, text, btn, o = {}) {
   $("oText").innerHTML = text;
   $("startButton").textContent = btn;
   $("mode").style.display = o.menu ? "flex" : "none";
+  const lb = $("lookBar");
+  if (lb) lb.hidden = o.panel === "settings" || !(o.menu || o.panel);
   $("diff").style.display = o.menu && mode === "endless" ? "flex" : "none";
   $("levelBox").innerHTML = o.menu && mode === "campaign" ? renderLevels() : "";
   $("skinBox").innerHTML = o.skins ? renderSkins() : "";
