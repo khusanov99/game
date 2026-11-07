@@ -1718,7 +1718,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         box(T(cx, 1.8, -62), o.w - 6, 0.5, 3, 0, [1, 0.5, 0.12], 0.85);
         for (const sx of [x0 - 3, x1 + 3]) {
           const ou = sx < cx ? -1 : 1;
-          box(T(sx, 3, -30), 8, 6, 30, 0, [0.72, 0.72, 0.74], 0.15); // concrete curb
+          box(T(sx, 3, -30), 8, 6, 30, 0, [0.1, 0.24, 0.68], 0.25); // tiled curb
           for (let k = 0; k < 5; k++)
             box(
               J(T(sx, 6.4, -30 + (k - 2) * 6), 0, 0, 0, 0, 0, 0),
@@ -1726,7 +1726,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
               0.8,
               3,
               0,
-              k % 2 ? [1, 0.76, 0.1] : [0.09, 0.09, 0.12],
+              k % 2 ? [1, 0.78, 0.2] : [0.97, 0.93, 0.82],
               0.35,
             );
           // warning post with a blinking lamp + a red triangle sign
@@ -1745,7 +1745,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
             9,
             0.8,
             0,
-            [0.92, 0.12, 0.1],
+            [0.8, 0.32, 0.18],
             0.5,
           );
           box(
@@ -1857,9 +1857,9 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         }
       } else if (o.t === "train") {
         const bd = T(X, Y, 0);
-        box(bd, o.w, o.h - 8, 46, (o.h - 8) / 2 + 6, [0.18, 0.43, 0.82], 0.15);
-        box(bd, o.w + 2, 5, 48, o.h - 6, [0.82, 0.88, 0.98], 0.4);
-        box(bd, o.w + 2, 4, 48, 20, [0.92, 0.94, 1], 0.35);
+        box(bd, o.w, o.h - 8, 46, (o.h - 8) / 2 + 6, [0.04, 0.55, 0.62], 0.2);
+        box(bd, o.w + 2, 5, 48, o.h - 6, [1, 0.78, 0.2], 0.5);
+        box(bd, o.w + 2, 4, 48, 20, [0.98, 0.94, 0.82], 0.4);
         for (let wx = -o.w / 2 + 28; wx < o.w / 2 - 20; wx += 26)
           box(
             T(X + wx, Y + o.h - 24, -23.5),
@@ -1940,207 +1940,136 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
             0.1,
           );
       } else if (o.t === "block") {
-        const dp = Math.min(46, o.w + 8),
-          at = (u, y, z) => T(X + u, Y + y, z),
+        /* Uzbek-craft obstacles, drawn 1.2x larger than the hitbox so they read well on small screens:
+           painted bazaar chest, glazed clay pots, tiled gate barrier. Palette: turquoise, cobalt, gold, terracotta, cream. */
+        const S = 1.2,
+          B = SC(T(X, Y, 0), S),
+          at = (u, y, z) => J(B, u, y, z, 0, 0, 0),
           w = o.w,
-          h = o.h;
+          h = o.h,
+          dp = Math.min(46, w + 8),
+          TQ = [0.04, 0.62, 0.68],
+          CB = [0.1, 0.24, 0.68],
+          GD = [1, 0.78, 0.2],
+          TC = [0.8, 0.32, 0.18],
+          CR = [0.98, 0.94, 0.82],
+          NV = [0.06, 0.1, 0.28];
+        box(
+          at(0, 0, 0),
+          w + 12,
+          1.2,
+          dp + 10,
+          0.6,
+          [1, 0.8, 0.25],
+          0.55 + 0.25 * blink,
+        ); // glowing base pad = "danger" read
         if (o.v === "crate") {
-          /* wooden shipping crate: slatted faces, dark frame + diagonal brace, steel corner brackets, red stencil label */
-          const lite = [0.9, 0.62, 0.31],
-            mid = [0.8, 0.53, 0.26],
-            dk = [0.4, 0.22, 0.09];
-          box(at(0, 0, 0), w, h, dp, h / 2, mid, 0.1);
-          const n = Math.max(3, Math.round(w / 9)),
-            sw = w / n;
-          for (let k = 0; k < n; k++)
+          /* sandiq: turquoise painted chest, gold bands, ikat diamonds, domed terracotta lid */
+          box(at(0, 0, 0), w, h * 0.84, dp, h * 0.42, TQ, 0.22);
+          box(at(0, 0, 0), w + 3, 3.4, dp + 3, 1.7, NV, 0.1);
+          for (const xx of [-w / 2 + 1.5, w / 2 - 1.5])
+            box(at(xx, 0, -1), 3.4, h * 0.84, dp + 2.2, h * 0.42, GD, 0.5);
+          box(at(0, 0, 0), w + 2, 3.4, dp + 2, h * 0.84 - 1.5, GD, 0.5);
+          const dy = h * 0.46,
+            dr = Math.min(w, h) * 0.2;
+          for (let k = -1; k <= 1; k++) {
+            const c = k % 2 ? CR : CB;
             box(
-              at(-w / 2 + sw * (k + 0.5), 0, -dp / 2 - 0.9),
-              sw - 1.2,
-              h - 7,
-              1.8,
-              h / 2,
-              k % 2 ? lite : mid,
-              0.14,
-            );
-          for (const yy of [2.5, h - 2.5])
-            box(at(0, 0, -dp / 2 - 1.3), w + 1.5, 5, 2.6, yy, dk, 0.1);
-          for (const xx of [-w / 2 + 2.2, w / 2 - 2.2])
-            box(at(xx, 0, -dp / 2 - 1.3), 4.4, h, 2.6, h / 2, dk, 0.1);
-          box(
-            J(
-              at(0, h / 2, -dp / 2 - 2.4),
+              J(at(k * dr * 1.7, dy, -dp / 2 - 1.4), 0, 0, 0, 0, 0, PI / 4),
+              dr * 1.5,
+              dr * 1.5,
+              1.2,
               0,
-              0,
-              0,
-              0,
-              0,
-              Math.atan2(h - 8, w - 8),
-            ),
-            Math.hypot(w - 8, h - 8),
-            3.4,
-            1.4,
-            0,
-            dk,
-            0.1,
-          );
-          box(at(0, 0, 0), w + 2, 2.8, dp + 2, h + 1, [0.72, 0.46, 0.21], 0.1); // lid
-          for (const xx of [-w / 2 + 1, w / 2 - 1])
-            for (const yy of [1.5, h - 1.5])
-              box(
-                at(xx, 0, -dp / 2 - 2.4),
-                4.4,
-                4.4,
-                1.2,
-                yy,
-                [0.62, 0.66, 0.72],
-                0.35,
-              );
-          box(
-            at(w * 0.12, 0, -dp / 2 - 2.8),
-            Math.min(18, w * 0.5),
-            7.5,
-            0.8,
-            h * 0.6,
-            [0.88, 0.16, 0.12],
-            0.45,
-          );
-          box(
-            at(w * 0.12, 0, -dp / 2 - 3.2),
-            Math.min(14, w * 0.4),
-            4.2,
-            0.6,
-            h * 0.6,
-            [0.97, 0.97, 0.95],
-            0.6,
-          );
-        } else if (o.v === "cones") {
-          /* three traffic cones with reflective collars, square bases and a red/white tape between them */
-          const R = Math.min(8, w * 0.17),
-            offs = [-w * 0.3, w * 0.3, 0],
-            zz = [0, 0, 7];
-          offs.forEach((u, i) => {
-            const cb = at(u, 0, zz[i]),
-              ch = h * (i === 2 ? 0.86 : 0.95);
-            box(cb, R * 2.5, 2.6, R * 2.5, 1.3, [0.12, 0.12, 0.14], 0.1);
-            cone(J(cb, 0, 2.2, 0), R, ch - 2.2, [1, 0.42, 0.08], 0.32);
-            for (const q of [0.34, 0.62]) {
-              const ry = 2.2 + (ch - 2.2) * q,
-                rr = R * (1 - q) + 0.5;
-              cyl(J(cb, 0, ry + 1.5, 0), rr, 3, [0.97, 0.97, 0.95], 0.55);
-            }
-            sph(
-              J(cb, 0, ch, 0),
-              R * 0.22,
-              R * 0.22,
-              R * 0.22,
-              [0.15, 0.15, 0.17],
-              0.1,
-            );
-          });
-          for (let k = 0; k < 6; k++)
-            box(
-              at(-w * 0.3 + (w * 0.6 * (k + 0.5)) / 6, 0, -1.4),
-              (w * 0.6) / 6 + 0.2,
-              2.4,
-              0.6,
-              h * 0.62,
-              k % 2 ? [0.95, 0.95, 0.95] : [0.9, 0.15, 0.12],
+              c,
               0.45,
             );
-        } else {
-          /* road-block: concrete Jersey base, striped warning board on two posts, flashing beacon on top */
-          const bh = h * 0.42;
-          box(
-            at(0, 0, 0),
-            w,
-            bh * 0.55,
-            dp * 0.9,
-            bh * 0.275,
-            [0.74, 0.74, 0.76],
-            0.12,
-          );
-          box(
-            at(0, 0, 0),
-            w * 0.86,
-            bh * 0.5,
-            dp * 0.55,
-            bh * 0.55 + bh * 0.25,
-            [0.78, 0.78, 0.8],
-            0.12,
-          );
-          box(
-            at(0, 0, -dp * 0.45 - 0.6),
-            w * 0.8,
-            2,
-            0.8,
-            bh * 0.35,
-            [1, 0.78, 0.12],
-            0.5,
-          ); // reflective strip
-          for (const xx of [-w * 0.36, w * 0.36])
             box(
-              at(xx, 0, -2),
-              3,
-              h * 0.55,
-              3,
-              bh + h * 0.275,
-              [0.2, 0.2, 0.24],
-              0.15,
+              J(at(k * dr * 1.7, dy, -dp / 2 - 2.1), 0, 0, 0, 0, 0, PI / 4),
+              dr * 0.7,
+              dr * 0.7,
+              0.8,
+              0,
+              k % 2 ? TC : GD,
+              0.6,
             );
-          const by = bh + h * 0.12,
-            bhh = h * 0.34,
-            ns = 6;
-          box(
-            at(0, 0, -4.2),
-            w * 0.94,
-            bhh + 2,
-            2.4,
-            by + bhh / 2,
-            [0.12, 0.12, 0.15],
-            0.1,
-          );
+          }
+          sph(at(0, h * 0.84, 0), w * 0.6, h * 0.18, dp * 0.55, TC, 0.2);
+          box(at(0, 0, -dp / 2 - 1.6), 5, 6, 1.2, h * 0.3, GD, 0.7); // lock plate
+        } else if (o.v === "cones") {
+          /* three glazed kuzas (clay pots) with turquoise glaze and gold rims */
+          [
+            [-0.3, 0.92, 0],
+            [0.3, 0.92, 0],
+            [0, 1.18, 5],
+          ].forEach(([u, k, z], i) => {
+            const r = Math.min(11, w * 0.2) * (i === 2 ? 1.15 : 1),
+              ph = h * k,
+              p = at(u * w, 0, z);
+            sph(J(p, 0, ph * 0.42, 0), r, ph * 0.42, r, i % 2 ? TQ : TC, 0.22);
+            cyl(
+              J(p, 0, ph * 0.98, 0),
+              r * 0.52,
+              ph * 0.2,
+              i % 2 ? TQ : TC,
+              0.22,
+            );
+            cyl(J(p, 0, ph * 1.0, 0), r * 0.68, 2.2, GD, 0.6); // gold rim
+            cyl(J(p, 0, ph * 0.5, 0), r * 1.02, 2.6, GD, 0.55); // gold belt
+            cyl(J(p, 0, ph * 0.36, 0), r * 0.98, 2.2, CB, 0.35);
+            sph(J(p, 0, ph * 0.96, 0), r * 0.4, 2.2, r * 0.4, NV, 0.05); // dark mouth
+          });
+        } else {
+          /* darvoza gate: tiled cobalt pillars, striped gold/navy arm, lantern beacon */
+          for (const sx of [-w * 0.4, w * 0.4]) {
+            box(at(sx, 0, 0), 8, h * 0.9, 10, h * 0.45, CB, 0.25);
+            box(at(sx, 0, -5.3), 6, 5, 0.8, h * 0.62, GD, 0.7);
+            box(at(sx, 0, -5.3), 6, 5, 0.8, h * 0.3, CR, 0.55);
+            sph(at(sx, h * 0.9, 0), 6, 3.4, 6, TQ, 0.35);
+          }
+          box(at(0, 0, -2), w * 0.9, h * 0.22, 5, h * 0.62, NV, 0.2);
+          const ns = 7;
           for (let k = 0; k < ns; k++)
             box(
               J(
-                at(-w * 0.44 + (w * 0.88 * (k + 0.5)) / ns, by + bhh / 2, -5.6),
+                at(-w * 0.4 + (w * 0.8 * (k + 0.5)) / ns, h * 0.62, -5),
                 0,
                 0,
                 0,
                 0,
                 0,
-                0.5,
+                0.55,
               ),
-              ((w * 0.88) / ns) * 0.62,
-              bhh * 1.15,
-              0.8,
+              ((w * 0.8) / ns) * 0.58,
+              h * 0.3,
+              1,
               0,
-              k % 2 ? [1, 0.55, 0.08] : [0.97, 0.97, 0.95],
-              0.45,
+              k % 2 ? GD : TQ,
+              0.6,
             );
-          box(at(0, 0, -2), 3.4, 7, 3.4, h + 1.5, [0.2, 0.2, 0.24], 0.15);
+          cyl(at(0, h * 0.95 + 14, 0), 1.2, 12, K.dark, 0.2);
           sph(
-            at(0, h + 6.5, -2),
-            4.2,
-            4.2,
-            4.2,
-            blink ? [1, 0.25, 0.2] : [0.5, 0.1, 0.1],
+            at(0, h * 0.95 + 14, 0),
+            4.6,
+            5.4,
+            4.6,
+            blink ? [1, 0.3, 0.2] : [0.7, 0.12, 0.1],
             1,
           );
           sph(
-            at(0, h + 6.5, -2),
-            6.4,
-            6.4,
-            6.4,
-            blink ? [1, 0.45, 0.3] : [0.3, 0.08, 0.08],
-            blink ? 0.35 : 0.1,
+            at(0, h * 0.95 + 14, 0),
+            7.4,
+            8.4,
+            7.4,
+            blink ? [1, 0.5, 0.3] : [0.4, 0.1, 0.1],
+            blink ? 0.4 : 0.1,
           );
         }
       } else if (o.t === "drone") {
         /* patrol quad-copter: armoured body, glowing red eye, four arms with spinning rotors, skids and an under-light */
         const hv = Math.sin(t * 4 + o.x * 0.01) * 2,
-          dr = T(X, Y + o.h / 2 + hv, 0),
-          gm = [0.2, 0.21, 0.27],
-          gl = [0.3, 0.32, 0.4];
+          dr = SC(T(X, Y + o.h / 2 + hv, 0), 1.3),
+          gm = [0.04, 0.5, 0.58],
+          gl = [0.98, 0.78, 0.2];
         sph(dr, 10, 6.5, 10, gm, 0.22);
         sph(J(dr, 0, 3, 0), 8, 4, 8, gl, 0.3);
         box(J(dr, 0, -1, -8.6), 12, 5.4, 2, 0, [0.05, 0.02, 0.05], 0.1);
