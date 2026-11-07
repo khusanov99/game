@@ -189,7 +189,7 @@ function update(dt) {
         floatText(T("heliEnd"), "#7ffcb0");
       }
     }
-    const top = py + (slideT > 0 && py < floorY + 0.1 ? 0.85 : 1.85),
+    const top = py + (slideT > 0 && py < floorY + 0.1 ? 0.7 : 1.62),
       pad = 0.45;
     for (const o of objs) {
       if (o.dead || o.got) continue;

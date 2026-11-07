@@ -17,14 +17,14 @@ function render() {
       (speed - 15) * 0.0012 +
       fovK * 0.16 -
       slowK * 0.07,
-    dist = (asp < 0.8 ? 6.0 : 6.8) + fovK * 0.9,
-    h = (asp < 0.8 ? 3.5 : 3.7) - camDip - (scoot > 0 ? 0.12 : 0);
+    dist = (asp < 0.8 ? 5.3 : 6.0) + fovK * 0.9,
+    h = (asp < 0.8 ? 3.1 : 3.3) - camDip - (scoot > 0 ? 0.12 : 0);
   const shk = shakeT > 0 ? shakeT : 0,
     sx = rnd(-1, 1) * shk * 0.25,
     sy = rnd(-1, 1) * shk * 0.2,
     jl = jetK * 1.9;
   let CAMv = [camX + sx, h + sy + jl, pz - dist],
-    tgt = [camX * 0.55 + px * 0.2, 2.7 + jl * 0.35, pz + 8],
+    tgt = [camX * 0.55 + px * 0.2, 2.35 + jl * 0.35, pz + 8],
     fyv = fy,
     heroYaw = 0,
     show = null;

@@ -10,8 +10,8 @@ const ease = (x) => x * x * (3 - 2 * x),
 function showShot(T, asp) {
   const u = T % 16,
     off = asp > 1.3 ? 1.15 : 0,
-    gh = asp < 0.8 ? 3.5 : 3.7,
-    gd = asp < 0.8 ? 6.0 : 6.8;
+    gh = asp < 0.8 ? 3.1 : 3.3,
+    gd = asp < 0.8 ? 5.3 : 6.0;
   let az,
     r,
     hg,
@@ -19,30 +19,30 @@ function showShot(T, asp) {
     tk = 0,
     wave = 0;
   const rs = asp < 0.8 ? 1.9 : 1,
-    ty = asp < 0.8 ? 0.3 : 1.25;
+    ty = asp < 0.8 ? 0.15 : 0.85;
   if (u < 5) {
     const k = ease(u / 5);
     az = lerp(Math.PI, 0.3, k);
-    r = lerp(gd, 3.6 * rs, k);
-    hg = lerp(gh, 0.9, k);
+    r = lerp(gd, 2.7 * rs, k);
+    hg = lerp(gh, 0.65, k);
     fov = lerp(54, 40, k);
     wave = sm(2.6, 3.4, u) * (1 - sm(4.4, 5, u));
   } else if (u < 11) {
     const k = (u - 5) / 6;
     az = 0.3 + ease(k) * TAU;
-    r = (3.6 + Math.sin(k * Math.PI) * 0.9) * rs;
-    hg = 0.9 + Math.sin(k * Math.PI) * 1.1;
+    r = (2.7 + Math.sin(k * Math.PI) * 0.7) * rs;
+    hg = 0.65 + Math.sin(k * Math.PI) * 0.8;
     fov = 42;
   } else {
     const k = ease((u - 11) / 5);
     az = lerp(0.3, Math.PI, k);
-    r = lerp(3.6 * rs, gd, k);
-    hg = lerp(0.9, gh, k);
+    r = lerp(2.7 * rs, gd, k);
+    hg = lerp(0.65, gh, k);
     fov = lerp(40, 54, k);
     tk = k;
   }
   let cam = [Math.sin(az) * r, hg, pz + Math.cos(az) * r],
-    tgt = [0, lerp(ty, 2.7, tk), pz + lerp(0, 8, tk)];
+    tgt = [0, lerp(ty, 2.35, tk), pz + lerp(0, 8, tk)];
   if (off) {
     const f = [tgt[0] - cam[0], tgt[2] - cam[2]],
       l = Math.hypot(f[0], f[1]) || 1,
@@ -72,18 +72,18 @@ function drawStage(K, T) {
   // glowing Registan-star podium + orbiting motes under the idle hero
   const base = Tp(0, 0, pz),
     ang = T * 0.5;
-  pd(cylM(1.45, 1.5, 0.1), joint(base, 0, 0.05, 0, 0), null, K.deck);
-  pd(cylM(1.52, 1.52, 0.04), joint(base, 0, 0.1, 0, 0), null, K.gold);
+  pd(cylM(1.05, 1.08, 0.08), joint(base, 0, 0.05, 0, 0), null, K.deck);
+  pd(cylM(1.1, 1.1, 0.04), joint(base, 0, 0.1, 0, 0), null, K.gold);
   for (let i = 0; i < 2; i++)
     pd(
-      boxM(1.5, 0.03, 1.5, 0.1),
+      boxM(1.1, 0.03, 1.1, 0.1),
       joint(base, 0, 0.13, 0, 0, ang + (i * Math.PI) / 4, 0),
       null,
-      i ? K.glow : K.dome,
+      i ? K.glow : K.trim,
     );
   for (let i = 0; i < 8; i++) {
     const a = T * 0.9 + (i * TAU) / 8,
-      rr = 1.25 + Math.sin(T * 1.3 + i) * 0.12;
+      rr = 0.95 + Math.sin(T * 1.3 + i) * 0.12;
     pd(
       sphM(0.045 + (i & 1) * 0.02),
       joint(

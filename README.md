@@ -151,3 +151,13 @@ Done (2D main game, tested in headless Chromium only):
   - `controller/` input and flow: audio, input (touch / mouse / keyboard / gamepad), flow (screens), loop, main (boot), api (`ZR3D` test hooks)
   - Honest note: the files share one global lexical scope (a pragmatic split of the former single closure), so this is an MVC-_inspired_ separation by responsibility, not isolated modules with explicit imports. Turning it into ES modules with an explicit state object would be the next step.
 - **Limits**: still tested only in headless Chromium (SwiftShader); no real phone / tablet / gamepad run; art is procedural geometry.
+
+## v7 — new robot cast (2D + 3D)
+
+- **ZUMA, the duck-bot** (hero, both versions): a small chibi duck robot (~1.6 units tall in 3D, ~50 px in 2D): glossy yellow shell, dark face screen with LED eyes (round, blink, happy `^ ^`, `X` when hit), small orange bill that opens when dashing, blush LEDs, stub wings that flap, ribbed turquoise doppi with a gold finial, ikat belt, 8-pointed-star chest core, ikat scarf and a tiny jet pack. Skins recolour the shell (yellow / rose / mint / gold). Poses: run waddle, jump, double-jump flip, belly slide, hit, dash, scooter, idle + wave.
+- **Burgut** (chaser): compact hawk-bot, dark steel + crimson, hooked bronze beak, red LED visor, crest with a police beacon, folded blade-wings, talon feet, shock lance.
+- **Bo'ri** (the dog): a small robotic wolf pup with big ears, bronze collar, plume tail and red LED eyes.
+- Scale: hero and Burgut share the same height; Bo'ri is about half of it. 3D hit-box was tightened to match (standing 1.62, sliding 0.7) and the gameplay camera moved slightly closer.
+- Where: 3D in `js/3d/view/hero.js` and `js/3d/view/chaser.js`; 2D side view and back view in `rig.js` (same API and frame indices as before, so `game.js` / `city.js` are unchanged). The old painted fallbacks in `chars.js` / `sprites.js` are only used if `Rig` fails to load and still show the previous look.
+- Performance: the 3D hero is ~60 batched primitives (down from ~150); the busiest 3D frame measured ~8.8k of 16k character vertices. 2D robots are still pre-rendered once into small canvases.
+- Still only checked in headless Chromium; not on a real phone. The main-game chaser sprite was verified in the sprite sheet but I did not capture it in a live chase frame.
