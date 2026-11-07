@@ -2,8 +2,24 @@
 "use strict";
 /* ---------- WebGL ---------- */
 let gl = null;
-try { gl = cv.getContext("webgl", { antialias: !COARSE, alpha: false, depth: true, powerPreference: "high-performance", preserveDrawingBuffer: false }) || cv.getContext("experimental-webgl"); } catch (e) {}
-if (!gl) { location.replace("./city.html"); throw new Error("WebGL unavailable: redirecting to the 2.5D version"); }
-const ANISO = gl.getExtension("EXT_texture_filter_anisotropic") || gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
-cv.addEventListener("webglcontextlost", (e) => { e.preventDefault(); });
+try {
+  gl =
+    cv.getContext("webgl", {
+      antialias: !COARSE,
+      alpha: false,
+      depth: true,
+      powerPreference: "high-performance",
+      preserveDrawingBuffer: false,
+    }) || cv.getContext("experimental-webgl");
+} catch (e) {}
+if (!gl) {
+  location.replace("./city.html");
+  throw new Error("WebGL unavailable: redirecting to the 2.5D version");
+}
+const ANISO =
+  gl.getExtension("EXT_texture_filter_anisotropic") ||
+  gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+cv.addEventListener("webglcontextlost", (e) => {
+  e.preventDefault();
+});
 cv.addEventListener("webglcontextrestored", () => location.reload());

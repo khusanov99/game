@@ -1,94 +1,336 @@
 <!doctype html>
 <html lang="uz">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-<meta name="theme-color" content="#070816" />
-<title>ZUMARY — City Run 3D</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@500;700&display=swap" rel="stylesheet" />
-<style>
-  :root{--gold:#ffd84f;--cyan:#53f7ff;--pink:#ff4fd8;--text:#f5f7ff}
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:#070816;color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
-  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
-  #hud{pointer-events:none}
-  .vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 55%,rgba(6,6,20,.55) 100%)}
-  .ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 40%,rgba(7,8,22,.35),rgba(7,8,22,.82))}
-  .ov.hidden{display:none}
-  .card{width:min(420px,100%);text-align:center;padding:22px 20px;border-radius:22px;background:rgba(10,12,30,.72);border:1px solid rgba(123,145,255,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-  h1{font:800 clamp(26px,8vw,40px)/1.05 Orbitron,sans-serif;margin:0 0 6px;letter-spacing:1px;background:linear-gradient(90deg,var(--cyan),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .sub{color:#aeb6e0;font-size:13px;line-height:1.6;margin:8px 0 14px}
-  .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:10px 0}
-  .pill{padding:8px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font:700 14px Orbitron,sans-serif}
-  .pill small{display:block;font:600 9px Orbitron,sans-serif;letter-spacing:1.5px;color:#8c93b8;margin-bottom:2px}
-  button,a.btn{display:block;width:100%;margin-top:10px;padding:15px;border:0;border-radius:16px;font:800 15px Orbitron,sans-serif;letter-spacing:1.5px;color:#06121d;background:linear-gradient(90deg,var(--cyan),#8be9ff);cursor:pointer;text-decoration:none}
-  a.btn.ghost{background:transparent;color:#aeb6e0;border:1px solid rgba(255,255,255,.18);font-size:12px;padding:12px}
-  .coin{display:inline-block;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6b0,#f2b82a 60%,#b27208);vertical-align:-2px;margin-right:4px}
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"
+    />
+    <meta name="theme-color" content="#070816" />
+    <title>ZUMARY — City Run 3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --gold: #ffd84f;
+        --cyan: #53f7ff;
+        --pink: #ff4fd8;
+        --text: #f5f7ff;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #070816;
+        color: var(--text);
+        font-family: Inter, system-ui, sans-serif;
+        overflow: hidden;
+        overscroll-behavior: none;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #hud {
+        pointer-events: none;
+      }
+      .vig {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at 50% 45%,
+          rgba(0, 0, 0, 0) 55%,
+          rgba(6, 6, 20, 0.55) 100%
+        );
+      }
+      .ov {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(16px, env(safe-area-inset-top)) 16px
+          max(16px, env(safe-area-inset-bottom));
+        background: radial-gradient(
+          ellipse at 50% 40%,
+          rgba(7, 8, 22, 0.35),
+          rgba(7, 8, 22, 0.82)
+        );
+      }
+      .ov.hidden {
+        display: none;
+      }
+      .card {
+        width: min(420px, 100%);
+        text-align: center;
+        padding: 22px 20px;
+        border-radius: 22px;
+        background: rgba(10, 12, 30, 0.72);
+        border: 1px solid rgba(123, 145, 255, 0.28);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+      h1 {
+        font:
+          800 clamp(26px, 8vw, 40px)/1.05 Orbitron,
+          sans-serif;
+        margin: 0 0 6px;
+        letter-spacing: 1px;
+        background: linear-gradient(90deg, var(--cyan), var(--pink));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .sub {
+        color: #aeb6e0;
+        font-size: 13px;
+        line-height: 1.6;
+        margin: 8px 0 14px;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin: 10px 0;
+      }
+      .pill {
+        padding: 8px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        font:
+          700 14px Orbitron,
+          sans-serif;
+      }
+      .pill small {
+        display: block;
+        font:
+          600 9px Orbitron,
+          sans-serif;
+        letter-spacing: 1.5px;
+        color: #8c93b8;
+        margin-bottom: 2px;
+      }
+      button,
+      a.btn {
+        display: block;
+        width: 100%;
+        margin-top: 10px;
+        padding: 15px;
+        border: 0;
+        border-radius: 16px;
+        font:
+          800 15px Orbitron,
+          sans-serif;
+        letter-spacing: 1.5px;
+        color: #06121d;
+        background: linear-gradient(90deg, var(--cyan), #8be9ff);
+        cursor: pointer;
+        text-decoration: none;
+      }
+      a.btn.ghost {
+        background: transparent;
+        color: #aeb6e0;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        font-size: 12px;
+        padding: 12px;
+      }
+      .coin {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at 35% 30%,
+          #fff6b0,
+          #f2b82a 60%,
+          #b27208
+        );
+        vertical-align: -2px;
+        margin-right: 4px;
+      }
 
-  /* in-game touch / mouse buttons */
-  #pauseBtn,#dashBtn{position:fixed;display:none;width:auto;margin:0;padding:0;z-index:5;border-radius:50%;color:#eaf8ff;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  #pauseBtn.on,#dashBtn.on{display:grid;place-items:center}
-  #pauseBtn{left:50%;top:max(10px,calc(env(safe-area-inset-top) + 6px));transform:translateX(-50%);width:44px;height:44px;font:800 15px Orbitron,sans-serif;letter-spacing:0;background:rgba(8,10,28,.55);border:1px solid rgba(255,255,255,.28)}
-  #pauseBtn:active{transform:translateX(-50%) scale(.94)}
-  #dashBtn{right:max(14px,env(safe-area-inset-right));bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px));width:clamp(64px,17vmin,84px);height:clamp(64px,17vmin,84px);font:800 11px Orbitron,sans-serif;letter-spacing:1px;background:radial-gradient(circle,rgba(8,10,28,.78) 58%,transparent 60%),conic-gradient(#53f7ff calc(var(--e,0)*1%),rgba(255,255,255,.18) 0);border:0;opacity:.88}
-  #dashBtn.rdy{opacity:1;box-shadow:0 0 18px rgba(83,247,255,.55)}
-  #dashBtn:active{transform:scale(.94)}
-  .card{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
-  @media (max-height:520px){.card{padding:12px 16px}h1{font-size:22px}.sub{margin:4px 0 8px;font-size:12px}.row{margin:6px 0}button,a.btn{padding:10px;margin-top:6px}}
-  @media (min-width:900px){.card{width:min(460px,100%)}}
-  /* pre-game showcase: the hero stays visible, the menu becomes a bottom sheet (or a side panel on wide screens) */
-  .ov.show{align-items:flex-end;background:linear-gradient(180deg,rgba(7,8,22,0) 38%,rgba(7,8,22,.78) 100%)}
-  .ov.show .card{max-height:46dvh;background:rgba(10,12,30,.58)}
-  @media (min-aspect-ratio:13/10){.ov.show{align-items:center;justify-content:flex-end;background:linear-gradient(90deg,rgba(7,8,22,0) 45%,rgba(7,8,22,.72) 100%)}.ov.show .card{width:min(400px,40vw);max-height:calc(100dvh - 24px)}}
-</style>
-</head>
-<body>
-<canvas id="c" aria-label="ZUMARY City Run 3D"></canvas>
-<canvas id="hud"></canvas>
-<div class="vig"></div>
-<button id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
-<button id="dashBtn" type="button" aria-label="Dash">DASH</button>
-<div class="ov" id="ov">
-  <div class="card">
-    <h1 id="oTitle"></h1>
-    <div class="sub" id="oSub"></div>
-    <div class="row" id="oRow"></div>
-    <button id="go" type="button"></button>
-    <a class="btn ghost" id="back" href="./index.html"></a>
-  </div>
-</div>
-<script src="./rig.js"></script>
-<script src="./facades.js"></script>
-<!-- 3D game, split by responsibility: core (engine) -> model (state, rules) -> view (rendering) -> controller (input, flow). Order matters. -->
-<script src="./js/3d/core/util.js"></script>
-<script src="./js/3d/core/i18n.js"></script>
-<script src="./js/3d/core/gl.js"></script>
-<script src="./js/3d/core/math.js"></script>
-<script src="./js/3d/core/shaders.js"></script>
-<script src="./js/3d/core/geometry.js"></script>
-<script src="./js/3d/core/textures.js"></script>
-<script src="./js/3d/core/draw.js"></script>
-<script src="./js/3d/model/themes.js"></script>
-<script src="./js/3d/view/city-builder.js"></script>
-<script src="./js/3d/view/character-batch.js"></script>
-<script src="./js/3d/view/chaser.js"></script>
-<script src="./js/3d/view/hero.js"></script>
-<script src="./js/3d/model/state.js"></script>
-<script src="./js/3d/model/progress.js"></script>
-<script src="./js/3d/model/world.js"></script>
-<script src="./js/3d/controller/audio.js"></script>
-<script src="./js/3d/model/achievements.js"></script>
-<script src="./js/3d/controller/input.js"></script>
-<script src="./js/3d/model/events.js"></script>
-<script src="./js/3d/model/update.js"></script>
-<script src="./js/3d/view/environment.js"></script>
-<script src="./js/3d/view/showcase.js"></script>
-<script src="./js/3d/view/render.js"></script>
-<script src="./js/3d/view/hud.js"></script>
-<script src="./js/3d/controller/flow.js"></script>
-<script src="./js/3d/controller/loop.js"></script>
-<script src="./js/3d/controller/main.js"></script>
-<script src="./js/3d/controller/api.js"></script>
-</body>
+      /* in-game touch / mouse buttons */
+      #pauseBtn,
+      #dashBtn {
+        position: fixed;
+        display: none;
+        width: auto;
+        margin: 0;
+        padding: 0;
+        z-index: 5;
+        border-radius: 50%;
+        color: #eaf8ff;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #pauseBtn.on,
+      #dashBtn.on {
+        display: grid;
+        place-items: center;
+      }
+      #pauseBtn {
+        left: 50%;
+        top: max(10px, calc(env(safe-area-inset-top) + 6px));
+        transform: translateX(-50%);
+        width: 44px;
+        height: 44px;
+        font:
+          800 15px Orbitron,
+          sans-serif;
+        letter-spacing: 0;
+        background: rgba(8, 10, 28, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+      }
+      #pauseBtn:active {
+        transform: translateX(-50%) scale(0.94);
+      }
+      #dashBtn {
+        right: max(14px, env(safe-area-inset-right));
+        bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px));
+        width: clamp(64px, 17vmin, 84px);
+        height: clamp(64px, 17vmin, 84px);
+        font:
+          800 11px Orbitron,
+          sans-serif;
+        letter-spacing: 1px;
+        background:
+          radial-gradient(circle, rgba(8, 10, 28, 0.78) 58%, transparent 60%),
+          conic-gradient(
+            #53f7ff calc(var(--e, 0) * 1%),
+            rgba(255, 255, 255, 0.18) 0
+          );
+        border: 0;
+        opacity: 0.88;
+      }
+      #dashBtn.rdy {
+        opacity: 1;
+        box-shadow: 0 0 18px rgba(83, 247, 255, 0.55);
+      }
+      #dashBtn:active {
+        transform: scale(0.94);
+      }
+      .card {
+        max-height: calc(100dvh - 24px);
+        overflow: auto;
+        overscroll-behavior: contain;
+      }
+      @media (max-height: 520px) {
+        .card {
+          padding: 12px 16px;
+        }
+        h1 {
+          font-size: 22px;
+        }
+        .sub {
+          margin: 4px 0 8px;
+          font-size: 12px;
+        }
+        .row {
+          margin: 6px 0;
+        }
+        button,
+        a.btn {
+          padding: 10px;
+          margin-top: 6px;
+        }
+      }
+      @media (min-width: 900px) {
+        .card {
+          width: min(460px, 100%);
+        }
+      }
+      /* pre-game showcase: the hero stays visible, the menu becomes a bottom sheet (or a side panel on wide screens) */
+      .ov.show {
+        align-items: flex-end;
+        background: linear-gradient(
+          180deg,
+          rgba(7, 8, 22, 0) 38%,
+          rgba(7, 8, 22, 0.78) 100%
+        );
+      }
+      .ov.show .card {
+        max-height: 46dvh;
+        background: rgba(10, 12, 30, 0.58);
+      }
+      @media (min-aspect-ratio: 13/10) {
+        .ov.show {
+          align-items: center;
+          justify-content: flex-end;
+          background: linear-gradient(
+            90deg,
+            rgba(7, 8, 22, 0) 45%,
+            rgba(7, 8, 22, 0.72) 100%
+          );
+        }
+        .ov.show .card {
+          width: min(400px, 40vw);
+          max-height: calc(100dvh - 24px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c" aria-label="ZUMARY City Run 3D"></canvas>
+    <canvas id="hud"></canvas>
+    <div class="vig"></div>
+    <button id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
+    <button id="dashBtn" type="button" aria-label="Dash">DASH</button>
+    <div class="ov" id="ov">
+      <div class="card">
+        <h1 id="oTitle"></h1>
+        <div class="sub" id="oSub"></div>
+        <div class="row" id="oRow"></div>
+        <button id="go" type="button"></button>
+        <a class="btn ghost" id="back" href="./index.html"></a>
+      </div>
+    </div>
+    <script src="./rig.js"></script>
+    <script src="./facades.js"></script>
+    <!-- 3D game, split by responsibility: core (engine) -> model (state, rules) -> view (rendering) -> controller (input, flow). Order matters. -->
+    <script src="./js/3d/core/util.js"></script>
+    <script src="./js/3d/core/i18n.js"></script>
+    <script src="./js/3d/core/gl.js"></script>
+    <script src="./js/3d/core/math.js"></script>
+    <script src="./js/3d/core/shaders.js"></script>
+    <script src="./js/3d/core/geometry.js"></script>
+    <script src="./js/3d/core/textures.js"></script>
+    <script src="./js/3d/core/draw.js"></script>
+    <script src="./js/3d/model/themes.js"></script>
+    <script src="./js/3d/view/city-builder.js"></script>
+    <script src="./js/3d/view/character-batch.js"></script>
+    <script src="./js/3d/view/chaser.js"></script>
+    <script src="./js/3d/view/hero.js"></script>
+    <script src="./js/3d/model/state.js"></script>
+    <script src="./js/3d/model/progress.js"></script>
+    <script src="./js/3d/model/world.js"></script>
+    <script src="./js/3d/controller/audio.js"></script>
+    <script src="./js/3d/model/achievements.js"></script>
+    <script src="./js/3d/controller/input.js"></script>
+    <script src="./js/3d/model/events.js"></script>
+    <script src="./js/3d/model/update.js"></script>
+    <script src="./js/3d/view/environment.js"></script>
+    <script src="./js/3d/view/showcase.js"></script>
+    <script src="./js/3d/view/render.js"></script>
+    <script src="./js/3d/view/hud.js"></script>
+    <script src="./js/3d/controller/flow.js"></script>
+    <script src="./js/3d/controller/loop.js"></script>
+    <script src="./js/3d/controller/main.js"></script>
+    <script src="./js/3d/controller/api.js"></script>
+  </body>
 </html>

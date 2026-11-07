@@ -4,17 +4,17 @@ An endless runner and campaign game set in Uzbek cities (Tashkent, Samarkand, Bu
 
 ## Files
 
-| File | Purpose |
-|---|---|
-| `index.html` | Page markup and script loading order |
-| `style.css` | Layout, mobile bottom-sheet menus, touch pad, settings |
-| `i18n.js` | Uzbek / English / Japanese texts and language switching |
-| `art.js` | Pre-rendered city scenery, parallax layers, ground, thumbnails |
-| `chars.js` | Built-in painted runner, guard, dog (fallback), coins, obstacles, icons |
-| `sprites.js` | Optional: use your own PNG pictures instead (used only if `rig.js` is missing) |
-| `rig.js` | Skeleton-animated robots: hero robot, police robot, robot hound (IK legs, swinging arms, glowing parts, back-light rim) |
-| `assets/characters/` | Character pictures: `hero_run1/run2/slide.png` (runner), `dog.png`, `guard.png` (officer) |
-| `game.js` | Game engine, input, physics, spawning, audio, UI, saving |
+| File                 | Purpose                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `index.html`         | Page markup and script loading order                                                                                    |
+| `style.css`          | Layout, mobile bottom-sheet menus, touch pad, settings                                                                  |
+| `i18n.js`            | Uzbek / English / Japanese texts and language switching                                                                 |
+| `art.js`             | Pre-rendered city scenery, parallax layers, ground, thumbnails                                                          |
+| `chars.js`           | Built-in painted runner, guard, dog (fallback), coins, obstacles, icons                                                 |
+| `sprites.js`         | Optional: use your own PNG pictures instead (used only if `rig.js` is missing)                                          |
+| `rig.js`             | Skeleton-animated robots: hero robot, police robot, robot hound (IK legs, swinging arms, glowing parts, back-light rim) |
+| `assets/characters/` | Character pictures: `hero_run1/run2/slide.png` (runner), `dog.png`, `guard.png` (officer)                               |
+| `game.js`            | Game engine, input, physics, spawning, audio, UI, saving                                                                |
 
 Script order matters: `i18n.js`, `art.js`, `chars.js`, `rig.js`, `sprites.js`, `game.js` (`index.html` already does this).
 The only external resource is the Google Fonts stylesheet. If it is blocked, the game falls back to system fonts.
@@ -89,14 +89,16 @@ Opening `index.html` directly also works. A local server is better because it ma
 - The Japanese texts were written by the assistant. A native speaker should review them.
 - The characters and scenery are drawn in code, not taken from photos or sprite artwork. They are stylised, not photo-real or GTA-grade 3D art.
 
-
 ## City Run (city.html)
+
 Subway-Surfers-style mode: the camera is behind the robot, running down the middle of an Uzbek city street (Tashkent → Samarkand → Bukhara → Khiva) on 3 lanes. Swipe left/right to change lane, up to jump, down to slide (keys: arrows / WASD, P pause, M mute). Collect spinning patterned coins (gold gems = 5). Two hits and the police robot + hound catch you. Coins go to the same wallet as the main game. Pseudo-3D on plain Canvas 2D, no libraries. Not tested on real phones — only headless Chromium.
 
 ### City Run 3D (city3d.html)
+
 Real 3D version (WebGL, own tiny engine — no libraries): perspective buildings with lighting and fog, 3D robot built from jointed parts, 3D coins, parked cars, lamps and trees. Falls back to city.html if WebGL is missing. Uses facades.js (procedural Uzbek facade textures).
 
 **City Run 3D — v2 (performance + features)**
+
 - Performance: batched characters, preallocated buffers, time-sliced city generation (no hitches), dynamic-resolution governor (lowers/raises render resolution automatically to hold the frame rate), 4 quality tiers chosen from CPU cores / memory / GPU name. Software-GL headless run: ~3 ms JS per frame. Real iPhone/Android devices were NOT tested, so "never freezes on every phone" cannot be guaranteed — the governor is the safety net.
 - 6 cities cycling every 700 m: Tashkent, Samarkand, Bukhara, Khiva, Fergana (mountains), Neon Tashkent (night + rain).
 - Obstacles: low barriers, gates (slide), cones, pits, ramps, boost pads, carts, laser beams, buses, cars, moving traffic — ~14 spawn patterns.
@@ -104,7 +106,9 @@ Real 3D version (WebGL, own tiny engine — no libraries): perspective buildings
 - Meta: daily missions (seeded by date), XP/levels, revive for 100 coins, procedural music, rain.
 
 ## Main game performance pass (v3)
+
 Measured in headless Chromium with software rendering (no GPU), so absolute numbers are pessimistic and real devices were NOT measured.
+
 - Desktop heat: real `shadowBlur` is now only used when the player picks ULTRA; desktop pixel budget cut (2.6M → 1.5M px); overlay `backdrop-filter` blur removed (it re-blurred the live canvas every frame). Software-render cost at the top level: 48 ms → 32 ms per frame; auto mode now starts at HIGH.
 - Idle: menus/game-over redraw at ~30 fps, pause at ~4 fps, hidden tab does no work at all (measured: 60 → 8 draws / 2 s while paused).
 - Adaptive quality: drops fast when slow, now also climbs back after ~3.5 s of headroom, never returning to a level that just failed (no oscillation). Manual levels: AUTO / ULTRA / HIGH / MEDIUM / LOW (Settings or the 🎨 button).
@@ -114,13 +118,15 @@ Measured in headless Chromium with software rendering (no GPU), so absolute numb
 - Not measured: real CPU/GPU %, battery/thermal, loading time on real networks, touch latency on real devices.
 
 ## Evolution pass (v4) — what was done, and what was not
+
 Done (2D main game, tested in headless Chromium only):
+
 - **3D button** redesigned as a proper CTA card (opaque, wraps text, 58 px tall); checked at 320 / 390 px portrait and 844×390 landscape.
 - **Settings** (settings.js): 6 collapsible sections, ~38 controls, all wired to real behaviour and saved (`zr_cfg`, `zr_gfx`): graphics preset (Auto/Ultra/High/Medium/Low/Custom) + render scale, FPS limit (only rates the device reports: 30/60/90/120/144/max), 10 effect toggles, adaptive quality, battery saver, low-memory mode, reduced background processing, auto optimisation, thermal-friendly mode, FPS counter, volumes, vibration, swipe sensitivity, camera effects, auto-pause, hints, fullscreen, UI scale, shake intensity, layout, left-handed, reduced motion, high contrast, colour-friendly UI (interface colours only), larger UI, simplified effects, reset.
 - **Coin types**: gold, crystal, energy, ZUMARY coin — pre-rendered rotating sprites, distinct pickup effects/sounds, rare-coin mission + achievement.
 - **World events** (endless + non-boss levels): energy storm (coins ×2), meteor shower (dodge telegraphed impacts, leaves crystals), city blackout (score ×1.5), magnet zone, speed zone (speed/score ×1.5). Event mission + achievement, XP bonus.
 - Already existed and kept: power-ups (magnet, shield, turbo, ×2, slow-motion, hoverboard), combo multiplier, daily missions, XP, medals.
-Not done in this pass: redesign of the 2D cities and of the robot characters, secret paths / bonus zones, city-specific missions, billboards/drones/animated signs, and the new coin types and world events in the 3D mode (3D keeps its own coins/power-ups/helicopter event).
+  Not done in this pass: redesign of the 2D cities and of the robot characters, secret paths / bonus zones, city-specific missions, billboards/drones/animated signs, and the new coin types and world events in the 3D mode (3D keeps its own coins/power-ups/helicopter event).
 
 ## v5 — 3D hero & feature pass (city3d.html)
 
@@ -143,5 +149,5 @@ Not done in this pass: redesign of the 2D cities and of the robot characters, se
   - `model/` data and rules: themes, state, progress (missions/XP), world (spawning), achievements, events, update (simulation step)
   - `view/` rendering: city-builder, character-batch, chaser, hero, environment, showcase, render, hud
   - `controller/` input and flow: audio, input (touch / mouse / keyboard / gamepad), flow (screens), loop, main (boot), api (`ZR3D` test hooks)
-  - Honest note: the files share one global lexical scope (a pragmatic split of the former single closure), so this is an MVC-*inspired* separation by responsibility, not isolated modules with explicit imports. Turning it into ES modules with an explicit state object would be the next step.
+  - Honest note: the files share one global lexical scope (a pragmatic split of the former single closure), so this is an MVC-_inspired_ separation by responsibility, not isolated modules with explicit imports. Turning it into ES modules with an explicit state object would be the next step.
 - **Limits**: still tested only in headless Chromium (SwiftShader); no real phone / tablet / gamepad run; art is procedural geometry.
