@@ -253,9 +253,9 @@ function* genChunk(ci) {
     zB = zA + CH,
     th = themeAt(zA + CH / 2),
     ch = { ci, zA, zB, b: {}, meshes: [] };
-  if (metroChunk(ci)) {
-    /* Metro tunnel stretch: drawn from shared tunnel meshes, no city to build */
-    ch.metro = true;
+  if (secChunk(ci)) {
+    /* special section (metro / tim / wall / fields): drawn from shared meshes, no city to build */
+    ch.sec = secChunk(ci);
     ch.b = null;
     CUR[0] = CUR[1] = zB;
     return ch;
@@ -353,6 +353,17 @@ function* genChunk(ci) {
       lb.tex = null;
       lb.mat = { emis: 1 };
       lb.b.sph(sd * 4.25, 5.0, z, 0.26, 0.14, 0.26, 5, 8, [1, 0.9, 0.6]);
+      (ch.halo || (ch.halo = new B())).quad(
+        [
+          [sd * 4.25 - 2.2, 7.2, z - 0.4],
+          [sd * 4.25 + 2.2, 7.2, z - 0.4],
+          [sd * 4.25 + 2.2, 2.8, z - 0.4],
+          [sd * 4.25 - 2.2, 2.8, z - 0.4],
+        ],
+        [0, 0, -1],
+        [[0, 0], [1, 0], [1, 1], [0, 1]],
+        [1, 0.9, 0.65],
+      );
       if (kit && THEMES[th].mount && z % 20 === 0) {
         for (const dx of [-0.2, 0.2])
           sb.sph(
@@ -391,6 +402,10 @@ function* genChunk(ci) {
     if (e.b.i.length) ch.meshes.push({ m: e.b.mesh(), tex: e.tex, mat: e.mat });
   }
   ch.b = null;
+  if (ch.halo) {
+    ch.haloM = ch.halo.mesh();
+    ch.halo = null;
+  }
   return ch;
 }
 function addMinaretMaybe(ch, sd, z, th) {

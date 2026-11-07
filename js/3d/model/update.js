@@ -24,7 +24,7 @@ function landed(v) {
   flipT = 0;
 }
 const DASHC = ["#53f7ff", "#ffe27a", "#ff4fd8"];
-let lastMetro = false,
+let lastMetro = 0,
   forkMul = 1,
   lastFork = false,
   forkWarned = false;
@@ -100,15 +100,16 @@ function update(dt) {
       }
     }
     {
-      const inM = metroAt(pz + 4);
-      if (inM !== lastMetro) {
-        lastMetro = inM;
-        if (pz > 50 && inM) {
-          floatText("METRO", "#7fe6ff");
+      const sc = secAt(pz + 4);
+      if (sc !== lastMetro) {
+        const prev = lastMetro;
+        lastMetro = sc;
+        if (pz > 50 && sc) {
+          floatText(SEC_NAME[sc], "#7fe6ff");
           sfx.zumary();
-        } else if (pz > 50) {
+        } else if (pz > 50 && prev) {
           bonus += 100;
-          floatText("METRO +100", "#ffe27a");
+          floatText(SEC_NAME[prev] + " +100", "#ffe27a");
         }
       }
     }

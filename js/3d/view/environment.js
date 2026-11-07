@@ -16,7 +16,8 @@ const maxc = (a, b) => [
     lerp(a[1], b[1], t),
     lerp(a[2], b[2], t),
   ];
-let envTheme = 0;
+let envTheme = 0,
+  envT = 0;
 function setEnvironment() {
   const n = THEMES.length,
     th = themeAt(pz),
@@ -42,12 +43,39 @@ function setEnvironment() {
       l = Math.hypot(...v);
     return v.map((x) => x / l);
   })();
-  rainA = lerp(rainA, THEMES[envTheme].rain ? 1 : 0, 0.02);
-  const mk = metroAmt(pz); // Metro tunnel: dark, warm, lit by chandeliers
+  {
+    /* weather: smooth blend; nothing falls inside enclosed sections */
+    const wt = weatherTarget(pz),
+      open = 1 - metroAmt(pz),
+      now = performance.now(),
+      kk = 1 - Math.exp(-Math.min(0.25, (now - envT) / 1000) / 2.2);
+    envT = now;
+    rainA = lerp(rainA, wt[0] * open, kk);
+    snowA = lerp(snowA, wt[1] * open, kk);
+    fogA = lerp(fogA, wt[2] * (0.4 + 0.6 * open), kk);
+    const oc = clamp(Math.max(rainA * 0.75, snowA * 0.6, fogA * 0.9), 0, 1),
+      lum = (FOGC[0] + FOGC[1] + FOGC[2]) / 3,
+      grey = mulc([0.8, 0.82, 0.86], clamp(lum * 1.5, 0.22, 1));
+    if (oc > 0.01) {
+      const gk = oc * 0.65;
+      FOGC = mixa(FOGC, grey, clamp(fogA * 0.8 + rainA * 0.3 + snowA * 0.4, 0, 0.85));
+      SKY.cur = {
+        top: mixa(SKY.cur.top, mulc(grey, 0.75), gk),
+        mid: mixa(SKY.cur.mid, mulc(grey, 0.9), gk),
+        low: mixa(SKY.cur.low, grey, gk),
+        sun: SKY.cur.sun,
+      };
+      SKYC = mixa(SKYC, mulc(grey, 0.8), gk * 0.7);
+      GNDC = mixa(GNDC, mulc(grey, 0.5), gk * 0.5);
+      SUNC = mulc(SUNC, 1 - 0.55 * oc);
+    }
+  }
+  const mk = metroAmt(pz); // enclosed sections: dark, warm, lit by lamps
   if (mk > 0) {
-    FOGC = mixa(FOGC, [0.06, 0.05, 0.08], mk);
-    SKYC = mixa(SKYC, [0.2, 0.19, 0.25], mk);
-    GNDC = mixa(GNDC, [0.14, 0.13, 0.16], mk);
+    const tim = (secAt(pz + 40) || secAt(pz - 40)) === 2;
+    FOGC = mixa(FOGC, tim ? [0.1, 0.06, 0.04] : [0.06, 0.05, 0.08], mk);
+    SKYC = mixa(SKYC, tim ? [0.3, 0.22, 0.17] : [0.2, 0.19, 0.25], mk);
+    GNDC = mixa(GNDC, tim ? [0.2, 0.14, 0.1] : [0.14, 0.13, 0.16], mk);
     SUNC = mulc(SUNC, 1 - 0.6 * mk);
   }
 }

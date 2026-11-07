@@ -58,3 +58,27 @@ function drawFork() {
   draw(FORKM.strip, Tp(LX[0], 0.01, z0), null, { tint: [1, 0.15, 0.2], emis: 1, alpha: 0.5 });
   draw(FORKM.strip, Tp(LX[2], 0.01, z0), null, { tint: [1, 0.8, 0.15], emis: 1, alpha: 0.5 });
 }
+/* soft glow around street lamps — shown in rain, fog and snow */
+const HALOT = (() => {
+  const c = mkc(64, 64),
+    g = c.getContext("2d"),
+    r = g.createRadialGradient(32, 32, 1, 32, 32, 31);
+  r.addColorStop(0, "rgba(255,255,255,1)");
+  r.addColorStop(0.25, "rgba(255,255,255,0.55)");
+  r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r;
+  g.fillRect(0, 0, 64, 64);
+  return texFrom(c);
+})();
+function drawHalos() {
+  const wk = clamp(rainA * 0.8 + fogA * 1.0 + snowA * 0.7, 0, 1);
+  if (wk < 0.06) return;
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  gl.depthMask(false);
+  for (const ch of CHUNKS.values())
+    if (ch.haloM && ch.zB >= pz - 10 && ch.zA < pz + FAR)
+      draw(ch.haloM, IDM, HALOT, { emis: 1, alpha: 0.5 * wk });
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+}

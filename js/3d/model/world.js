@@ -18,27 +18,38 @@ function coinLine(l, z, n, step = 2.2, y) {
 const low = (l, z) => objs.push({ k: "low", x: LX[l], z, len: 0.7 }),
   gate = (l, z) => objs.push({ k: "gate", x: LX[l], z, len: 0.6 }),
   cone = (l, z) =>
-    objs.push({ k: metroAt(z) ? "low" : "cone", x: LX[l], z, len: metroAt(z) ? 0.7 : 1.2 });
+    secAt(z)
+      ? low(l, z)
+      : objs.push({ k: "cone", x: LX[l], z, len: 1.2 });
 const pit = (l, z) => objs.push({ k: "pit", x: LX[l], z, len: 3 }),
   ramp = (l, z) => objs.push({ k: "ramp", x: LX[l], z, len: 6 }),
   pad = (l, z) => objs.push({ k: "pad", x: LX[l], z, len: 4 });
-const cart = (l, z) =>
+/* market stall / hay cart that stays put (sections) or rolls across lanes (street) */
+const cartStill = (l, z) =>
+  objs.push({ k: "cart", x: LX[l], z, len: 1.4, vx: 0 });
+const cart = (l, z) => {
+    const s = secAt(z);
+    if (s === 1) return gate(l, z);
+    if (s) return cartStill(l, z);
     objs.push({
-      k: metroAt(z) ? "gate" : "cart",
+      k: "cart",
       x: LX[l],
       z,
-      len: metroAt(z) ? 0.6 : 1.4,
-      vx: metroAt(z) ? 0 : (Math.random() < 0.5 ? -1 : 1) * rnd(1.7, 2.5),
-    }),
+      len: 1.4,
+      vx: (Math.random() < 0.5 ? -1 : 1) * rnd(1.7, 2.5),
+    });
+  },
   laser = (z, hi) => objs.push({ k: "laser", x: 0, z, len: 0.5, hi });
-const car = (l, z, vz) =>
+const car = (l, z, vz) => {
+  const s = secAt(z);
+  if (s > 1) return low(l, z);
   objs.push({
-    k: metroAt(z) ? "bus" : "car",
-    metro: metroAt(z),
+    k: s ? "bus" : "car",
+    metro: !!s,
     x: LX[l],
     z,
-    len: metroAt(z) ? 11 : 4.6,
-    vz: metroAt(z) ? 0 : vz || 0,
+    len: s ? 11 : 4.6,
+    vz: s ? 0 : vz || 0,
     hue: pick([
       [0.92, 0.92, 0.95],
       [0.85, 0.12, 0.16],
@@ -46,10 +57,13 @@ const car = (l, z, vz) =>
       [0.2, 0.36, 0.7],
     ]),
   });
-const bus = (l, z, len) =>
+};
+const bus = (l, z, len) => {
+  const s = secAt(z);
+  if (s > 1) return gate(l, z);
   objs.push({
     k: "bus",
-    metro: metroAt(z),
+    metro: s === 1,
     x: LX[l],
     z,
     len,
@@ -59,6 +73,7 @@ const bus = (l, z, len) =>
       [0.2, 0.62, 0.52],
     ]),
   });
+};
 const powUp = (l, z, t) =>
     objs.push({ k: "pow", t, x: LX[l], z, y: 1.2, len: 0 }),
   letterUp = (l, z, n) =>
@@ -68,6 +83,105 @@ const BLOCK = { low: 1, cone: 1, car: 1, bus: 1, cart: 1 },
 function arc(l, z, n, step, h) {
   for (let i = 0; i < n; i++)
     coin(l, z + i * step, 1.0 + Math.sin((i / (n - 1)) * Math.PI) * h);
+}
+/* patterns for the special sections; returns the length used */
+function secSpawn(sec, z, L, o1, o2) {
+  const q = Math.random();
+  if (sec === 1) {
+    /* metro: parked wagons to run over / between, turnstile gates */
+    if (q < 0.4) {
+      bus(L, z + 4, rnd(12, 16));
+      coinLine(o1, z, 9);
+      if (Math.random() < 0.5) coinLine(o2, z + 3, 8);
+      return 34;
+    } else if (q < 0.7) {
+      bus(L, z + 4, rnd(10, 14));
+      bus(o1, z + 12, rnd(10, 13));
+      coinLine(o2, z, 11);
+      return 38;
+    } else if (q < 0.85) {
+      gate(L, z + 8);
+      gate(o1, z + 8);
+      coinLine(o2, z, 8);
+      return 22;
+    }
+    low(L, z + 8);
+    arc(o1, z, 9, 1.8, 1.4);
+    coinLine(o2, z + 6, 7);
+    return 24;
+  }
+  if (sec === 2) {
+    /* Bukhara tim: stalls, hanging carpets (slide), crates */
+    if (q < 0.3) {
+      cartStill(L, z + 8);
+      cartStill(o1, z + 14);
+      coinLine(o2, z, 10);
+      return 28;
+    } else if (q < 0.55) {
+      gate(L, z + 8);
+      gate(o1, z + 8);
+      coinLine(o2, z + 2, 8, 2.2, 1.0);
+      coinLine(L, z + 1, 5, 1.6, 0.7);
+      return 24;
+    } else if (q < 0.8) {
+      low(L, z + 8);
+      low(o1, z + 8);
+      arc(o2, z + 1, 9, 1.8, 1.3);
+      return 24;
+    }
+    cartStill(L, z + 10);
+    gate(o1, z + 16);
+    coinLine(o2, z, 12);
+    coinLine(L, z + 14, 5, 1.6, 0.7);
+    return 30;
+  }
+  if (sec === 3) {
+    /* Khiva wall-top: gaps in the deck to jump, low blocks, arches */
+    if (q < 0.35) {
+      pit(L, z + 8);
+      arc(L, z + 3, 9, 1.3, 1.3);
+      coinLine(o1, z, 8);
+      return 26;
+    } else if (q < 0.6) {
+      pit(L, z + 8);
+      pit(o1, z + 18);
+      arc(L, z + 3, 8, 1.3, 1.3);
+      coinLine(o2, z, 12);
+      return 30;
+    } else if (q < 0.8) {
+      ramp(L, z + 6);
+      for (let i = 0; i < 9; i++) {
+        const t = (i * 1.9) / 21;
+        coin(L, z + 12 + i * 1.9, Math.max(1.0, 1.4 + 10.5 * t - 14 * t * t));
+      }
+      coinLine(o1, z + 2, 8);
+      return 34;
+    }
+    gate(L, z + 8);
+    low(o1, z + 8);
+    coinLine(o2, z, 9);
+    return 24;
+  }
+  /* sec === 4, Fergana: irrigation canals to jump, hay carts, cotton fields */
+  if (q < 0.35) {
+    pit(L, z + 8);
+    arc(L, z + 3, 9, 1.2, 1.2);
+    coinLine(o1, z, 8);
+    return 26;
+  } else if (q < 0.6) {
+    for (const l of [0, 1, 2]) pit(l, z + 10);
+    arc(1, z + 4, 9, 1.3, 1.4);
+    return 26;
+  } else if (q < 0.82) {
+    cartStill(o1, z + 12);
+    coinLine(L, z + 2, 9);
+    coinLine(o2, z + 6, 7);
+    return 26;
+  }
+  low(L, z + 8);
+  coinLine(o1, z, 9);
+  coin(o2, z + 10, 1.0, true);
+  return 22;
 }
 function spawn() {
   const z = nextSpawn,
@@ -91,30 +205,9 @@ function spawn() {
     nextSpawn = z + 30;
     return;
   }
-  if (metroAt(z + 20) && Math.random() < 0.65) {
-    /* inside the Metro tunnel: parked wagons to run over / between, turnstile gates, benches */
-    const q = Math.random();
-    if (q < 0.4) {
-      bus(L, z + 4, rnd(12, 16));
-      coinLine(o1, z, 9);
-      if (Math.random() < 0.5) coinLine(o2, z + 3, 8);
-      used = 34;
-    } else if (q < 0.7) {
-      bus(L, z + 4, rnd(10, 14));
-      bus(o1, z + 12, rnd(10, 13));
-      coinLine(o2, z, 11);
-      used = 38;
-    } else if (q < 0.85) {
-      gate(L, z + 8);
-      gate(o1, z + 8);
-      coinLine(o2, z, 8);
-      used = 22;
-    } else {
-      low(L, z + 8);
-      arc(o1, z, 9, 1.8, 1.4);
-      coinLine(o2, z + 6, 7);
-      used = 24;
-    }
+  const sec = secAt(z + 20);
+  if (sec && Math.random() < 0.8) {
+    used = secSpawn(sec, z, L, o1, o2);
     nextSpawn = z + used + speed * rnd(0.5, 0.85) * (1.1 - hard * 0.35);
     return;
   }

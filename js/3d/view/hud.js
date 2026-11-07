@@ -30,11 +30,21 @@ function drawHUD(vp) {
     hx.fillRect(p[0], p[1], 3.2 * u, 3.2 * u);
   }
   hx.globalAlpha = 1;
-  if (rainA > 0.05 && qual < 2 && state !== "ready") {
+  if (snowA > 0.05 && state !== "ready") {
+    hx.fillStyle = "rgba(255,255,255," + 0.85 * snowA + ")";
+    const n = qual < 2 ? 70 : qual < 3 ? 45 : 26;
+    for (let i = 0; i < n; i++) {
+      const sz = (1.6 + (i % 3)) * u,
+        x = ((i * 97.3 + 31) % W) + Math.sin(tNow / 700 + i) * 14 * u,
+        y = ((i * 53.1 + tNow * (0.05 + (i % 4) * 0.018)) % (H + 20)) - 10;
+      hx.fillRect(x, y, sz, sz);
+    }
+  }
+  if (rainA > 0.05 && qual < 3 && state !== "ready") {
     hx.strokeStyle = "rgba(200,220,255," + 0.32 * rainA + ")";
     hx.lineWidth = 1;
     hx.beginPath();
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0, n = qual < 2 ? 70 : 34; i < n; i++) {
       const x = (i * 83.7 + 13) % W,
         y = ((i * 47.3 + tNow * (0.9 + (i % 5) * 0.12)) % (H + 40)) - 20;
       hx.moveTo(x, y);
