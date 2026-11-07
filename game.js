@@ -2560,6 +2560,21 @@ function drawPlayer() {
     );
     ctx.fill();
   }
+  if (FX.charFx && !Q.flat && state !== "over") {
+    // wet-road reflection: one flipped, faded copy of the runner sprite mirrored about the ground line (cheap depth cue)
+    ctx.save();
+    ctx.globalAlpha = 0.17;
+    ctx.translate(p.x + p.w / 2, sy);
+    ctx.scale(1, -0.5);
+    ctx.drawImage(
+      R.f[playerFrame()],
+      -R.fx * PS,
+      -R.fy * PS - hg,
+      R.w * PS,
+      R.h * PS,
+    );
+    ctx.restore();
+  }
   ctx.save();
   ctx.translate(p.x + p.w / 2, p.y + p.h);
   ctx.scale(1 + sq * 0.5, 1 - sq * 0.5); // squash & stretch
