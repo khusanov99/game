@@ -129,7 +129,7 @@ function rumbleTick(on) {
     src.buffer = noiseBuf;
     src.loop = true;
     lp.type = "lowpass";
-    lp.frequency.value = 170;
+    lp.frequency.value = 650; // phone speakers cannot play deep bass, so the rumble lives in the low-mids
     g.gain.value = 0;
     src.connect(lp);
     lp.connect(g);
@@ -152,7 +152,7 @@ function trainWhoosh() {
   bp.frequency.setValueAtTime(180, t);
   bp.frequency.exponentialRampToValueAtTime(900, t + 1.6);
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.1, t + 0.7);
+  g.gain.exponentialRampToValueAtTime(0.22, t + 0.7);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
   src.connect(bp);
   bp.connect(g);
@@ -160,28 +160,93 @@ function trainWhoosh() {
   src.start(t);
   src.stop(t + 1.9);
 }
-/* station chime ("ding-dong") plus a spoken announcement when this device has a voice for the game's language */
+/* phones: unlock audio and speech on the first touch, use the media channel (iOS silent switch), keep the context alive */
+let VOICES = [],
+  speechOk = false,
+  silentEl = null;
+function loadVoices() {
+  try {
+    VOICES = window.speechSynthesis.getVoices() || [];
+  } catch (e) {}
+}
+try {
+  loadVoices();
+  window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+} catch (e) {}
+function unlockAudio() {
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = "playback";
+  } catch (e) {}
+  actx();
+  try {
+    if (AC && AC.state !== "running") AC.resume();
+  } catch (e) {}
+  if (!silentEl) {
+    try {
+      /* a silent looping <audio> moves older iOS Safari to the playback channel, which ignores the ring/silent switch */
+      silentEl = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=");
+      silentEl.loop = true;
+      silentEl.volume = 0.01;
+      silentEl.play().catch(() => (silentEl = null));
+    } catch (e) {}
+  }
+  if (!speechOk) {
+    try {
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+      speechOk = true;
+    } catch (e) {}
+  }
+  loadVoices();
+}
+for (const ev of ["pointerdown", "touchend", "keydown"]) addEventListener(ev, unlockAudio, { passive: true });
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden)
+    try {
+      AC && AC.state !== "running" && AC.resume();
+    } catch (e) {}
+});
+/* one bell strike: a fundamental plus two bright overtones, so it still carries on a tiny phone speaker */
+function bell(f, t, d, v) {
+  tone(f, d, "sine", v, 0, t);
+  tone(f * 2, d * 0.6, "triangle", v * 0.5, 0, t);
+  tone(f * 3, d * 0.4, "sine", v * 0.25, 0, t);
+}
+/* Uzbek is rarely installed as a voice: fall back to a Turkish or Russian voice, which read Uzbek Latin text well enough */
+function pickVoice() {
+  const prefs = LG === "ja" ? ["ja"] : LG === "uz" ? ["uz", "tr", "ru"] : ["en"];
+  for (const p of prefs) {
+    const v = VOICES.find((x) => x.lang && x.lang.toLowerCase().startsWith(p));
+    if (v) return v;
+  }
+  return null;
+}
+/* station chime ("ding-dong") plus a spoken announcement when this device has a suitable voice */
 function stationChime(name) {
   if (muted) return;
-  tone(784, 0.5, "sine", 0.07);
-  setTimeout(() => tone(587, 0.7, "sine", 0.07), 330);
+  const a = actx();
+  if (a) {
+    bell(880, a.currentTime, 0.9, 0.16);
+    bell(660, a.currentTime + 0.42, 1.2, 0.16);
+  }
   try {
     const ss = window.speechSynthesis,
-      lg = LG === "ja" ? "ja" : LG === "uz" ? "uz" : "en",
-      v = ss && ss.getVoices().find((x) => x.lang && x.lang.toLowerCase().startsWith(lg));
-    if (v && name !== lastSpeak) {
+      v = pickVoice();
+    if (ss && v && name !== lastSpeak) {
       lastSpeak = name;
-      const u = new SpeechSynthesisUtterance(lg === "ja" ? "次は、" + name + "です" : lg === "uz" ? "Navbatdagi bekat: " + name : "Next station: " + name);
+      const u = new SpeechSynthesisUtterance(LG === "ja" ? "次は、" + name + "です" : LG === "uz" ? "Navbatdagi bekat: " + name : "Next station: " + name);
       u.voice = v;
       u.lang = v.lang;
-      u.volume = 0.7;
-      setTimeout(() => ss.speak(u), 900);
+      u.volume = 1;
+      ss.cancel();
+      setTimeout(() => ss.speak(u), 1300);
     }
   } catch (e) {}
 }
 function musicTick() {
   const inMetro = state === "play" && !paused && metroAmt(pz) > 0.5 && secAt(pz) === 1;
-  rumbleTick(muted || state !== "play" || paused ? 0 : 0.05 * metroAmt(pz) * (secAt(pz) === 1 ? 1 : 0.4));
+  rumbleTick(muted || state !== "play" || paused ? 0 : 0.1 * metroAmt(pz) * (secAt(pz) === 1 ? 1 : 0.4));
   if (muted || state !== "play" || paused || !AC || AC.state !== "running") return;
   const t = AC.currentTime;
   if (inMetro && t > trainT) {
