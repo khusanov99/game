@@ -77,6 +77,20 @@ function spawn() {
     hard = clamp(pz / 2600, 0, 1),
     r = Math.random() * (pz < 350 ? 0.55 : 1);
   let used = 26;
+  if (forkAt(z)) {
+    /* road fork: walled median + fast (left) / coin (right) roads */
+    objs.push({ k: "bus", fork: true, x: LX[1], z, len: 30, hue: [1, 1, 1] });
+    const q = Math.random();
+    if (q < 0.4) low(0, z + 6);
+    else if (q < 0.7) gate(0, z + 12);
+    else cone(0, z + 8);
+    if (Math.random() < 0.6) low(0, z + 22);
+    coin(0, z + 15, 1.0, Math.random() < 0.3);
+    coinLine(2, z + 1, 13, 2.2);
+    if (Math.random() < 0.3) coin(2, z + 29, 1.0, true);
+    nextSpawn = z + 30;
+    return;
+  }
   if (metroAt(z + 20) && Math.random() < 0.65) {
     /* inside the Metro tunnel: parked wagons to run over / between, turnstile gates, benches */
     const q = Math.random();

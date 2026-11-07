@@ -1,7 +1,7 @@
 /* model/state.js — Mutable game state (position, speed, timers, power-ups, camera effects). */
 "use strict";
 /* ---------- game state ---------- */
-const LX = [-2.2, 0, 2.2],
+const LX = [2.2, 0, -2.2],
   SPEED0 = 15;
 let state = "ready",
   pz = 0,

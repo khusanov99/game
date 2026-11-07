@@ -113,6 +113,7 @@ function render() {
     for (const x of ch.meshes) draw(x.m, IDM, x.tex, x.mat || MAT0);
   }
   drawStreetLife();
+  drawFork();
   const ca = performance.now() / 380,
     blink = Math.floor(performance.now() / 260) % 2;
   for (const o of objs) {
@@ -155,6 +156,8 @@ function render() {
         emis: 0.1,
       });
       draw(TAIL, Tp(o.x, 0, o.z - 0.01), null, { emis: 1 });
+    } else if (k === "bus" && o.fork) {
+      draw(forkWall(o.len), Tp(o.x, 0, o.z), null, { emis: 0.15, spec: 0.2 });
     } else if (k === "bus" && o.metro) {
       const w = metroWagon(o.len);
       draw(w.b, Tp(o.x, 0, o.z), null, { emis: 0.22, spec: 0.5, rim: 0.3 });

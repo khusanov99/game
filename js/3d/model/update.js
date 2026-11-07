@@ -24,19 +24,24 @@ function landed(v) {
   flipT = 0;
 }
 const DASHC = ["#53f7ff", "#ffe27a", "#ff4fd8"];
-let lastMetro = false;
+let lastMetro = false,
+  forkMul = 1,
+  lastFork = false,
+  forkWarned = false;
 function update(dt) {
   if (hitStop > 0) {
     hitStop -= dt;
     return;
   }
   if (state === "play") {
+    forkMul = lerp(forkMul, forkAt(pz) ? (px > 1.1 ? 1.25 : px < -1.1 ? 0.8 : 1) : 1, Math.min(1, dt * 4));
     const vEff =
-      speed +
+      forkMul *
+      (speed +
       (turbo > 0 ? 12 : 0) +
       (padB > 0 ? 7 : 0) +
       (dash > 0 ? 16 : 0) +
-      (scoot > 0 ? 2 : 0);
+        (scoot > 0 ? 2 : 0));
     speed = Math.min(34, speed + dt * 0.22);
     pz += vEff * dt;
     S.dist = pz;
@@ -106,6 +111,22 @@ function update(dt) {
           floatText("METRO +100", "#ffe27a");
         }
       }
+    }
+    {
+      const inF = forkAt(pz + 2),
+        aF = forkAhead(pz);
+      if (inF !== lastFork) {
+        lastFork = inF;
+        if (pz > 50 && !inF) {
+          bonus += 50;
+          floatText(px > 1.1 ? "TEZ YO'L +50" : px < -1.1 ? "TANGA YO'LI +50" : "YO'L +50", "#ffe27a");
+        }
+      }
+      if (aF && !inF && aF[0] - pz < 95 && aF[0] - pz > 85 && !forkWarned) {
+        forkWarned = true;
+        floatText("CHORRAHA: ⇦ TEZ  |  TANGA ⇨", "#ff9a3c");
+      }
+      if (!aF || aF[0] - pz > 96) forkWarned = false;
     }
     jetK = lerp(jetK, jet > 0 ? 1 : 0, Math.min(1, dt * 3));
     wingK = lerp(
