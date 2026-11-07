@@ -478,14 +478,15 @@ const GL3 = (() => {
     IB[ni++] = b0 + 20;
     IB[ni++] = b0 + 1;
   }
-  const VS = `attribute vec3 aP;attribute vec3 aN;attribute vec4 aC;uniform mat4 uVP;uniform vec3 uOff;uniform float uNDC;varying vec3 vN;varying vec4 vC;varying float vD;
-void main(){vN=aN;vC=aC;vec4 p=uVP*vec4(aP+uOff,1.0);vD=p.w;gl_Position=uNDC>0.5?vec4(aP.xy,0.999,1.0):p;}`;
-  const FS = `precision mediump float;varying vec3 vN;varying vec4 vC;varying float vD;uniform vec3 uSun;uniform vec3 uSunC;uniform vec3 uAmb;uniform vec3 uFog;uniform vec2 uFogR;uniform float uAlpha;
+  const VS = `attribute vec3 aP;attribute vec3 aN;attribute vec4 aC;uniform mat4 uVP;uniform vec3 uOff;uniform float uNDC;varying vec3 vN;varying vec4 vC;varying float vD;varying float vY;
+void main(){vN=aN;vC=aC;vY=aP.y;vec4 p=uVP*vec4(aP+uOff,1.0);vD=p.w;gl_Position=uNDC>0.5?vec4(aP.xy,0.999,1.0):p;}`;
+  const FS = `precision mediump float;varying vec3 vN;varying vec4 vC;varying float vD;varying float vY;uniform vec3 uSun;uniform vec3 uSunC;uniform vec3 uAmb;uniform vec3 uFog;uniform vec2 uFogR;uniform float uAlpha;
 void main(){vec3 n=normalize(vN);float d=max(dot(n,uSun),0.0);
 vec3 lit=vC.rgb*(uAmb+uSunC*d);
-float rim=pow(1.0-clamp(-n.z,0.0,1.0),3.0)*0.2*step(0.0,n.y+0.6);
-float sp=pow(max(dot(n,normalize(uSun+vec3(0.0,0.0,-1.0))),0.0),28.0)*0.32;
+float r=1.0-clamp(-n.z,0.0,1.0);float rim=r*r*r*0.2*step(0.0,n.y+0.6);
+float s1=max(dot(n,vec3(0.2,0.55,-0.81)),0.0);s1*=s1;float s2=s1*s1;float s3=s2*s2;float sp=s3*s2*s1*0.32;
 vec3 c=mix(lit+vec3(rim*0.9,rim*0.95,rim)+vec3(sp),vC.rgb,vC.a);
+c*=0.84+0.16*clamp(vY*0.0166,0.0,1.0);
 float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uFog,f*0.6),uAlpha);}`;
   function sh(t, s) {
     const o = gl.createShader(t);
@@ -505,7 +506,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         antialias: !COARSE,
         alpha: false,
         depth: true,
-        powerPreference: "high-performance",
+        powerPreference: COARSE ? "default" : "high-performance",
         preserveDrawingBuffer: false,
       });
       if (!gl) return false;
@@ -541,6 +542,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
         e.preventDefault();
         API.on = false; // the classic 2D renderer takes over at once (no black frame)
         cv3.style.visibility = "hidden";
+        setTimeout(() => typeof resize === "function" && resize(), 0);
       });
       cv3.addEventListener("webglcontextrestored", () => {
         try {
@@ -548,8 +550,9 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
           const old = cv3;
           if (old.parentNode) old.parentNode.removeChild(old);
           if (init() && !API.dead) {
-            API.size(canvas.width, canvas.height);
+            API.size(API.gw, API.gh);
             API.on = true;
+            setTimeout(() => typeof resize === "function" && resize(), 0);
           }
         } catch (e) {
           API.on = false;
@@ -563,6 +566,8 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     }
   }
   API.size = (w, h) => {
+    API.gw = w;
+    API.gh = h;
     if (cv3 && (cv3.width !== w || cv3.height !== h)) {
       cv3.width = w;
       cv3.height = h;
@@ -1574,7 +1579,6 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
       API.on = false;
       return;
     }
-    API.size(canvas.width, canvas.height);
     const asp = W / H,
       fov =
         (18 * (PI / 180)) /
@@ -2112,6 +2116,7 @@ float f=clamp((vD-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);gl_FragColor=vec4(mix(c,uF
     API.on = false;
     API.dead = true;
     if (cv3) cv3.style.display = "none";
+    setTimeout(() => typeof resize === "function" && resize(), 0); // the 2D layer goes back to full resolution
   }
   function blank() {
     const px = new Uint8Array(4);
@@ -2259,9 +2264,18 @@ function resize() {
   if (want > budget) DPR = Math.max(0.5, DPR * Math.sqrt(budget / want));
   const nw = Math.round(cw * DPR),
     nh = Math.round(ch * DPR);
-  if (canvas.width !== nw || canvas.height !== nh) {
-    canvas.width = nw;
-    canvas.height = nh;
+  /* with the 3D layer on, the 2D layer only carries HUD / particles / effects: it may be much coarser on phones
+     (two full-resolution layers are what makes a phone's compositor and GPU run hot) */
+  let ow = nw,
+    oh = nh;
+  if (GL3.on && COARSE) {
+    const k = Math.min(1, 1.2 / DPR);
+    ow = Math.max(1, Math.round(nw * k));
+    oh = Math.max(1, Math.round(nh * k));
+  }
+  if (canvas.width !== ow || canvas.height !== oh) {
+    canvas.width = ow;
+    canvas.height = oh;
   }
   if (GL3.size) GL3.size(nw, nh);
   ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
@@ -6739,7 +6753,7 @@ function loop(t) {
     const cap =
       FPSCAP > 0
         ? FPSCAP
-        : CFG.thermal && thermalT > 180000
+        : (COARSE || CFG.thermal) && thermalT > (COARSE ? 60000 : 180000)
           ? 30
           : CFG.battery
             ? 30
