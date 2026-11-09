@@ -41,7 +41,10 @@ function stnSignTex(D) {
 }
 const STNM = {};
 function stationBuild(i) {
-  if (STNM[i]) return STNM[i];
+  /* lite hall (phones, low-end, software GL): same layout and colours, fewer tiny decoration pieces */
+  const lite = !!(typeof SOFTGL !== "undefined" && SOFTGL) || DEV.low || COARSE,
+    key = i + (lite ? "l" : "");
+  if (STNM[key]) return STNM[key];
   const D = STN[i],
     b = new B(),
     g = new B(),
@@ -68,7 +71,7 @@ function stationBuild(i) {
       nr = [-Math.cos(mid) / RX, -Math.sin(mid) / RY],
       nl = Math.hypot(nr[0], nr[1]);
     b.quad([[p0[0], p0[1], 0], [p1[0], p1[1], 0], [p1[0], p1[1], LEN], [p0[0], p0[1], LEN]], [nr[0] / nl, nr[1] / nl, 0], UV, D.vault[k % 2]);
-    for (let z = 0; z < LEN; z += 6) {
+    for (let z = 0; z < LEN; z += lite ? 12 : 6) {
       const q0 = ell(a0, 0.985),
         q1 = ell(a1, 0.985);
       b.quad([[q0[0], q0[1], z], [q1[0], q1[1], z], [q1[0], q1[1], z + 0.45], [q0[0], q0[1], z + 0.45]], [nr[0] / nl, nr[1] / nl, 0], UV, D.trim);
@@ -101,7 +104,7 @@ function stationBuild(i) {
         b.box(cx, 0.18, z, 1.05, 0.36, 1.05, D.trim);
         b.box(cx, 4.55, z, 1.1, 0.4, 1.1, D.trim);
       } else {
-        b.cyl(cx, 0, z, 0.46, 0.4, 4.7, D.colS === "fluted" ? 12 : 14, D.col, false, D.colS === "fluted" ? mulc(D.col, 0.86) : undefined);
+        b.cyl(cx, 0, z, 0.46, 0.4, 4.7, lite ? 8 : D.colS === "fluted" ? 12 : 14, D.col, false, D.colS === "fluted" ? mulc(D.col, 0.86) : undefined);
         b.cyl(cx, 0, z, 0.62, 0.62, 0.32, 12, D.trim, true);
         b.cyl(cx, 4.5, z, 0.68, 0.46, 0.4, 12, D.trim, true);
       }
@@ -118,11 +121,11 @@ function stationBuild(i) {
     b.cyl(0, 6.2, z, 0.04, 0.04, 0.7, 5, [0.3, 0.26, 0.2]);
     if (D.chand === "ring" || D.chand === "grand") {
       const r = D.chand === "grand" ? 1.5 : 1.2;
-      for (let q = 0; q < 12; q++) g.sph(Math.cos(q * 0.5236) * r, 6.0, z + Math.sin(q * 0.5236) * r, 0.17, 0.17, 0.17, 4, 6, G);
-      if (D.chand === "grand") for (let q = 0; q < 8; q++) g.sph(Math.cos(q * 0.785) * 0.8, 5.55, z + Math.sin(q * 0.785) * 0.8, 0.13, 0.13, 0.13, 4, 6, mulc(G, 0.95));
+      for (let q = 0; q < 12; q += lite ? 2 : 1) g.sph(Math.cos(q * 0.5236) * r, 6.0, z + Math.sin(q * 0.5236) * r, lite ? 0.26 : 0.17, lite ? 0.26 : 0.17, lite ? 0.26 : 0.17, 4, 6, G);
+      if (D.chand === "grand" && !lite) for (let q = 0; q < 8; q++) g.sph(Math.cos(q * 0.785) * 0.8, 5.55, z + Math.sin(q * 0.785) * 0.8, 0.13, 0.13, 0.13, 4, 6, mulc(G, 0.95));
       g.sph(0, 5.8, z, 0.4, 0.45, 0.4, 5, 8, G);
     } else if (D.chand === "armil") {
-      for (let q = 0; q < 16; q++) {
+      for (let q = 0; q < 16; q += lite ? 2 : 1) {
         const a = q * 0.3927;
         g.sph(Math.cos(a) * 1.0, 5.6 + Math.sin(a) * 0.9, z, 0.09, 0.09, 0.09, 4, 5, D.trim);
         g.sph(0, 5.6 + Math.sin(a) * 0.9, z + Math.cos(a) * 1.0, 0.09, 0.09, 0.09, 4, 5, D.trim);
@@ -141,7 +144,7 @@ function stationBuild(i) {
   /* each hall's own decoration */
   const dec = D.deco;
   if (dec === "cosmos" || dec === "stars")
-    for (let q = 0; q < 70; q++) {
+    for (let q = 0; q < (lite ? 28 : 70); q++) {
       const a = 0.1 + rr() * 2.94,
         p = ell(a, 0.97);
       g.sph(p[0], p[1], rr() * LEN, 0.07 + rr() * 0.06, 0.07, 0.07, 4, 4, dec === "stars" ? D.trim : [0.85, 0.92, 1]);
@@ -170,26 +173,26 @@ function stationBuild(i) {
       }
   if (dec === "cotton")
     for (const sd of [-1, 1])
-      for (let z = 1.5; z < LEN; z += 3) {
+      for (let z = 1.5; z < LEN; z += lite ? 6 : 3) {
         const x = sd * (RX - 0.25);
         b.box(x, 1.4, z, 0.06, 0.5, 0.06, [0.2, 0.55, 0.25]);
-        for (let q = 0; q < 4; q++) g.sph(x, 1.7 + (q % 2) * 0.12, z + (q - 1.5) * 0.14, 0.1, 0.1, 0.1, 4, 5, [1, 1, 0.98]);
+        for (let q = 0; q < (lite ? 2 : 4); q++) g.sph(x, 1.7 + (q % 2) * 0.12, z + (q - 1.5) * 0.14, 0.1, 0.1, 0.1, 4, 5, [1, 1, 0.98]);
       }
   if (dec === "blossom") {
     const pk = [[1, 0.7, 0.8], [1, 0.82, 0.88], [0.96, 0.55, 0.72]];
-    for (let q = 0; q < 46; q++) {
+    for (let q = 0; q < (lite ? 18 : 46); q++) {
       const a = 0.12 + rr() * 2.9,
         p = ell(a, 0.96),
         z = rr() * LEN;
-      for (let m = 0; m < 4; m++) g.sph(p[0] + (rr() - 0.5) * 0.6, p[1] - rr() * 0.3, z + (rr() - 0.5) * 0.6, 0.13, 0.11, 0.13, 4, 5, pk[(q + m) % 3]);
+      for (let m = 0; m < (lite ? 2 : 4); m++) g.sph(p[0] + (rr() - 0.5) * 0.6, p[1] - rr() * 0.3, z + (rr() - 0.5) * 0.6, 0.13, 0.11, 0.13, 4, 5, pk[(q + m) % 3]);
     }
   }
   if (dec === "silk")
     for (const sd of [-1, 1])
-      for (let z = 0; z < LEN; z += 1.5) {
+      for (let z = 0; z < LEN; z += lite ? 3 : 1.5) {
         const x = sd * (RX - 0.07),
           c = [[0.8, 0.14, 0.18], [0.98, 0.78, 0.2], [0.1, 0.58, 0.64]][Math.floor(z / 1.5) % 3];
-        b.quad([[x, 0.05, z], [x, 0.05, z + 0.75], [x, 1.0, z + 0.75], [x, 1.0, z]], [-sd, 0, 0], UV, c);
+        b.quad([[x, 0.05, z], [x, 0.05, z + (lite ? 1.5 : 0.75)], [x, 1.0, z + (lite ? 1.5 : 0.75)], [x, 1.0, z]], [-sd, 0, 0], UV, c);
       }
   if (dec === "domes")
     for (let z = 6; z < LEN; z += 12) {
@@ -210,7 +213,7 @@ function stationBuild(i) {
   sg.box(0, 0, 0, 8, 2.4, 0.2, [1, 1, 1], { uv: { nz: [0, 0, 1, 1], pz: [0.02, 0.02, 0.03, 0.03] } });
   const pb = new B();
   for (const sx of [-3.6, 3.6]) pb.box(sx, 6.3, 0, 0.08, 1.5, 0.08, [0.3, 0.3, 0.34]);
-  return (STNM[i] = {
+  return (STNM[key] = {
     parts: [
       { m: b.mesh(), mat: { emis: star ? 0.3 : 0.24, tint: [1, 0.98, 1], spec: 0.1 } },
       { m: g.mesh(), mat: { emis: 1 } },
