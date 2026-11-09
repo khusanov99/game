@@ -250,9 +250,14 @@ function slPopulate(ch, th) {
             ph: Math.random() * 6,
           })),
         });
+}
+/* planned BEFORE the chunk's parked cars, so those keep out of this driving car's stretch */
+function slPlan(ch) {
   if (qual < 3 && Math.random() < 0.7) {
     const sd = Math.random() < 0.5 ? -1 : 1,
       z0 = ch.zA + rnd(0, 10);
+    /* never share a stretch of kerb with another driving car (their ranges would cross) */
+    if (TRAFFIC[sd].some((r) => z0 < r[1] + 8 && z0 + 60 > r[0] - 8)) return;
     ch.slot = {
       sd,
       z0,
