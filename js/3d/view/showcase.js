@@ -108,3 +108,37 @@ function drawHunters(T, u) {
   drawBall(Tp(1.6, 0, z - 1.2), ph * 0.8, T);
   drawDrone(Tp(0, 0.5, z - 2.4), ph, T);
 }
+
+/* ---------- SHOP SHOT: the hero on the podium, the camera swaying round it; each tab frames its own part ---------- */
+let shOn = false,
+  shTab = "bag",
+  shDrag = 0,
+  shAzV = Math.PI,
+  shLastT = 0;
+function shopShot(T, asp) {
+  const narrow = asp < 0.8,
+    rs = narrow ? 1.7 : 1,
+    F = {
+      bag: [Math.PI, 3.1 * rs, 1.0, 0.85],
+      outfit: [0.4, 3.9 * rs, 1.05, 0.75],
+      hat: [0.35, 2.6 * rs, 1.3, 1.1],
+      ride: [1.3, 4.6 * rs, 1.0, 0.55],
+    }[shTab],
+    dt = Math.min(0.1, Math.max(0, T - shLastT));
+  shLastT = T;
+  const want = F[0] + Math.sin(T * 0.6) * 0.55 + shDrag;
+  shAzV += (want - shAzV) * Math.min(1, dt * 5);
+  /* the hero sits in the upper part of the screen, above the shop panel */
+  const lift = narrow ? 0.55 : 0.2,
+    cam = [Math.sin(shAzV) * F[1], F[2] + 0.2, pz + Math.cos(shAzV) * F[1]],
+    tgt = [0, F[3] - lift, pz];
+  if (asp > 1.3) {
+    const sd = 0.9;
+    cam[0] += Math.cos(shAzV) * sd;
+    cam[2] -= Math.sin(shAzV) * sd;
+    tgt[0] += Math.cos(shAzV) * sd;
+    tgt[2] -= Math.sin(shAzV) * sd;
+    tgt[1] += lift;
+  }
+  return { cam, tgt, fov: (46 * Math.PI) / 180, yaw: 0, wave: shTab === "outfit" ? 0.5 + 0.5 * Math.sin(T * 2) : 0, head: Math.sin(T * 0.8) * 0.25, wing: 0.5 + 0.4 * Math.sin(T * 1.5), u: 0 };
+}

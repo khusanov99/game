@@ -58,6 +58,61 @@ function crown(M, mt, s) {
     );
 }
 /* the scooter, scaled for a 1.55-unit rider: deck + fork + bar + two spinning wheels (emissive spokes make the spin readable) */
+/* shop variants: bag colours and ride colours are derived from the look's materials once and cached */
+const SHK = new WeakMap();
+function shopMats(K, bagId, rideId) {
+  let c = SHK.get(K);
+  if (!c) SHK.set(K, (c = {}));
+  const key = bagId + "|" + rideId;
+  if (c[key]) return c[key];
+  const bg = shItem("bag", bagId),
+    o = Object.create(K);
+  o.bagA = mat(bg.a, { spec: 0.6, emis: bagId === "gold" ? 0.8 : 0.5 });
+  o.bagB = mat(bg.b, { spec: 0.5, emis: 0.4 });
+  o.bagC = { tint: bg.c, emis: 0.9 };
+  if (rideId === "scoot2") {
+    o.deck = mat([0.2, 0.05, 0.3], { spec: 0.9, emis: 0.3 });
+    o.glow = { tint: [1, 0.25, 0.9], emis: 1 };
+    o.acc = { tint: [0.3, 1, 0.9], emis: 1 };
+    o.body = mat([0.85, 0.7, 1], { spec: 1, emis: 0.6 });
+  } else if (rideId === "bike") {
+    o.deck = mat([0.9, 0.2, 0.2], { spec: 0.9, emis: 0.45 });
+    o.glow = { tint: [1, 0.9, 0.5], emis: 1 };
+  } else if (rideId === "bike2") {
+    o.deck = mat([1, 0.8, 0.25], { spec: 1, emis: 0.85 });
+    o.glow = { tint: [1, 1, 0.8], emis: 1 };
+    o.acc = { tint: [1, 0.7, 0.1], emis: 1 };
+  }
+  return (c[key] = o);
+}
+/* a bicycle: two big spoked wheels, a diagonal frame, fork + bar, spinning pedals; the rider is lifted onto it */
+function drawBike(base, K, wph) {
+  const S0 = joint(base, 0, 0, -0.05, 0);
+  for (const wz of [0.62, -0.6]) {
+    const W0 = joint(S0, 0, 0.27, wz, wph),
+      tw = joint(W0, 0, 0, 0, 0, 0, PI / 2);
+    pd(cylM(0.27, 0.27, 0.045), joint(tw, 0, 0.0225, 0, 0), null, K.tyre);
+    pd(cylM(0.2, 0.2, 0.05), joint(tw, 0, 0.025, 0, 0), null, K.white);
+    pd(boxM(0.04, 0.02, 0.48), W0, null, K.glow);
+    pd(boxM(0.04, 0.48, 0.02), W0, null, K.glow);
+  }
+  pd(boxM(0.06, 0.06, 1.1), joint(S0, 0, 0.3, 0, 0.0), null, K.deck);
+  pd(boxM(0.06, 0.06, 0.7), joint(S0, 0, 0.3, -0.18, -0.55), null, K.deck);
+  const fk = joint(S0, 0, 0.27, 0.62, -0.3);
+  pd(boxM(0.05, 0.62, 0.05, 0.31), fk, null, K.body);
+  pd(boxM(0.5, 0.05, 0.05, 0.62), fk, null, K.body);
+  for (const s of [-1, 1]) pd(cylM(0.035, 0.035, 0.1), joint(fk, s * 0.27, 0.62, 0, 0, 0, PI / 2), null, K.acc);
+  for (const s of [-1, 1]) {
+    const pe = joint(S0, s * 0.14, 0.2 + Math.sin(wph * 1.3 + (s > 0 ? 0 : PI)) * 0.07, Math.cos(wph * 1.3 + (s > 0 ? 0 : PI)) * 0.07, 0);
+    pd(boxM(0.14, 0.03, 0.1), pe, null, K.glow);
+  }
+  pd(boxM(0.14, 0.05, 0.24), joint(S0, 0, 0.5, -0.25, 0), null, K.acc);
+}
+function drawRide(base, K, wph, t) {
+  const r = ldv("ride");
+  if (r === "bike" || r === "bike2") drawBike(base, K, wph);
+  else drawScooter(base, K, wph, t);
+}
 function drawScooter(base, K, wph, t) {
   const S0 = joint(base, 0, 0, -0.05, 0);
   pd(boxM(0.3, 0.06, 1.15, 0.1), S0, null, K.deck);
@@ -87,9 +142,38 @@ function drawScooter(base, K, wph, t) {
     pd(boxM(0.08, 0.24, 0.025), W0, null, K.glow);
   }
 }
+/* headwear sits on the head joint: courier cap, doppi, safety helmet, golden crown */
+function drawHat(hd, K, id) {
+  if (id === "none") return;
+  if (id === "cap") {
+    pd(sphM(0.39, 0.62, 0.98), joint(hd, 0, 0.14, -0.01, 0), null, K.blue);
+    pd(boxM(0.4, 0.03, 0.3, 0), joint(hd, 0, 0.2, 0.37, -0.2), null, K.blueD);
+    pd(boxM(0.14, 0.05, 0.02), joint(hd, 0, 0.3, 0.3, -0.5), null, K.glow);
+  } else if (id === "doppi") {
+    pd(cylM(0.25, 0.31, 0.15, 12), joint(hd, 0, 0.4, 0, 0), null, K.dark);
+    pd(cylM(0.32, 0.32, 0.025, 12), joint(hd, 0, 0.255, 0, 0), null, K.white);
+    for (let i = 0; i < 4; i++) {
+      const a = (i * PI) / 2;
+      pd(boxM(0.09, 0.09, 0.02), joint(hd, Math.sin(a) * 0.29, 0.33, Math.cos(a) * 0.29, 0, a, 0), null, K.white);
+    }
+  } else if (id === "helmet") {
+    pd(sphM(0.41, 0.72, 1.0), joint(hd, 0, 0.1, -0.01, 0), null, K.beak);
+    pd(boxM(0.08, 0.025, 0.5), joint(hd, 0, 0.42, 0, 0), null, K.white);
+    pd(boxM(0.46, 0.03, 0.14, 0), joint(hd, 0, 0.17, 0.32, -0.15), null, K.beakD);
+    pd(sphM(0.05), joint(hd, 0, 0.3, 0.3, 0), null, SIREN_R);
+  } else if (id === "crown") {
+    pd(cylM(0.26, 0.28, 0.1, 10), joint(hd, 0, 0.42, 0, 0), null, K.gold);
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 2 * PI) / 5;
+      pd(coneM(0.05, 0.16), joint(hd, Math.sin(a) * 0.25, 0.42, Math.cos(a) * 0.25, 0), null, K.gold);
+      pd(sphM(0.03), joint(hd, Math.sin(a) * 0.25, 0.6, Math.cos(a) * 0.25, 0), null, K.glow);
+    }
+  }
+}
 function drawHero(root, look, st) {
   // st: {ph, air, slide, hit, boost, dash, scoot, fx, fy, land, wing, t, sp, tilt, idle, wave, yaw}
-  const K = heroMats(look),
+  const K = shopMats(heroMats(look), ldv("bag"), ldv("ride")),
+    lift = { bike: 0.17, bike2: 0.17 }[ldv("ride")] || 0,
     t = st.t,
     ph = st.ph,
     sw = Math.sin(ph),
@@ -105,7 +189,8 @@ function drawHero(root, look, st) {
     base = joint(base, 0, 0.7, 0, st.fx, st.fy);
     base = joint(base, 0, -0.7, 0, 0);
   }
-  if (sc) drawScooter(base, K, ph * 1.6, t);
+  if (sc) drawRide(base, K, ph * 1.6, t);
+  if (sc && lift) base = joint(base, 0, lift, 0, 0);
   const run = !air && !sc && !st.slide && !st.hit && !idle && !ds;
   let R = base,
     crouch = st.land * 0.1 + (sc ? 0.05 : 0);
@@ -188,6 +273,8 @@ function drawHero(root, look, st) {
     pd(boxM(0.42 * bk, 0.44 * bk, 0.26 * bk), B0, null, K.bagA);
     pd(boxM(0.45 * bk, 0.07, 0.29 * bk), joint(B0, 0, 0.23 * bk, 0, 0), null, K.bagB);
     pd(boxM(0.34, 0.03, 0.02), joint(B0, 0, -0.14, -0.135 * bk, 0), null, K.white);
+    pd(boxM(0.4 * bk, 0.035, 0.015), joint(B0, 0, 0.1 * bk, -0.133 * bk, 0), null, K.bagC);
+    pd(boxM(0.4 * bk, 0.035, 0.015), joint(B0, 0, -0.04 * bk, -0.133 * bk, 0), null, K.bagC);
     for (const sx of [-0.12, 0.12]) pd(boxM(0.05, 0.38, 0.02), joint(tor, sx, 0.03, 0.288, -0.08), null, K.bagB);
   }
   // jet nozzles (flames only while boosting) + cape
@@ -297,6 +384,7 @@ function drawHero(root, look, st) {
     null,
     K.blue,
   );
+  drawHat(hd, K, ldv("hat"));
   // arms: white, black elbow rings, mitten hands with blue cuffs; they swing, spread in the air, reach for the bar, wave when idle
   const spread = 0.16 + wk * 0.6 + (wk > 0.5 ? Math.sin(t * 18) * 0.1 : 0);
   for (const s of [-1, 1]) {

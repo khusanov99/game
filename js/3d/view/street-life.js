@@ -65,10 +65,13 @@ function slBuild() {
     for (const s of [-1, 1]) b.box(s * 0.8, 1.2, -0.1, 0.04, 0.34, 2.4, G);
     b.box(0, 1.2, -1.66, 1.2, 0.34, 0.04, G);
     b.box(0, 1.2, 1.36, 1.3, 0.4, 0.04, G);
-    b.box(0, 0.36, -1.82, 1.72, 0.18, 0.12, [0.4, 0.42, 0.46]);
-    b.box(0, 0.36, 1.82, 1.72, 0.18, 0.12, [0.4, 0.42, 0.46]);
+    b.box(0, 0.36, -1.82, 1.72, 0.18, 0.12, [0.08, 0.08, 0.1]);
+    b.box(0, 0.36, 1.82, 1.72, 0.22, 0.14, [0.08, 0.08, 0.1]); // black front bumper
     b.box(0, 0.52, -1.84, 0.5, 0.14, 0.03, [1, 1, 0.95]);
-    b.box(0, 0.95, 0, 1.72, 0.05, 3.62, [0.12, 0.45, 0.78]); // blue belt line
+    for (const s of [-1, 1]) {
+      b.box(s * 0.86, 0.9, 0.2, 0.03, 0.1, 2.4, [0.95, 0.5, 0.12]); // side stripe: orange over blue
+      b.box(s * 0.86, 0.8, 0.2, 0.03, 0.08, 2.4, [0.12, 0.3, 0.62]);
+    }
     for (const sz of [-1.2, 1.2])
       for (const sx of [-0.86, 0.86])
         b.box(sx, 0.3, sz, 0.22, 0.6, 0.6, [0.05, 0.05, 0.06]);
@@ -77,8 +80,30 @@ function slBuild() {
     for (const s of [-0.6, 0.6]) {
       g.box(s, 0.78, -1.84, 0.3, 0.14, 0.05, [1, 0.12, 0.1]);
       g.box(s, 0.76, 1.84, 0.3, 0.14, 0.05, [1, 0.95, 0.7]);
+      g.box(s * 1.28, 0.42, 1.85, 0.2, 0.1, 0.05, [1, 0.6, 0.1]); // amber corner lamps
     }
     M.damG = g.mesh();
+    /* a white four-door sedan (generic low-poly): body, tapered glass cabin, bumpers, wheels, lamps */
+    const s = new B(),
+      sg = new B();
+    s.box(0, 0.55, 0, 1.7, 0.55, 4.3, W);
+    s.box(0, 0.88, 1.35, 1.64, 0.14, 1.3, W); // hood
+    s.box(0, 0.9, -1.55, 1.64, 0.16, 1.0, W); // boot
+    s.box(0, 1.2, -0.1, 1.52, 0.48, 1.9, W); // cabin shell
+    for (const x of [-1, 1]) s.box(x * 0.77, 1.22, -0.1, 0.04, 0.36, 1.7, G);
+    s.box(0, 1.26, 0.88, 1.4, 0.4, 0.04, G); // windscreen
+    s.box(0, 1.26, -1.07, 1.4, 0.36, 0.04, G); // rear window
+    s.box(0, 0.38, 2.18, 1.72, 0.2, 0.12, [0.1, 0.1, 0.12]);
+    s.box(0, 0.38, -2.18, 1.72, 0.2, 0.12, [0.1, 0.1, 0.12]);
+    for (const sz of [-1.4, 1.4])
+      for (const sx of [-0.86, 0.86]) s.box(sx, 0.32, sz, 0.22, 0.64, 0.64, [0.05, 0.05, 0.06]);
+    M.sed = s.mesh();
+    for (const x of [-0.6, 0.6]) {
+      sg.box(x, 0.66, 2.17, 0.34, 0.14, 0.05, [1, 0.95, 0.7]);
+      sg.box(x * 1.3, 0.42, 2.19, 0.18, 0.08, 0.05, [1, 0.6, 0.1]); // amber lamps
+      sg.box(x, 0.66, -2.17, 0.34, 0.12, 0.05, [1, 0.12, 0.1]);
+    }
+    M.sedG = sg.mesh();
   }
   /* pigeon: resting and flying */
   {
@@ -225,9 +250,14 @@ function slPopulate(ch, th) {
             ph: Math.random() * 6,
           })),
         });
+}
+/* planned BEFORE the chunk's parked cars, so those keep out of this driving car's stretch */
+function slPlan(ch) {
   if (qual < 3 && Math.random() < 0.7) {
     const sd = Math.random() < 0.5 ? -1 : 1,
       z0 = ch.zA + rnd(0, 10);
+    /* never share a stretch of kerb with another driving car (their ranges would cross) */
+    if (TRAFFIC[sd].some((r) => z0 < r[1] + 8 && z0 + 60 > r[0] - 8)) return;
     ch.slot = {
       sd,
       z0,
@@ -235,6 +265,7 @@ function slPopulate(ch, th) {
       z: 0,
       on: false,
       done: false,
+      sedan: Math.random() < 0.5,
       sp: rnd(3.6, 5),
       hue: pick([
         [1, 1, 1],
@@ -287,13 +318,13 @@ function drawStreetLife() {
         if (sl.z > sl.z1 || sl.z < pz - 25) sl.done = true;
         else if (sl.z - pz < maxD + 20) {
           const M = Tp(sl.sd * 4.35, 0, sl.z);
-          draw(SLM.dam, M, null, {
+          draw(sl.sedan ? SLM.sed : SLM.dam, M, null, {
             tint: sl.hue,
             spec: 0.7,
             rim: 0.3,
             emis: 0.12,
           });
-          draw(SLM.damG, M, null, { emis: 1 });
+          draw(sl.sedan ? SLM.sedG : SLM.damG, M, null, { emis: 1 });
         }
       }
     }

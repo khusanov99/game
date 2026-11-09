@@ -5,6 +5,7 @@ function moveLane(d) {
   if (state !== "play" || paused || resumeCd > 0) return;
   const nl = clamp(lane + d, 0, 2);
   if (nl !== lane) {
+    tutDo("m");
     lane = nl;
     sfx.move();
   }
@@ -16,6 +17,7 @@ function dust(n) {
 function jump() {
   if (state !== "play" || paused || resumeCd > 0 || jet > 0) return;
   if (grounded()) {
+    tutDo("j");
     vy = scoot > 0 ? 9.8 : 9.2;
     slideT = 0;
     S.jump++;
@@ -41,6 +43,7 @@ function jump() {
 function slide() {
   if (state !== "play" || paused || resumeCd > 0 || jet > 0) return;
   slideT = 0.75;
+  tutDo("s");
   if (py > floorY + 0.08) vy = Math.min(vy, -12);
   else {
     S.slide++;

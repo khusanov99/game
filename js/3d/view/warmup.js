@@ -36,7 +36,7 @@ function warmTick(dt) {
   }
   if (state === "play" && metroSoon()) {
     for (let i = 0; i < STN.length; i++)
-      if (!STNM[i]) {
+      if (!STNM[i] && !STNM[i + "l"]) {
         warmLast = now;
         try {
           stationBuild(i);

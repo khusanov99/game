@@ -351,6 +351,7 @@ function* genChunk(ci) {
     }
   yield;
   // street furniture
+  slPlan(ch);
   const sb = chunkB(ch, "solid").b,
     kit = qual < 2;
   for (let z = Math.ceil(zA / 20) * 20; z < zB; z += 20)

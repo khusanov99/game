@@ -3,6 +3,26 @@
 /* ---------- audio / input ---------- */
 let AC = null,
   muted = store.get("zr3d_mute", false);
+/* player settings: master volume (0-1) and vibration on/off; every sound goes through one master gain node */
+let VOL = +store.get("zr3d_vol", 1),
+  VIBON = store.get("zr3d_vib", true),
+  OUTN = null;
+const outN = () => {
+  if (!OUTN || OUTN.context !== AC) {
+    OUTN = AC.createGain();
+    OUTN.gain.value = VOL;
+    OUTN.connect(AC.destination);
+  }
+  return OUTN;
+};
+function setVol(v) {
+  VOL = v;
+  store.set("zr3d_vol", v);
+  try {
+    if (OUTN) OUTN.gain.value = v;
+    if (voiceEl) voiceEl.volume = v;
+  } catch (e) {}
+}
 const actx = () => {
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
@@ -24,15 +44,22 @@ function tone(f, d, type, v, f2, at) {
     g.gain.setValueAtTime(v || 0.06, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + d);
     o.connect(g);
-    g.connect(a.destination);
+    g.connect(outN());
     o.start(t);
     o.stop(t + d + 0.02);
   } catch (e) {}
 }
+let coinChain = 0,
+  coinLast = 0;
 const sfx = {
   coin() {
-    tone(988, 0.07, "sine", 0.06);
-    setTimeout(() => tone(1480, 0.1, "sine", 0.05), 55);
+    /* quick pickups climb a little scale, so a coin line sounds like a melody */
+    const n = performance.now();
+    coinChain = n - coinLast < 650 ? Math.min(coinChain + 1, 7) : 0;
+    coinLast = n;
+    const k = Math.pow(1.0595, [0, 2, 4, 5, 7, 9, 11, 12][coinChain]);
+    tone(988 * k, 0.07, "sine", 0.06);
+    setTimeout(() => tone(1480 * k, 0.1, "sine", 0.05), 55);
   },
   jump() {
     tone(300, 0.16, "triangle", 0.07, 620);
@@ -89,6 +116,7 @@ const sfx = {
   },
 };
 const vib = (n) => {
+  if (!VIBON) return;
   try {
     navigator.vibrate && navigator.vibrate(n);
   } catch (e) {}
@@ -133,7 +161,7 @@ function rumbleTick(on) {
     g.gain.value = 0;
     src.connect(lp);
     lp.connect(g);
-    g.connect(AC.destination);
+    g.connect(outN());
     src.start();
     rumble = g;
   }
@@ -156,7 +184,7 @@ function trainWhoosh() {
   g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
   src.connect(bp);
   bp.connect(g);
-  g.connect(AC.destination);
+  g.connect(outN());
   src.start(t);
   src.stop(t + 1.9);
 }
@@ -256,7 +284,7 @@ function speakStation(idx) {
       const u = new SpeechSynthesisUtterance(txt);
       u.voice = v;
       u.lang = v.lang;
-      u.volume = 1;
+      u.volume = VOL;
       ss.cancel();
       ss.speak(u);
     } catch (e) {}
@@ -271,7 +299,7 @@ function speakStation(idx) {
   };
   voiceEl.onerror = fall;
   voiceEl.src = "audio/stn/" + lg + "/" + idx + ".mp3";
-  voiceEl.volume = 1;
+  voiceEl.volume = VOL;
   const pr = voiceEl.play();
   if (pr && pr.then)
     pr.then(

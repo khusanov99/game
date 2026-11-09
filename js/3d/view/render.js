@@ -29,7 +29,7 @@ function render() {
     heroYaw = 0,
     show = null;
   if (state === "ready") {
-    show = showShot(showT, asp);
+    show = shOn ? shopShot(showT, asp) : showShot(showT, asp);
     CAMv = show.cam;
     tgt = show.tgt;
     fyv = show.fov;
@@ -260,7 +260,7 @@ function render() {
       hit: false,
       boost: false,
       dash: 0,
-      scoot: false,
+      scoot: shOn && ldv("ride") !== "none" && shTab === "ride",
       fx: 0,
       fy: 0,
       land: 0,

@@ -97,5 +97,5 @@ const newStats = () => ({
 });
 let S = newStats(),
   B0 = newStats();
-const look = () => Rig.LOOKS[skin] || Rig.LOOKS.default;
+const look = () => Rig.LOOKS[ldv("outfit")] || Rig.LOOKS.default;
 const scoreNow = () => Math.floor(pz - startZ) + bonus;
