@@ -90,3 +90,14 @@ function tutTick(dt) {
   tutT += dt;
   if (tutT > 14 || state !== "play") tutEnd();
 }
+/* game-over screen: every menu shortcut first returns to the start screen, then opens its section (wired here because these buttons are created in later scripts) */
+for (const [b, , fn] of overBtns())
+  b.addEventListener(
+    "click",
+    (e) => {
+      if (state !== "over") return;
+      e.stopImmediatePropagation();
+      toMenu(fn);
+    },
+    true,
+  );
