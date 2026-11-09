@@ -84,6 +84,7 @@ function showOv(title, sub, row, btn, canRevive) {
   dlBtn.style.display = "none";
   shopBtn.style.display = "none";
   setBtn.style.display = "none";
+  mnBtn.style.display = "none";
   $("oTitle").textContent = title;
   $("oSub").innerHTML = sub;
   $("oRow").innerHTML = row;
@@ -93,6 +94,8 @@ function showOv(title, sub, row, btn, canRevive) {
   rvBtn.textContent = "▶ " + T("revive");
   $("ov").classList.remove("hidden");
   $("ov").classList.remove("show");
+  const cd = $("ov").querySelector(".card");
+  if (cd) cd.scrollTop = 0;
 }
 function missionHtml() {
   const m = loadMissions();
@@ -283,8 +286,50 @@ function endGame() {
       T("again"),
       !revived && wallet >= 100,
     );
+    overButtons();
   }, 1500);
 }
+/* game-over screen: the same menu shortcuts as the start screen (they all go through the menu first, which restores the stage) */
+const mnBtn = document.createElement("button");
+mnBtn.id = "mnb";
+mnBtn.type = "button";
+mnBtn.style.cssText = "display:none;background:rgba(127,230,255,.1);color:#7fe6ff;border:1px solid rgba(127,230,255,.4);font-size:12px;padding:12px";
+$("go").after(mnBtn);
+const overBtns = () => [
+  [shopBtn, () => shT("btn"), shopOpen],
+  [setBtn, () => sT("btn"), setOv],
+  [jrBtn, () => T("jrBtn") + "  " + jrCount() + "/" + QUEST.length, jrOv],
+  [dlBtn, () => T("dlBtn") + (dailyToday() ? "  ✔" : ""), dailyOv],
+  [cuBtn, () => T("cuBtn") + "  " + cu.c.reduce((a, b) => a + b, 0) + "/" + CU.length * CU_AT.length, cuOv],
+  [cityBtn, () => T("cityBtn") + "  " + cityCount() + "/" + CITY.length, cityOv],
+  [achBtn, () => T("achBtn") + "  " + ACHS.filter((a) => AU[a[0]]).length + "/" + ACHS.length, achOv],
+];
+let overGo = null;
+function overButtons() {
+  mnBtn.style.display = "block";
+  mnBtn.textContent = "☰ " + ({ uz: "MENYU", en: "MENU", ja: "メニュー" }[LG] || "MENU");
+  for (const [b, label] of overBtns()) {
+    b.style.display = "block";
+    b.textContent = label();
+  }
+  gfxBtn.style.display = "block";
+  gfxLabel();
+}
+/* back to the start screen: restores the idle stage, then optionally opens a section */
+function toMenu(next) {
+  if (state !== "over") return;
+  dailyOff();
+  state = "ready";
+  paused = false;
+  showT = 0;
+  camBlend = 0;
+  SC = null;
+  jrStart = 0;
+  reset();
+  menu();
+  if (next) next();
+}
+mnBtn.addEventListener("click", () => toMenu());
 rvBtn.addEventListener("click", () => {
   if (ovMode === "dl") return menu();
   if (state !== "over" || revived || wallet < 100) return;
