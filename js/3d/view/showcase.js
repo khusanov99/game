@@ -122,7 +122,7 @@ function shopShot(T, asp) {
       bag: [Math.PI, 3.1 * rs, 1.0, 0.85],
       outfit: [0.4, 3.9 * rs, 1.05, 0.75],
       hat: [0.35, 2.6 * rs, 1.3, 1.1],
-      ride: [1.3, 4.6 * rs, 1.0, 0.45],
+      ride: [1.3, shRideR() * rs, 1.0, 0.55],
     }[shTab],
     dt = Math.min(0.1, Math.max(0, T - shLastT));
   shLastT = T;
@@ -142,3 +142,4 @@ function shopShot(T, asp) {
   }
   return { cam, tgt, fov: (46 * Math.PI) / 180, yaw: 0, wave: shTab === "outfit" ? 0.5 + 0.5 * Math.sin(T * 2) : 0, head: Math.sin(T * 0.8) * 0.25, wing: 0.5 + 0.4 * Math.sin(T * 1.5), u: 0 };
 }
+const shRideR = () => (ldv("ride") === "car" || ldv("ride") === "van" ? 6.2 : 4.6);
