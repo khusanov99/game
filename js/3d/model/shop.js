@@ -51,8 +51,6 @@ const SHOP_TABS = ["bag", "outfit", "hat", "ride"],
       { id: "scoot2", cost: 300, e: "🛴", n: { uz: "Neon skuter", en: "Neon Scooter", ja: "ネオンスクーター" } },
       { id: "bike", cost: 400, e: "🚲", n: { uz: "Velosiped", en: "Bicycle", ja: "自転車" } },
       { id: "bike2", cost: 800, e: "🚲", n: { uz: "Oltin velosiped", en: "Golden Bicycle", ja: "ゴールド自転車" } },
-      { id: "car", cost: 1200, e: "🚗", n: { uz: "Oq sedan", en: "White Sedan", ja: "白いセダン" } },
-      { id: "van", cost: 1500, e: "🚐", n: { uz: "Yetkazib berish miniveni", en: "Delivery Mini Van", ja: "配達ミニバン" } },
     ],
   };
 const shT = (k) => (SHOP_UI[k] || {})[LG] || (SHOP_UI[k] || {}).en || k,

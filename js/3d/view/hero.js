@@ -108,59 +108,8 @@ function drawBike(base, K, wph) {
   }
   pd(boxM(0.14, 0.05, 0.24), joint(S0, 0, 0.5, -0.25, 0), null, K.acc);
 }
-/* generic low-poly cars (no badges): an open-top white sedan and a boxy white mini van with a cargo box; the rider sits in the cab */
-const CARM = {
-  white: mat([0.97, 0.98, 1], { spec: 0.9, emis: 0.55 }),
-  glass: mat([0.1, 0.16, 0.28], { spec: 1, emis: 0.2 }),
-  dark: mat([0.07, 0.07, 0.09], { spec: 0.4, emis: 0.2 }),
-  seat: mat([0.35, 0.36, 0.42], { spec: 0.2, emis: 0.3 }),
-  rim: mat([0.8, 0.82, 0.88], { spec: 1, emis: 0.5 }),
-  amber: { tint: [1, 0.6, 0.1], emis: 1 },
-};
-function drawCar(base, wph, van) {
-  const C = CARM,
-    S0 = joint(base, 0, 0, van ? 0.35 : 0, 0);
-  for (const sz of van ? [0.72, -0.68] : [0.72, -0.72])
-    for (const sx of [-1, 1]) {
-      const W = joint(S0, sx * 0.48, 0.2, sz - (van ? 0.35 : 0), wph, 0, 0),
-        tw = joint(W, 0, 0, 0, 0, 0, PI / 2);
-      pd(cylM(0.2, 0.2, 0.12), joint(tw, sx * -0.06 + 0.06, 0.06, 0, 0), null, C.dark);
-      pd(cylM(0.12, 0.12, 0.13), joint(tw, sx * -0.06 + 0.06, 0.065, 0, 0), null, C.rim);
-      pd(boxM(0.14, 0.03, 0.03), joint(W, sx * 0.07, 0, 0, 0), null, C.dark);
-    }
-  const Z = (z) => z - (van ? 0.35 : 0);
-  pd(boxM(0.95, 0.26, van ? 1.2 : 2.3, 0.34), joint(S0, 0, 0, Z(van ? 0.55 : 0), 0), null, C.white);
-  pd(boxM(0.9, 0.12, 0.12), joint(S0, 0, 0.2, Z(van ? 1.12 : 1.13), 0), null, C.dark); // front bumper
-  pd(boxM(0.9, 0.12, 0.12), joint(S0, 0, 0.2, Z(van ? -0.3 : -1.13), 0), null, C.dark); // rear bumper (van: behind the cab)
-  for (const sx of [-1, 1]) {
-    pd(boxM(0.2, 0.1, 0.05), joint(S0, sx * 0.31, 0.46, Z(van ? 1.16 : 1.16), 0), null, K_WHITE);
-    pd(boxM(0.1, 0.07, 0.05), joint(S0, sx * 0.4, 0.3, Z(van ? 1.16 : 1.16), 0), null, C.amber);
-    pd(boxM(0.2, 0.08, 0.05), joint(S0, sx * 0.31, 0.46, Z(van ? -0.34 : -1.16), 0), null, SIREN_R);
-  }
-  pd(boxM(0.8, 0.1, 0.5), joint(S0, 0, 0.52, Z(van ? 0.9 : 0.88), 0), null, C.white); // hood
-  pd(boxM(0.04, 0.34, 0.5), joint(S0, 0.45, 0.62, Z(0.18), 0), null, C.white); // doors
-  pd(boxM(0.04, 0.34, 0.5), joint(S0, -0.45, 0.62, Z(0.18), 0), null, C.white);
-  pd(boxM(0.8, 0.34, 0.08), joint(S0, 0, 0.62, Z(van ? 0.78 : 0.62), 0), null, C.dark); // dashboard
-  pd(boxM(0.84, 0.46, 0.035), joint(S0, 0, 0.94, Z(van ? 0.82 : 0.66), -0.45), null, C.glass); // windscreen
-  pd(boxM(0.8, 0.18, 0.36), joint(S0, 0, 0.5, Z(van ? -0.12 : -0.2), 0), null, C.seat);
-  pd(cylM(0.15, 0.15, 0.025), joint(S0, 0, 0.98, Z(van ? 0.62 : 0.46), 1.0), null, C.dark); // steering wheel
-  if (van) {
-    pd(boxM(0.98, 0.8, 1.1, 0.0), joint(S0, 0, 0.66, Z(-0.62), 0), null, C.white); // cargo box (low enough to see the rider over it)
-    for (const sx of [-1, 1]) {
-      pd(boxM(0.02, 0.24, 0.8), joint(S0, sx * 0.495, 0.82, Z(-0.62), 0), null, C.glass);
-      pd(boxM(0.02, 0.08, 0.8), joint(S0, sx * 0.495, 0.58, Z(-0.62), 0), null, K_ORANGE);
-    }
-    pd(boxM(0.6, 0.22, 0.02), joint(S0, 0, 0.82, Z(-1.18), 0), null, C.glass);
-  } else {
-    pd(boxM(0.9, 0.12, 0.6), joint(S0, 0, 0.54, Z(-0.88), 0), null, C.white); // trunk
-    for (const sx of [-1, 1]) pd(boxM(0.03, 0.05, 0.4), joint(S0, sx * 0.46, 0.8, Z(-0.2), 0), null, C.white);
-  }
-}
-const K_WHITE = { tint: [1, 1, 0.92], emis: 1 },
-  K_ORANGE = { tint: [1, 0.55, 0.1], emis: 0.9 };
 function drawRide(base, K, wph, t) {
   const r = ldv("ride");
-  if (r === "car" || r === "van") return drawCar(base, wph, r === "van");
   if (r === "bike" || r === "bike2") drawBike(base, K, wph);
   else drawScooter(base, K, wph, t);
 }
@@ -224,7 +173,7 @@ function drawHat(hd, K, id) {
 function drawHero(root, look, st) {
   // st: {ph, air, slide, hit, boost, dash, scoot, fx, fy, land, wing, t, sp, tilt, idle, wave, yaw}
   const K = shopMats(heroMats(look), ldv("bag"), ldv("ride")),
-    lift = { bike: 0.17, bike2: 0.17, car: 0.3, van: 0.3 }[ldv("ride")] || 0,
+    lift = { bike: 0.17, bike2: 0.17 }[ldv("ride")] || 0,
     t = st.t,
     ph = st.ph,
     sw = Math.sin(ph),
@@ -241,7 +190,7 @@ function drawHero(root, look, st) {
     base = joint(base, 0, -0.7, 0, 0);
   }
   if (sc) drawRide(base, K, ph * 1.6, t);
-  if (sc && lift) base = joint(base, 0, lift, ldv("ride") === "van" ? 0.35 : 0, 0);
+  if (sc && lift) base = joint(base, 0, lift, 0, 0);
   const run = !air && !sc && !st.slide && !st.hit && !idle && !ds;
   let R = base,
     crouch = st.land * 0.1 + (sc ? 0.05 : 0);
