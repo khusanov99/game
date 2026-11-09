@@ -83,6 +83,7 @@ function showOv(title, sub, row, btn, canRevive) {
   cuBtn.style.display = "none";
   dlBtn.style.display = "none";
   shopBtn.style.display = "none";
+  setBtn.style.display = "none";
   $("oTitle").textContent = title;
   $("oSub").innerHTML = sub;
   $("oRow").innerHTML = row;
@@ -119,6 +120,8 @@ function menu() {
   jrBtn.textContent = T("jrBtn") + "  " + jrCount() + "/" + QUEST.length;
   shopBtn.style.display = "block";
   shopBtn.textContent = shT("btn");
+  setBtn.style.display = "block";
+  setBtn.textContent = sT("btn");
   cityBtn.style.display = "block";
   cityBtn.textContent = T("cityBtn") + "  " + cityCount() + "/" + CITY.length;
   achBtn.style.display = "block";
@@ -237,6 +240,7 @@ function start() {
   ovMode = "play";
   $("ov").classList.add("hidden");
   lastT = 0;
+  tutStart();
 }
 function endGame() {
   if (state !== "play") return;
@@ -309,7 +313,7 @@ $("go").addEventListener("click", () => {
     jrStart = 0;
     dailyArm();
     start();
-  } else if (ovMode === "ach" || ovMode === "city" || ovMode === "jr" || ovMode === "cu") menu();
+  } else if (ovMode === "set" || ovMode === "ach" || ovMode === "city" || ovMode === "jr" || ovMode === "cu") menu();
   else start();
 });
 rsBtn.addEventListener("click", () => {

@@ -148,4 +148,5 @@ function frame(ts) {
   syncUi();
   render();
   warmTick(dt);
+  tutTick(dt);
 }
