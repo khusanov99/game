@@ -82,6 +82,7 @@ function showOv(title, sub, row, btn, canRevive) {
   jrBtn.style.display = "none";
   cuBtn.style.display = "none";
   dlBtn.style.display = "none";
+  shopBtn.style.display = "none";
   $("oTitle").textContent = title;
   $("oSub").innerHTML = sub;
   $("oRow").innerHTML = row;
@@ -116,6 +117,8 @@ function menu() {
   cuBtn.style.display = "block";
   cuBtn.textContent = T("cuBtn") + "  " + cu.c.reduce((a, b) => a + b, 0) + "/" + CU.length * CU_AT.length;
   jrBtn.textContent = T("jrBtn") + "  " + jrCount() + "/" + QUEST.length;
+  shopBtn.style.display = "block";
+  shopBtn.textContent = shT("btn");
   cityBtn.style.display = "block";
   cityBtn.textContent = T("cityBtn") + "  " + cityCount() + "/" + CITY.length;
   achBtn.style.display = "block";
