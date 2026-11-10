@@ -126,7 +126,10 @@ function cuTrust(c, rt) {
   cu.d[c]++;
   cu.r[c] += rt;
   const add = rt >= 5 ? 2 : rt === 4 ? 1 : 0;
-  if (!add) return { add: 0, ch: -1 };
+  if (!add) {
+    store.set("zr3d_cu", cu);
+    return { add: 0, ch: -1 };
+  }
   cu.t[c] += add;
   const j = cu.c[c];
   let ch = -1,
