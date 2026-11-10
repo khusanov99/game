@@ -166,20 +166,83 @@ function jrOv() {
   }).join("");
   showOv(T("jrTitle"), T("jrHint"), rows, T("back2"), false);
 }
+const CU_LV = {
+  uz: ["Yangi", "Tanish", "Do'st", "Sherik"],
+  en: ["New", "Familiar", "Friend", "Partner"],
+  ja: ["はじめまして", "顔なじみ", "友達", "相棒"],
+};
+const cuLvN = (i) => (CU_LV[LG] || CU_LV.en)[cuLevel(i)],
+  CU_COL = ["#8c93b8", "#7fe6ff", "#7ffcb0", "#ffd84f"],
+  CU_UI = {
+    met: { uz: "Yetkazildi", en: "Deliveries", ja: "配達数" },
+    avg: { uz: "O'rtacha baho", en: "Avg rating", ja: "平均評価" },
+    fav: { uz: "Sevimli buyurtma", en: "Favourite order", ja: "好きな注文" },
+    unk: { uz: "Hali uchrashmagansan", en: "Not met yet", ja: "まだ会っていない" },
+    story: { uz: "Hikoya", en: "Story", ja: "ストーリー" },
+    to: { uz: "keyingi bob", en: "next chapter", ja: "次の章" },
+    max: { uz: "Eng yuqori daraja", en: "Max level", ja: "最高レベル" },
+  },
+  cuT = (k) => (CU_UI[k] || {})[LG] || (CU_UI[k] || {}).en || k;
+let cuSel = -1;
+function cuProg(i) {
+  const n = cu.c[i],
+    nx = CU_AT[n],
+    prev = n ? CU_AT[n - 1] : 0;
+  return nx ? Math.min(1, Math.max(0, (cu.t[i] - prev) / (nx - prev))) : 1;
+}
 function cuOv() {
   ovMode = "cu";
-  const rows = CU.map((c, i) => {
-    const t = cu.t[i],
-      n = cu.c[i],
-      nx = CU_AT[n],
-      hearts = "♥".repeat(Math.min(t, 15)),
-      chs = c.ch
-        .map((_, j) => (j < n ? `<div style="margin-top:4px;color:#e6e9ff">“${cuText(i, j)}”</div>` : `<div style="margin-top:4px;color:#6b7299">🔒 ${CU_AT[j]} ♥</div>`))
-        .join("");
-    return `<div style="width:100%;text-align:left;font:600 11px Inter,sans-serif;padding:7px 0;color:#c8cdf0"><div style="display:flex;justify-content:space-between"><b>${c.e} ${cuName(i)}</b><span style="color:#ffa8d4">${t}${nx ? " / " + nx : ""} ♥</span></div>${chs}</div>`;
-  }).join("");
-  showOv(T("cuTitle"), T("cuHint"), rows, T("back2"), false);
+  const found = cu.d.filter((x) => x > 0).length,
+    cards = CU.map((c, i) => {
+      const met = cu.d[i] > 0,
+        col = CU_COL[cuLevel(i)],
+        nx = CU_AT[cu.c[i]];
+      return `<div data-c="${i}" style="cursor:pointer;text-align:center;padding:12px 8px;border-radius:16px;background:${met ? "rgba(255,255,255,.07)" : "rgba(255,255,255,.03)"};border:1.5px solid ${met ? col : "rgba(255,255,255,.1)"}"><div style="font-size:44px;line-height:1.1;${met ? "" : "filter:grayscale(1) brightness(.3)"}">${c.e}</div><div style="font:800 11px Orbitron,sans-serif;margin:6px 0 2px;color:${met ? "#fff" : "#6b7299"}">${met ? cuName(i) : "???"}</div><div style="font:700 9px Orbitron,sans-serif;letter-spacing:1px;color:${met ? col : "#6b7299"}">${met ? cuLvN(i).toUpperCase() : "🔒"}</div>${met ? `<div style="height:5px;border-radius:3px;background:rgba(255,255,255,.12);margin:7px 4px 3px;overflow:hidden"><div style="height:100%;width:${Math.round(cuProg(i) * 100)}%;background:${col}"></div></div><div style="font:600 10px Inter,sans-serif;color:#ffa8d4">${cu.t[i]}${nx ? " / " + nx : ""} ♥</div>` : ""}</div>`;
+    }).join("");
+  showOv(
+    T("cuTitle"),
+    found + " / " + CU.length + "<br><span style='font-size:11px;color:#aeb6e0'>" + T("cuHint") + "</span>",
+    `<div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px">${cards}</div>`,
+    T("back2"),
+    false,
+  );
 }
+function cuDetail(i) {
+  ovMode = "cud";
+  cuSel = i;
+  const c = CU[i],
+    met = cu.d[i] > 0,
+    col = CU_COL[cuLevel(i)],
+    nx = CU_AT[cu.c[i]],
+    chs = c.ch
+      .map((_, j) =>
+        j < cu.c[i]
+          ? `<div style="margin-top:6px;color:#e6e9ff">“${cuText(i, j)}”</div>`
+          : `<div style="margin-top:6px;color:#6b7299">🔒 ${CU_AT[j]} ♥</div>`,
+      )
+      .join(""),
+    stat = (l, v) => `<div style="flex:1;min-width:0;padding:7px 4px;border-radius:12px;background:rgba(255,255,255,.06)"><div style="font:600 8px Orbitron,sans-serif;letter-spacing:1px;color:#8c93b8;margin-bottom:3px">${l}</div><div style="font:800 13px Orbitron,sans-serif">${v}</div></div>`;
+  showOv(
+    met ? cuName(i) : "???",
+    met ? `<span style="color:${col}">${cuLvN(i)}</span>` : cuT("unk"),
+    `<div style="width:100%;text-align:center"><div style="font-size:84px;line-height:1.1;${met ? "" : "filter:grayscale(1) brightness(.3)"}">${c.e}</div>` +
+      (met
+        ? `<div style="font:600 12px Inter,sans-serif;color:#c8cdf0;margin:6px 0 10px">${cuBio(i)}</div>` +
+          `<div style="display:flex;gap:6px;margin-bottom:10px">${stat(cuT("met"), "📦 " + cu.d[i])}${stat(cuT("avg"), "★ " + cuAvg(i).toFixed(1))}${stat("♥", cu.t[i] + (nx ? "/" + nx : ""))}</div>` +
+          `<div style="height:7px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div style="height:100%;width:${Math.round(cuProg(i) * 100)}%;background:${col}"></div></div>` +
+          `<div style="font:600 10px Inter,sans-serif;color:#8c93b8;margin:4px 0 12px">${nx ? cuT("to") + ": " + cu.t[i] + " / " + nx + " ♥" : cuT("max")}</div>` +
+          `<div style="text-align:left;font:600 11px Inter,sans-serif;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.05);margin-bottom:10px"><span style="color:#8c93b8">${cuT("fav")}:</span> ${ITEM_EMO[ITEM_CU[i]]} <b>${cuFav(i)}</b></div>` +
+          `<div style="text-align:left;font:600 11px Inter,sans-serif"><div style="font:700 9px Orbitron,sans-serif;letter-spacing:1.5px;color:#8c93b8">${cuT("story")}</div>${chs}</div>`
+        : `<div style="font:600 12px Inter,sans-serif;color:#6b7299;margin-top:10px">${cuT("unk")}</div>`) +
+      `</div>`,
+    T("back2"),
+    false,
+  );
+}
+$("oRow").addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-c]");
+  if (b && ovMode === "cu") cuDetail(+b.dataset.c);
+});
 function dailyOv() {
   ovMode = "dl";
   const t = dailyToday(),
@@ -353,7 +416,8 @@ rvBtn.addEventListener("click", () => {
   $("ov").classList.add("hidden");
 });
 $("go").addEventListener("click", () => {
-  if (ovMode === "pause") setPause(false);
+  if (ovMode === "cud") cuOv();
+  else if (ovMode === "pause") setPause(false);
   else if (ovMode === "dl") {
     jrStart = 0;
     dailyArm();
