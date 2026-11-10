@@ -85,6 +85,9 @@ const CU_AT = [3, 8, 15],
   STORY_CU = [1, 3, 2, 0, 3, 2];
 let cu = store.get("zr3d_cu", null);
 if (!cu || !Array.isArray(cu.t) || cu.t.length !== CU.length) cu = { t: CU.map(() => 0), c: CU.map(() => 0) };
+/* per-customer collection stats: deliveries made and the sum of the ratings given (older saves start from zero) */
+if (!Array.isArray(cu.d) || cu.d.length !== CU.length) cu.d = CU.map(() => 0);
+if (!Array.isArray(cu.r) || cu.r.length !== CU.length) cu.r = CU.map(() => 0);
 const cuName = (i) => CU[i].n[LG] || CU[i].n.en,
   cuText = (i, j) => CU[i].ch[j][LG] || CU[i].ch[j].en;
 let lastCu = -1;
@@ -97,9 +100,36 @@ function pickCust(story) {
   while (c === lastCu);
   return c;
 }
+/* collection card text: who they are, and the name of what they like to order */
+const CU_BIO = [
+  { uz: "Mahalladagi mehribon xola. Non pishirishni yaxshi ko'radi.", en: "The kind granny of the neighbourhood. Loves baking bread.", ja: "町の優しいおばあさん。パンを焼くのが好き。" },
+  { uz: "Kuryer bo'lishni orzu qiladigan quvnoq bola.", en: "A cheerful boy who dreams of becoming a courier.", ja: "配達員を夢見る元気な男の子。" },
+  { uz: "Bozordagi do'kon egasi. Vaqtida yetkazishni qadrlaydi.", en: "A bazaar shop owner who values punctual delivery.", ja: "市場の店主。時間通りの配達を大切にする。" },
+  { uz: "Maktab o'qituvchisi. Kitoblarni juda yaxshi ko'radi.", en: "A school teacher who adores books.", ja: "学校の先生。本が大好き。" },
+];
+const ITEM_FAV = [
+  { uz: "Ayiqcha", en: "Teddy bear", ja: "くまのぬいぐるみ" },
+  { uz: "Sopol vaza", en: "Ceramic vase", ja: "陶器の花瓶" },
+  { uz: "Ipak mato", en: "Silk cloth", ja: "絹の布" },
+  { uz: "Eski kalit", en: "Old key", ja: "古い鍵" },
+  { uz: "Mato namunasi", en: "Fabric sample", ja: "布のサンプル" },
+  { uz: "Shirinlik", en: "Sweets", ja: "お菓子" },
+  { uz: "Issiq non", en: "Warm bread", ja: "焼きたてのパン" },
+  { uz: "Kitoblar", en: "Books", ja: "本" },
+  { uz: "Savat", en: "Basket", ja: "かご" },
+];
+const cuBio = (i) => CU_BIO[i][LG] || CU_BIO[i].en,
+  cuFav = (i) => ITEM_FAV[ITEM_CU[i]][LG] || ITEM_FAV[ITEM_CU[i]].en,
+  cuLevel = (i) => cu.c[i], // 0 new, 1 familiar, 2 friend, 3 partner
+  cuAvg = (i) => (cu.d[i] ? cu.r[i] / cu.d[i] : 0);
 function cuTrust(c, rt) {
+  cu.d[c]++;
+  cu.r[c] += rt;
   const add = rt >= 5 ? 2 : rt === 4 ? 1 : 0;
-  if (!add) return { add: 0, ch: -1 };
+  if (!add) {
+    store.set("zr3d_cu", cu);
+    return { add: 0, ch: -1 };
+  }
   cu.t[c] += add;
   const j = cu.c[c];
   let ch = -1,
