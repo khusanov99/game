@@ -82,6 +82,7 @@ function shBuy(tab, id) {
   wallet -= it.cost;
   store.set("zr_wallet", wallet);
   (shOwn[tab] = shOwn[tab] || []).push(id);
+  track("buy", { tab, id });
   shSave();
   return true;
 }

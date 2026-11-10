@@ -290,6 +290,7 @@ function showPause() {
   gfxBtn.style.display = "block";
   gfxLabel();
 }
+let runT0 = 0;
 function start() {
   actx();
   try {
@@ -306,6 +307,8 @@ function start() {
   ovMode = "play";
   $("ov").classList.add("hidden");
   lastT = 0;
+  runT0 = performance.now();
+  track("start", { daily: DAILY.on ? 1 : 0, ver: jrStart });
   tutStart();
 }
 function endGame() {
@@ -314,6 +317,7 @@ function endGame() {
   ovMode = "over";
   LT.runs++;
   LT.best = Math.max(LT.best, Math.floor(pz - startZ));
+  track("run", { m: Math.floor(pz - startZ), coins: coinsGot, sec: Math.round((performance.now() - runT0) / 1000), fps: Math.round(1000 / Math.max(1, avgDt)), q: qual, gfx, deliv: CR.n || 0 });
   saveLT();
   checkAch();
   bustT = 0;
