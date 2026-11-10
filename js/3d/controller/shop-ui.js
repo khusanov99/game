@@ -48,6 +48,7 @@ function shRender() {
 }
 function shopOpen() {
   ovMode = "shop";
+  track("shop", {});
   shOn = true;
   shTab = "bag";
   shSel = null;

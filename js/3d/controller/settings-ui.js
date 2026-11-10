@@ -8,6 +8,7 @@ const SET_UI = {
   on: { uz: "YOQILGAN", en: "ON", ja: "オン" },
   off: { uz: "O'CHIRILGAN", en: "OFF", ja: "オフ" },
   gfx: { uz: "GRAFIKA", en: "GRAPHICS", ja: "画質" },
+  ana: { uz: "ANONIM STATISTIKA", en: "ANONYMOUS STATS", ja: "匿名の統計" },
   tut: { uz: "Qanday o'ynaladi", en: "How to play", ja: "遊び方" },
   tutM: { uz: "Yon tomonga suring: yo'lakni almashtirish", en: "Swipe sideways: change lane", ja: "横にスワイプ：レーン移動" },
   tutJ: { uz: "Tepaga suring: sakrash", en: "Swipe up: jump", ja: "上にスワイプ：ジャンプ" },
@@ -30,7 +31,8 @@ function setOv() {
     sT("title"),
     "",
     row(sT("vol"), VOLS.map((v) => chip(Math.abs(VOL - v) < 0.01, `data-v="${v}"`, Math.round(v * 100) + "%")).join("")) +
-      row(sT("vib"), chip(VIBON, 'data-vb="1"', sT("on")) + chip(!VIBON, 'data-vb="0"', sT("off"))),
+      row(sT("vib"), chip(VIBON, 'data-vb="1"', sT("on")) + chip(!VIBON, 'data-vb="0"', sT("off"))) +
+      row(sT("ana"), chip(anaOn, 'data-an="1"', sT("on")) + chip(!anaOn, 'data-an="0"', sT("off"))),
     T("back2"),
     false,
   );
@@ -40,8 +42,13 @@ function setOv() {
 setBtn.addEventListener("click", setOv);
 $("oRow").addEventListener("click", (e) => {
   if (ovMode !== "set") return;
-  const b = e.target.closest && e.target.closest("[data-v],[data-vb]");
+  const b = e.target.closest && e.target.closest("[data-v],[data-vb],[data-an]");
   if (!b) return;
+  if (b.dataset.an !== undefined) {
+    anaOn = b.dataset.an === "1";
+    store.set("zr3d_ana", anaOn);
+    return setOv();
+  }
   if (b.dataset.v !== undefined) {
     setVol(+b.dataset.v);
     sfx.coin();
@@ -76,6 +83,7 @@ function tutRender() {
 function tutEnd() {
   tutOn = false;
   tutDone = true;
+  if (tutSeen.m && tutSeen.j && tutSeen.s) track("tutorial", {});
   store.set("zr3d_tut", true);
   tutEl.style.display = "none";
 }
